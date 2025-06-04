@@ -19,14 +19,14 @@ def handle_verification(event, line_bot_api):
             TextSendMessage(text="請輸入您的 LINE ID（如無請輸入「尚未設定」）")
         )
     elif temp.get("step") == "wait_id":
-        temp["line_id"] = text
-        temp["step"] = "confirm"
-        set_temp_user(user_id, temp)
-        reply = f"請確認以下資料是否正確：
+    temp["line_id"] = text
+    temp["step"] = "confirm"
+    set_temp_user(user_id, temp)
+    reply = f"""請確認以下資料是否正確：
 📱手機：{temp['phone']}
 🔗LINE ID：{temp['line_id']}
-正確請輸入 1"
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+✅ 正確請輸入 1"""
+    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
     elif temp.get("step") == "confirm" and text == "1":
         # 模擬驗證成功（實際應該寫入 DB）
         reply = f"✅ 驗證成功囉！
