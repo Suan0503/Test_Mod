@@ -1,7 +1,7 @@
 from flask import abort
 from linebot.models import TextSendMessage
-from utils.cache import get_temp_user, set_temp_user, del_temp_user
-from utils.helper import generate_verify_code
+from routes.ultis.cache import get_temp_user, set_temp_user, del_temp_user
+from routes.ultis.helper import generate_verify_code
 
 def handle_verification(event, line_bot_api):
     user_id = event.source.user_id
@@ -27,7 +27,6 @@ def handle_verification(event, line_bot_api):
 ✅ 正確請輸入 1"""
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
     elif temp.get("step") == "confirm" and text == "1":
-        # 模擬驗證成功（實際應該寫入 DB）
         reply = f"""✅ 驗證成功囉！
 📱手機：{temp['phone']}
 🔗LINE ID：{temp['line_id']}"""
