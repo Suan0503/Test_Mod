@@ -8,10 +8,15 @@ message_bp = Blueprint('message', __name__)
 def callback():
     signature = request.headers.get("X-Line-Signature")
     body = request.get_data(as_text=True)
+    print("=== Callback Body ===")
+    print(body)
+    print("=== Signature ===")
+    print(signature)
     try:
         handler.handle(body, signature)
     except Exception as e:
         print("handle error:", e)
+        import traceback; traceback.print_exc()
         abort(400)
     return "OK"
 
