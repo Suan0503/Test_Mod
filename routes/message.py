@@ -12,6 +12,10 @@ def callback():
     print(body)
     print("==== signature ====")
     print(signature)
+    print("==== env token ====")
+    print(os.getenv("LINE_CHANNEL_ACCESS_TOKEN"))
+    print("==== env secret ====")
+    print(os.getenv("LINE_CHANNEL_SECRET"))
     try:
         handler.handle(body, signature)
     except Exception as e:
