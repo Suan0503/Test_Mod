@@ -1,11 +1,9 @@
 from flask import Blueprint, request, abort
 from extensions import line_bot_api, handler, db
 from linebot.models import MessageEvent, TextMessage, ImageMessage, TextSendMessage
-import os
-
+from models import Coupon
 from utils.draw_utils import draw_coupon, has_drawn_today, save_coupon_record, get_today_coupon_flex
 from utils.image_verification import extract_lineid_phone
-from models import CouponModel
 
 message_bp = Blueprint('message', __name__)
 
@@ -28,12 +26,12 @@ def handle_text(event):
     display_name = "用戶"
 
     if user_text in ["抽獎", "daily", "抽獎！", "我要抽獎"]:
-        if has_drawn_today(user_id, CouponModel):
-            record = has_drawn_today(user_id, CouponModel)
+        record = has_drawn_today(user_id, Coupon)
+        if record:
             amount = record.amount
         else:
             amount = draw_coupon()
-            save_coupon_record(user_id, amount, CouponModel, db)
+            save_coupon_record(user_id, amount, Coupon, db)
         flex_msg = get_today_coupon_flex(user_id, display_name, amount)
         line_bot_api.reply_message(event.reply_token, flex_msg)
         return
@@ -63,4 +61,5 @@ def handle_image(event):
         event.reply_token,
         TextSendMessage(text="\n".join(result))
     )
+    import os
     os.remove(temp_path)
