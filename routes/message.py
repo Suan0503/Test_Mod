@@ -1,9 +1,23 @@
 from flask import Blueprint, request, abort
-# 這裡可根據你的架構加上 line_bot_api, handler
+from extensions import line_bot_api, handler
+from linebot.models import MessageEvent, TextMessage, TextSendMessage
 
 message_bp = Blueprint('message', __name__)
 
 @message_bp.route("/callback", methods=["POST"])
 def callback():
-    # 處理 LINE webhook 或其它邏輯
+    signature = request.headers.get("X-Line-Signature")
+    body = request.get_data(as_text=True)
+    try:
+        handler.handle(body, signature)
+    except Exception as e:
+        print("handle error:", e)
+        abort(400)
     return "OK"
+
+@handler.add(MessageEvent, message=TextMessage)
+def handle_message(event):
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text="你說了：" + event.message.text)
+    )
