@@ -1,12 +1,11 @@
 Flask
 gunicorn
 flask_sqlalchemy
-python-dotenv
 line-bot-sdk==2.4.1
-psycopg2-binary
+python-dotenv
 pytz
+psycopg2-binary
 pillow
 pytesseract
 opencv-python
 numpy
-redis
