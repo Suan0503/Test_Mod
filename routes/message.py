@@ -1,10 +1,10 @@
 from flask import Blueprint, request, abort
 from extensions import line_bot_api, handler, db
-from linebot.models import MessageEvent, TextMessage, ImageMessage, TextSendMessage, FlexSendMessage
+from linebot.models import MessageEvent, TextMessage, ImageMessage, TextSendMessage
 import os
 
-from draw_utils import draw_coupon, has_drawn_today, save_coupon_record, get_today_coupon_flex
-from image_verification import extract_lineid_phone
+from utils.draw_utils import draw_coupon, has_drawn_today, save_coupon_record, get_today_coupon_flex
+from utils.image_verification import extract_lineid_phone
 from models import CouponModel
 
 message_bp = Blueprint('message', __name__)
@@ -27,9 +27,6 @@ def handle_text(event):
     user_text = event.message.text.strip()
     display_name = "用戶"
 
-    # 你可以根據 user_id 去查 display_name（可選）
-
-    # 每日抽獎
     if user_text in ["抽獎", "daily", "抽獎！", "我要抽獎"]:
         if has_drawn_today(user_id, CouponModel):
             record = has_drawn_today(user_id, CouponModel)
@@ -41,7 +38,6 @@ def handle_text(event):
         line_bot_api.reply_message(event.reply_token, flex_msg)
         return
 
-    # 其他回應
     line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text="你說了：" + user_text)
@@ -49,14 +45,12 @@ def handle_text(event):
 
 @handler.add(MessageEvent, message=ImageMessage)
 def handle_image(event):
-    # 下載圖片
     message_id = event.message.id
     message_content = line_bot_api.get_message_content(message_id)
     temp_path = f"/tmp/{message_id}.jpg"
     with open(temp_path, 'wb') as f:
         for chunk in message_content.iter_content():
             f.write(chunk)
-    # OCR & 驗證
     phone, lineid, text = extract_lineid_phone(temp_path, debug=False)
     result = []
     if phone:
@@ -69,5 +63,4 @@ def handle_image(event):
         event.reply_token,
         TextSendMessage(text="\n".join(result))
     )
-    # 刪除暫存圖片
     os.remove(temp_path)
