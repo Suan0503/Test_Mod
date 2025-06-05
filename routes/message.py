@@ -1,7 +1,11 @@
 from flask import Blueprint, request, abort
-from extensions import line_bot_api, handler
-from linebot.models import MessageEvent, TextMessage, TextSendMessage
+from extensions import line_bot_api, handler, db
+from linebot.models import MessageEvent, TextMessage, ImageMessage, TextSendMessage, FlexSendMessage
 import os
+
+from draw_utils import draw_coupon, has_drawn_today, save_coupon_record, get_today_coupon_flex
+from image_verification import extract_lineid_phone
+from models import CouponModel
 
 message_bp = Blueprint('message', __name__)
 
@@ -9,14 +13,6 @@ message_bp = Blueprint('message', __name__)
 def callback():
     signature = request.headers.get("X-Line-Signature")
     body = request.get_data(as_text=True)
-    print("==== body ====")
-    print(body)
-    print("==== signature ====")
-    print(signature)
-    print("==== env token ====")
-    print(os.getenv("LINE_CHANNEL_ACCESS_TOKEN"))
-    print("==== env secret ====")
-    print(os.getenv("LINE_CHANNEL_SECRET"))
     try:
         handler.handle(body, signature)
     except Exception as e:
@@ -26,8 +22,52 @@ def callback():
     return "OK"
 
 @handler.add(MessageEvent, message=TextMessage)
-def handle_message(event):
+def handle_text(event):
+    user_id = event.source.user_id
+    user_text = event.message.text.strip()
+    display_name = "用戶"
+
+    # 你可以根據 user_id 去查 display_name（可選）
+
+    # 每日抽獎
+    if user_text in ["抽獎", "daily", "抽獎！", "我要抽獎"]:
+        if has_drawn_today(user_id, CouponModel):
+            record = has_drawn_today(user_id, CouponModel)
+            amount = record.amount
+        else:
+            amount = draw_coupon()
+            save_coupon_record(user_id, amount, CouponModel, db)
+        flex_msg = get_today_coupon_flex(user_id, display_name, amount)
+        line_bot_api.reply_message(event.reply_token, flex_msg)
+        return
+
+    # 其他回應
     line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(text="你說了：" + event.message.text)
+        TextSendMessage(text="你說了：" + user_text)
     )
+
+@handler.add(MessageEvent, message=ImageMessage)
+def handle_image(event):
+    # 下載圖片
+    message_id = event.message.id
+    message_content = line_bot_api.get_message_content(message_id)
+    temp_path = f"/tmp/{message_id}.jpg"
+    with open(temp_path, 'wb') as f:
+        for chunk in message_content.iter_content():
+            f.write(chunk)
+    # OCR & 驗證
+    phone, lineid, text = extract_lineid_phone(temp_path, debug=False)
+    result = []
+    if phone:
+        result.append(f"手機號碼：{phone}")
+    if lineid:
+        result.append(f"LINE ID：{lineid}")
+    if not result:
+        result.append("未偵測到有效手機號碼或 LINE ID")
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text="\n".join(result))
+    )
+    # 刪除暫存圖片
+    os.remove(temp_path)
