@@ -11,7 +11,5 @@ redis_client = redis.Redis(
     decode_responses=True,
     password=os.getenv("REDIS_PASSWORD", None)
 )
-
-# 加入 LineBotApi 與 WebhookHandler
 line_bot_api = LineBotApi(os.getenv("LINE_CHANNEL_ACCESS_TOKEN"))
 handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
