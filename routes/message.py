@@ -8,9 +8,9 @@ message_bp = Blueprint('message', __name__)
 def callback():
     signature = request.headers.get("X-Line-Signature")
     body = request.get_data(as_text=True)
-    print("=== Callback Body ===")
+    print("==== body ====")
     print(body)
-    print("=== Signature ===")
+    print("==== signature ====")
     print(signature)
     try:
         handler.handle(body, signature)
