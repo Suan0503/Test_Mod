@@ -37,14 +37,12 @@ def get_today_coupon_flex(user_id, display_name, amount):
     today_str = now.strftime("%Y/%m/%d")
     emoji_date = f"📅 {now.strftime('%m/%d')}"
     expire_time = "23:59"
-
     if amount == 0:
         text = "很可惜沒中獎呢～明天再試試看吧🌙"
         color = "#999999"
     else:
         text = f"🎁 恭喜你抽中 {amount} 元折價券"
         color = "#FF9900"
-
     return FlexSendMessage(
         alt_text="每日抽獎結果",
         contents={
@@ -55,41 +53,12 @@ def get_today_coupon_flex(user_id, display_name, amount):
                 "layout": "vertical",
                 "spacing": "md",
                 "contents": [
-                    {
-                        "type": "text",
-                        "text": emoji_date,
-                        "weight": "bold",
-                        "size": "lg"
-                    },
-                    {
-                        "type": "text",
-                        "text": f"用戶：{display_name}",
-                        "size": "sm",
-                        "color": "#888888"
-                    },
-                    {
-                        "type": "text",
-                        "text": f"日期：{today_str}",
-                        "size": "sm",
-                        "color": "#888888"
-                    },
+                    {"type": "text", "text": emoji_date, "weight": "bold", "size": "lg"},
+                    {"type": "text", "text": f"用戶：{display_name}", "size": "sm", "color": "#888888"},
+                    {"type": "text", "text": f"日期：{today_str}", "size": "sm", "color": "#888888"},
                     {"type": "separator"},
-                    {
-                        "type": "text",
-                        "text": text,
-                        "size": "xl",
-                        "weight": "bold",
-                        "color": color,
-                        "align": "center",
-                        "margin": "md"
-                    },
-                    {
-                        "type": "text",
-                        "text": f"🕒 有效至：今日 {expire_time}",
-                        "size": "sm",
-                        "color": "#999999",
-                        "align": "center"
-                    }
+                    {"type": "text", "text": text, "size": "xl", "weight": "bold", "color": color, "align": "center", "margin": "md"},
+                    {"type": "text", "text": f"🕒 有效至：今日 {expire_time}", "size": "sm", "color": "#999999", "align": "center"}
                 ]
             }
         }
