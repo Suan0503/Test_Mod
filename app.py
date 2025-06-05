@@ -1,19 +1,12 @@
 from flask import Flask
-from dotenv import load_dotenv
-import os
-
-# 載入 .env
-load_dotenv()
-
-from extensions import db
+from extensions import db, line_bot_api, handler, redis_client
+from routes.message import message_bp
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 
-# Blueprint 註冊
-from routes.message import message_bp
 app.register_blueprint(message_bp)
 
 @app.route("/")
