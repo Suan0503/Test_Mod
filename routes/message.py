@@ -1,6 +1,7 @@
 from flask import Blueprint, request, abort
 from extensions import line_bot_api, handler
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
+import os
 
 message_bp = Blueprint('message', __name__)
 
