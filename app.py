@@ -1,11 +1,12 @@
 from flask import Flask
-from extensions import db, line_bot_api, handler, redis_client
-from routes.message import message_bp
-import os
 from dotenv import load_dotenv
+import os
 
-# 載入 .env 設定（建議加這一行，讓本地/部署都能自動抓 .env）
+# 載入 .env
 load_dotenv()
+
+from extensions import db
+from routes.message import message_bp
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
