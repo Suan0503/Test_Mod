@@ -1,11 +1,9 @@
 import re
-from PIL import Image
 import pytesseract
+from PIL import Image
 
 def normalize_phone(phone_raw):
-    # 去掉空白與 - 和 +號
     phone = re.sub(r"[ \-\+]", "", phone_raw)
-    # 若開頭為8869，變成09
     if phone.startswith("8869") and len(phone) == 12:
         phone = "09" + phone[4:]
     elif phone.startswith("886") and len(phone) == 11:
@@ -32,3 +30,8 @@ def extract_lineid_phone(image_path, debug=False):
         print("LINE ID:", lineid)
 
     return phone, lineid, text
+
+if __name__ == "__main__":
+    img_path = input("請輸入圖片路徑：")
+    phone, lineid, text = extract_lineid_phone(img_path, debug=True)
+    print(f"\n偵測結果：\n手機號碼：{phone or '未識別'}\nLINE ID：{lineid or '未識別'}")
