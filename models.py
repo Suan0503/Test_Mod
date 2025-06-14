@@ -26,7 +26,7 @@ class Coupon(db.Model):
 
 class UserSplitUrl(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.String(64), unique=True, nullable=False)  # 綁定 line_user_id
+    line_user_id = db.Column(db.String(64), unique=True, nullable=False)  # 綁定 line_user_id
     split_url = db.Column(db.String(255), nullable=False)
     status = db.Column(db.String(20), default="active")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
