@@ -2,29 +2,31 @@ from extensions import db
 from datetime import datetime
 
 class Whitelist(db.Model):
-    __tablename__ = "whitelist"
     id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    phone = db.Column(db.String(20), unique=True, nullable=False)
+    name = db.Column(db.String(50))
+    line_id = db.Column(db.String(50))
+    line_user_id = db.Column(db.String(64), unique=True)
+    reason = db.Column(db.String(255))
     date = db.Column(db.String(20))
-    phone = db.Column(db.String(20), unique=True)
-    reason = db.Column(db.Text)
-    name = db.Column(db.String(255))
-    line_id = db.Column(db.String(100))
-    line_user_id = db.Column(db.String(255), unique=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Blacklist(db.Model):
-    __tablename__ = "blacklist"
     id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    date = db.Column(db.String(20))
-    phone = db.Column(db.String(20), unique=True)
-    reason = db.Column(db.Text)
-    name = db.Column(db.String(255))
+    phone = db.Column(db.String(20), unique=True, nullable=False)
+    reason = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Coupon(db.Model):
-    __tablename__ = "coupon"
     id = db.Column(db.Integer, primary_key=True)
-    line_user_id = db.Column(db.String(255))
-    date = db.Column(db.String(20))
-    amount = db.Column(db.Integer)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    line_user_id = db.Column(db.String(64), nullable=False)
+    amount = db.Column(db.Integer, nullable=False)
+    date = db.Column(db.String(20), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class UserSplitUrl(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(64), unique=True, nullable=False)  # 綁定 line_user_id
+    split_url = db.Column(db.String(255), nullable=False)
+    status = db.Column(db.String(20), default="active")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
