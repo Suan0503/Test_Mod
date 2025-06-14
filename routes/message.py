@@ -17,10 +17,6 @@ from utils.draw_utils import draw_coupon, get_today_coupon_flex, has_drawn_today
 from utils.image_verification import extract_lineid_phone
 from utils.special_case import is_special_case
 
-# 分流網址唯一綁定
-from models import UserSplitUrl
-from utils.split_url_utils import get_or_bind_split_url
-
 message_bp = Blueprint('message', __name__)
 
 ADMIN_IDS = [
@@ -35,8 +31,15 @@ manual_verify_pending = {}
 def generate_verify_code(length=8):
     return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 
-def get_function_menu_flex(user_id=None):
-    split_url = get_or_bind_split_url(user_id) if user_id else "https://line.me/ti/p/g7TPO_lhAL"
+def choose_link():
+    group = [
+        "https://line.me/ti/p/g7TPO_lhAL",
+        "https://line.me/ti/p/Q6-jrvhXbH",
+        "https://line.me/ti/p/AKRUvSCLRC"
+    ]
+    return group[hash(os.urandom(8)) % len(group)]
+
+def get_function_menu_flex():
     return FlexSendMessage(
         alt_text="功能選單",
         contents={
@@ -78,7 +81,7 @@ def get_function_menu_flex(user_id=None):
                             },
                             {
                                 "type": "button",
-                                "action": {"type": "uri", "label": "📬 預約諮詢", "uri": split_url},
+                                "action": {"type": "uri", "label": "📬 預約諮詢", "uri": choose_link()},
                                 "style": "primary",
                                 "color": "#B889F2"
                             },
@@ -265,7 +268,7 @@ def handle_message(event):
                 f"✅ 驗證成功，歡迎加入茗殿\n"
                 f"🌟 加入密碼：ming666"
             )
-            line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_function_menu_flex(user_id)])
+            line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_function_menu_flex()])
         else:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 你尚未完成驗證，請輸入手機號碼進行驗證。"))
         return
@@ -296,7 +299,7 @@ def handle_message(event):
                 f"✅ 驗證成功，歡迎加入茗殿\n"
                 f"🌟 加入密碼：ming666"
             )
-            line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_function_menu_flex(user_id)])
+            line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_function_menu_flex()])
         else:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 你已驗證完成，請輸入手機號碼查看驗證資訊"))
         return
@@ -376,7 +379,7 @@ def handle_message(event):
                 f"✅ 你的資料已補全，歡迎加入茗殿\n"
                 f"🌟 加入密碼：ming666"
             )
-        line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_function_menu_flex(user_id)])
+        line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_function_menu_flex()])
         temp_users.pop(user_id)
         return
 
