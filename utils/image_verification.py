@@ -1,13 +1,13 @@
+import re
 from paddleocr import PaddleOCR
 import cv2
-import re
-import numpy as np
 
+# PaddleOCR 只初始化一次（全域）
 ocr_model = PaddleOCR(use_angle_cls=True, lang='ch')
 
 def extract_lineid_phone(image_path):
     img = cv2.imread(image_path)
-    result = ocr_model.ocr(img)  # 注意：不要再加 cls 參數！
+    result = ocr_model.ocr(img)  # 不可加 cls 參數！
 
     text = ''
     for line in result:
