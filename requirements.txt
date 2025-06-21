@@ -5,7 +5,9 @@ line-bot-sdk==2.4.1
 pytz
 psycopg2-binary
 pillow
-pytesseract
 opencv-python-headless
+opencv-python
 numpy
 gunicorn
+paddlepaddle
+paddleocr
