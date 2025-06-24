@@ -138,6 +138,15 @@ def update_or_create_whitelist_from_data(data, user_id=None):
         db.session.commit()
         return new_user, True
 
+def normalize_phone(phone):
+    """將手機號碼轉為09開頭格式"""
+    phone = (phone or "").replace(" ", "").replace("-", "")
+    if phone.startswith("+8869"):
+        return "0" + phone[4:]
+    if phone.startswith("+886"):
+        return "0" + phone[4:]
+    return phone
+
 @message_bp.route("/callback", methods=["POST"])
 def callback():
     signature = request.headers.get("X-Line-Signature")
@@ -288,7 +297,7 @@ def handle_message(event):
 
     existing = Whitelist.query.filter_by(line_user_id=user_id).first()
     if existing:
-        if user_text == existing.phone:
+        if normalize_phone(user_text) == normalize_phone(existing.phone):
             tz = pytz.timezone("Asia/Taipei")
             reply = (
                 f"📱 {existing.phone}\n"
@@ -322,7 +331,7 @@ def handle_message(event):
             event.reply_token,
             [
                 TextSendMessage(text="📱 手機已登記囉～請接著輸入您的 LINE ID"),
-                TextSendMessage(text="若您有設定 LINE ID → ✅ 直接輸入即可\n若尚未設定 ID → 請輸入：「尚未設定」\n若您的 LINE ID 是手機號碼本身（例如 09xxxxxxxx）→ 請在開頭加上「ID」兩個字")
+                TextSendMessage(text="若您有設定 LINE ID → ✅ 直接輸入即可\n若尚未設定 ID → 請輸入：「尚未設定」\n若您的 LINE ID 是手機號碼本身（例如 09xxxx...），請直接輸入。")
             ]
         )
         return
@@ -416,8 +425,9 @@ def handle_image(event):
     input_lineid = temp_users[user_id].get("line_id")
     record = temp_users[user_id]
 
+    # 使用 normalize_phone 比對
     if input_lineid == "尚未設定":
-        if phone_ocr == input_phone:
+        if normalize_phone(phone_ocr) == normalize_phone(input_phone):
             reply = (
                 f"📱 {record['phone']}\n"
                 f"🌸 暱稱：{record['name']}\n"
@@ -436,7 +446,7 @@ def handle_image(event):
             )
     else:
         lineid_match = (lineid_ocr is not None and input_lineid is not None and lineid_ocr.lower() == input_lineid.lower())
-        if phone_ocr == input_phone and (lineid_match or lineid_ocr == "尚未設定"):
+        if normalize_phone(phone_ocr) == normalize_phone(input_phone) and (lineid_match or lineid_ocr == "尚未設定"):
             reply = (
                 f"📱 {record['phone']}\n"
                 f"🌸 暱稱：{record['name']}\n"
