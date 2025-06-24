@@ -11,7 +11,6 @@ import re
 import random
 import string
 import traceback
-from threading import Thread
 
 from models import Whitelist, Blacklist, Coupon
 from utils.draw_utils import draw_coupon, get_today_coupon_flex, has_drawn_today, save_coupon_record
@@ -390,89 +389,75 @@ def handle_image(event):
     if user_id not in temp_users or temp_users[user_id].get("step") != "waiting_screenshot":
         return
 
-    # 先回覆，避免 LINE 超時
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text="圖片收到，正在辨識，結果會稍後推播給您！")
-    )
+    if is_special_case(user_id):
+        record = temp_users[user_id]
+        reply = (
+            f"📱 {record['phone']}\n"
+            f"🌸 暱稱：{record['name']}\n"
+            f"       個人編號：待驗證後產生\n"
+            f"🔗 LINE ID：{record['line_id']}\n"
+            f"（此用戶經手動通過）\n"
+            f"請問以上資料是否正確？正確請回復 1\n"
+            f"⚠️輸入錯誤請從新輸入手機號碼即可⚠️"
+        )
+        record["step"] = "waiting_confirm"
+        temp_users[user_id] = record
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+        return
 
-    def ocr_and_push():
-        try:
-            message_content = line_bot_api.get_message_content(event.message.id)
-            image_path = f"/tmp/{user_id}_line_profile.png"
-            with open(image_path, 'wb') as fd:
-                for chunk in message_content.iter_content():
-                    fd.write(chunk)
+    message_content = line_bot_api.get_message_content(event.message.id)
+    image_path = f"/tmp/{user_id}_line_profile.png"
+    with open(image_path, 'wb') as fd:
+        for chunk in message_content.iter_content():
+            fd.write(chunk)
 
-            phone_ocr, lineid_ocr, ocr_text = extract_lineid_phone(image_path)
-            input_phone = temp_users[user_id].get("phone")
-            input_lineid = temp_users[user_id].get("line_id")
-            record = temp_users[user_id]
+    phone_ocr, lineid_ocr, ocr_text = extract_lineid_phone(image_path)
+    input_phone = temp_users[user_id].get("phone")
+    input_lineid = temp_users[user_id].get("line_id")
+    record = temp_users[user_id]
 
-            if is_special_case(user_id):
-                reply = (
-                    f"📱 {record['phone']}\n"
-                    f"🌸 暱稱：{record['name']}\n"
-                    f"       個人編號：待驗證後產生\n"
-                    f"🔗 LINE ID：{record['line_id']}\n"
-                    f"（此用戶經手動通過）\n"
-                    f"請問以上資料是否正確？正確請回復 1\n"
-                    f"⚠️輸入錯誤請從新輸入手機號碼即可⚠️"
-                )
-                record["step"] = "waiting_confirm"
-                temp_users[user_id] = record
-                line_bot_api.push_message(user_id, TextSendMessage(text=reply))
-                return
-
-            if input_lineid == "尚未設定":
-                if phone_ocr == input_phone:
-                    reply = (
-                        f"📱 {record['phone']}\n"
-                        f"🌸 暱稱：{record['name']}\n"
-                        f"       個人編號：待驗證後產生\n"
-                        f"🔗 LINE ID：尚未設定\n"
-                        f"請問以上資料是否正確？正確請回復 1\n"
-                        f"⚠️輸入錯誤請從新輸入手機號碼即可⚠️"
-                    )
-                    record["step"] = "waiting_confirm"
-                    temp_users[user_id] = record
-                    line_bot_api.push_message(user_id, TextSendMessage(text=reply))
-                else:
-                    line_bot_api.push_message(
-                        user_id,
-                        TextSendMessage(text="❌ 截圖中的手機號碼與您輸入的不符，請重新上傳正確的 LINE 個人頁面截圖。")
-                    )
-            else:
-                lineid_match = (lineid_ocr is not None and input_lineid is not None and lineid_ocr.lower() == input_lineid.lower())
-                if phone_ocr == input_phone and (lineid_match or lineid_ocr == "尚未設定"):
-                    reply = (
-                        f"📱 {record['phone']}\n"
-                        f"🌸 暱稱：{record['name']}\n"
-                        f"       個人編號：待驗證後產生\n"
-                        f"🔗 LINE ID：{record['line_id']}\n"
-                        f"請問以上資料是否正確？正確請回復 1\n"
-                        f"⚠️輸入錯誤請從新輸入手機號碼即可⚠️"
-                    )
-                    record["step"] = "waiting_confirm"
-                    temp_users[user_id] = record
-                    line_bot_api.push_message(user_id, TextSendMessage(text=reply))
-                else:
-                    line_bot_api.push_message(
-                        user_id,
-                        TextSendMessage(
-                            text=(
-                                "❌ 截圖中的手機號碼或 LINE ID 與您輸入的不符，請重新上傳正確的 LINE 個人頁面截圖。\n"
-                                f"【圖片偵測結果】手機:{phone_ocr or '未識別'}\nLINE ID:{lineid_ocr or '未識別'}"
-                            )
-                        )
-                    )
-        except Exception as e:
-            line_bot_api.push_message(
-                user_id,
-                TextSendMessage(text=f"❗ 圖片辨識過程發生錯誤，請稍後再試。錯誤訊息：{str(e)}")
+    if input_lineid == "尚未設定":
+        if phone_ocr == input_phone:
+            reply = (
+                f"📱 {record['phone']}\n"
+                f"🌸 暱稱：{record['name']}\n"
+                f"       個人編號：待驗證後產生\n"
+                f"🔗 LINE ID：尚未設定\n"
+                f"請問以上資料是否正確？正確請回復 1\n"
+                f"⚠️輸入錯誤請從新輸入手機號碼即可⚠️"
             )
-
-    Thread(target=ocr_and_push).start()
+            record["step"] = "waiting_confirm"
+            temp_users[user_id] = record
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+        else:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="❌ 截圖中的手機號碼與您輸入的不符，請重新上傳正確的 LINE 個人頁面截圖。")
+            )
+    else:
+        lineid_match = (lineid_ocr is not None and input_lineid is not None and lineid_ocr.lower() == input_lineid.lower())
+        if phone_ocr == input_phone and (lineid_match or lineid_ocr == "尚未設定"):
+            reply = (
+                f"📱 {record['phone']}\n"
+                f"🌸 暱稱：{record['name']}\n"
+                f"       個人編號：待驗證後產生\n"
+                f"🔗 LINE ID：{record['line_id']}\n"
+                f"請問以上資料是否正確？正確請回復 1\n"
+                f"⚠️輸入錯誤請從新輸入手機號碼即可⚠️"
+            )
+            record["step"] = "waiting_confirm"
+            temp_users[user_id] = record
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+        else:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(
+                    text=(
+                        "❌ 截圖中的手機號碼或 LINE ID 與您輸入的不符，請重新上傳正確的 LINE 個人頁面截圖。\n"
+                        f"【圖片偵測結果】手機:{phone_ocr or '未識別'}\nLINE ID:{lineid_ocr or '未識別'}"
+                    )
+                )
+            )
 
 @message_bp.route("/ocr", methods=["POST"])
 def ocr_image_verification():
