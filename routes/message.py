@@ -425,7 +425,30 @@ def handle_image(event):
     input_lineid = temp_users[user_id].get("line_id")
     record = temp_users[user_id]
 
-    # 使用 normalize_phone 比對
+    # ==== 新增：OCR與手動輸入完全吻合則自動通關 ====
+    if (
+        phone_ocr and lineid_ocr
+        and normalize_phone(phone_ocr) == normalize_phone(input_phone)
+        and input_lineid is not None and lineid_ocr.lower() == input_lineid.lower()
+    ):
+        tz = pytz.timezone("Asia/Taipei")
+        now = datetime.now(tz)
+        record["date"] = now.strftime("%Y-%m-%d")
+        whitelist_record, is_new = update_or_create_whitelist_from_data(record, user_id)
+        reply = (
+            f"📱 {record['phone']}\n"
+            f"🌸 暱稱：{record['name']}\n"
+            f"       個人編號：{whitelist_record.id}\n"
+            f"🔗 LINE ID：{record['line_id']}\n"
+            f"🕒 {whitelist_record.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
+            f"✅ 驗證成功，歡迎加入茗殿\n"
+            f"🌟 加入密碼：ming666"
+        )
+        line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_function_menu_flex()])
+        temp_users.pop(user_id, None)
+        return
+    # ==== END 新增區塊 ====
+
     if input_lineid == "尚未設定":
         if normalize_phone(phone_ocr) == normalize_phone(input_phone):
             reply = (
