@@ -20,7 +20,7 @@ db.init_app(app)
 
 # Blueprint 註冊
 app.register_blueprint(message_bp)
-app.register_blueprint(report_bp)
+# app.register_blueprint(report_bp)  # 已移除此行
 
 @app.route("/")
 def home():
@@ -33,4 +33,3 @@ def home():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
-
