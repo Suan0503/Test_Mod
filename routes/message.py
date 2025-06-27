@@ -283,17 +283,22 @@ def handle_message(event):
         return
 
     if user_text == "每日抽獎":
-        today_str = datetime.now(tz).strftime("%Y-%m-%d")
-        if has_drawn_today(user_id, Coupon):
-            coupon = Coupon.query.filter_by(line_user_id=user_id, date=today_str).first()
-            flex = get_today_coupon_flex(user_id, display_name, coupon.amount)
-            line_bot_api.reply_message(event.reply_token, flex)
-            return
-        amount = draw_coupon()
-        save_coupon_record(user_id, amount, Coupon, db)
-        flex = get_today_coupon_flex(user_id, display_name, amount)
+    # 先檢查是否已驗證（在白名單）
+    if not Whitelist.query.filter_by(line_user_id=user_id).first():
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 你尚未完成驗證，請先完成驗證才能參加每日抽獎！"))
+        return
+
+    today_str = datetime.now(tz).strftime("%Y-%m-%d")
+    if has_drawn_today(user_id, Coupon):
+        coupon = Coupon.query.filter_by(line_user_id=user_id, date=today_str).first()
+        flex = get_today_coupon_flex(user_id, display_name, coupon.amount)
         line_bot_api.reply_message(event.reply_token, flex)
         return
+    amount = draw_coupon()
+    save_coupon_record(user_id, amount, Coupon, db)
+    flex = get_today_coupon_flex(user_id, display_name, amount)
+    line_bot_api.reply_message(event.reply_token, flex)
+    return
 
     existing = Whitelist.query.filter_by(line_user_id=user_id).first()
     if existing:
