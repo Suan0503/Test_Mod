@@ -1,6 +1,7 @@
 from flask import Blueprint, request, abort, jsonify
 from extensions import line_bot_api, handler, db
 from models import Whitelist, Blacklist, Coupon, ReportArticle
+from linebot.models import (
     MessageEvent, TextMessage, FlexSendMessage, FollowEvent, ImageMessage, TextSendMessage
 )
 from linebot.exceptions import InvalidSignatureError
@@ -12,7 +13,6 @@ import random
 import string
 import traceback
 
-from models import Whitelist, Blacklist, Coupon
 from utils.draw_utils import draw_coupon, get_today_coupon_flex, has_drawn_today, save_coupon_record
 from utils.image_verification import extract_lineid_phone
 from utils.special_case import is_special_case
