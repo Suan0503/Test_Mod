@@ -16,6 +16,7 @@ from models import Whitelist, Blacklist, Coupon
 from utils.draw_utils import draw_coupon, get_today_coupon_flex, has_drawn_today, save_coupon_record
 from utils.image_verification import extract_lineid_phone
 from utils.special_case import is_special_case
+from utils.menu import get_menu_carousel
 
 message_bp = Blueprint('message', __name__)
 
@@ -38,69 +39,6 @@ def choose_link():
         "https://line.me/ti/p/AKRUvSCLRC"
     ]
     return group[hash(os.urandom(8)) % len(group)]
-
-def get_function_menu_flex():
-    return FlexSendMessage(
-        alt_text="功能選單",
-        contents={
-            "type": "bubble",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "spacing": "md",
-                "contents": [
-                    {"type": "text", "text": "✨ 功能選單 ✨", "weight": "bold", "size": "lg", "align": "center", "color": "#C97CFD"},
-                    {"type": "separator"},
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "margin": "lg",
-                        "spacing": "sm",
-                        "contents": [
-                            {
-                                "type": "button",
-                                "action": {"type": "message", "label": "📱 驗證資訊", "text": "驗證資訊"},
-                                "style": "primary",
-                                "color": "#FFB6B6"
-                            },
-                            {
-                                "type": "button",
-                                "action": {
-                                    "type": "uri",
-                                    "label": "📅 每日班表",
-                                    "uri": "https://t.me/+LaFZixvTaMY3ODA1"
-                                },
-                                "style": "secondary",
-                                "color": "#FFF8B7"
-                            },
-                            {
-                                "type": "button",
-                                "action": {"type": "message", "label": "🎁 每日抽獎", "text": "每日抽獎"},
-                                "style": "primary",
-                                "color": "#A3DEE6"
-                            },
-                            {
-                                "type": "button",
-                                "action": {"type": "uri", "label": "📬 預約諮詢", "uri": choose_link()},
-                                "style": "primary",
-                                "color": "#B889F2"
-                            },
-                            {
-                                "type": "button",
-                                "action": {
-                                    "type": "uri",
-                                    "label": "🌸 茗殿討論區",
-                                    "uri": "https://line.me/ti/g2/mq8VqBIVupL1lsIXuAulnqZNz5vw7VKrVYjNDg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default"
-                                },
-                                "style": "primary",
-                                "color": "#FFDCFF"
-                            }
-                        ]
-                    }
-                ]
-            }
-        }
-    )
 
 def update_or_create_whitelist_from_data(data, user_id=None):
     existing = Whitelist.query.filter_by(phone=data["phone"]).first()
@@ -177,6 +115,11 @@ def handle_message(event):
     tz = pytz.timezone("Asia/Taipei")
     profile = line_bot_api.get_profile(user_id)
     display_name = profile.display_name
+
+    # 主選單指令
+    if user_text in ["主選單", "功能選單", "選單", "menu", "Menu"]:
+        line_bot_api.reply_message(event.reply_token, get_menu_carousel())
+        return
 
     # === 手動驗證 - 僅限管理員流程 ===
     if user_text.startswith("手動驗證 - "):
@@ -277,7 +220,7 @@ def handle_message(event):
                 f"✅ 驗證成功，歡迎加入茗殿\n"
                 f"🌟 加入密碼：ming666"
             )
-            line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_function_menu_flex()])
+            line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_menu_carousel()])
         else:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 你尚未完成驗證，請輸入手機號碼進行驗證。"))
         return
@@ -313,7 +256,7 @@ def handle_message(event):
                 f"✅ 驗證成功，歡迎加入茗殿\n"
                 f"🌟 加入密碼：ming666"
             )
-            line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_function_menu_flex()])
+            line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_menu_carousel()])
         else:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 你已驗證完成，請輸入手機號碼查看驗證資訊"))
         return
@@ -393,7 +336,7 @@ def handle_message(event):
                 f"✅ 你的資料已補全，歡迎加入茗殿\n"
                 f"🌟 加入密碼：ming666"
             )
-        line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_function_menu_flex()])
+        line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_menu_carousel()])
         temp_users.pop(user_id)
         return
 
@@ -449,7 +392,7 @@ def handle_image(event):
             f"✅ 驗證成功，歡迎加入茗殿\n"
             f"🌟 加入密碼：ming666"
         )
-        line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_function_menu_flex()])
+        line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_menu_carousel()])
         temp_users.pop(user_id, None)
         return
     # ==== END 新增區塊 ====
