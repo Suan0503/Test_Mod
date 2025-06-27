@@ -138,6 +138,15 @@ def update_or_create_whitelist_from_data(data, user_id=None):
         db.session.commit()
         return new_user, True
 
+def normalize_phone(phone):
+    """將手機號碼轉為09開頭格式"""
+    phone = (phone or "").replace(" ", "").replace("-", "")
+    if phone.startswith("+8869"):
+        return "0" + phone[4:]
+    if phone.startswith("+886"):
+        return "0" + phone[4:]
+    return phone
+
 @message_bp.route("/callback", methods=["POST"])
 def callback():
     signature = request.headers.get("X-Line-Signature")
@@ -274,6 +283,11 @@ def handle_message(event):
         return
 
     if user_text == "每日抽獎":
+        # 先檢查是否已驗證（在白名單）
+        if not Whitelist.query.filter_by(line_user_id=user_id).first():
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 你尚未完成驗證，請先完成驗證才能參加每日抽獎！"))
+            return
+
         today_str = datetime.now(tz).strftime("%Y-%m-%d")
         if has_drawn_today(user_id, Coupon):
             coupon = Coupon.query.filter_by(line_user_id=user_id, date=today_str).first()
@@ -288,7 +302,7 @@ def handle_message(event):
 
     existing = Whitelist.query.filter_by(line_user_id=user_id).first()
     if existing:
-        if user_text == existing.phone:
+        if normalize_phone(user_text) == normalize_phone(existing.phone):
             tz = pytz.timezone("Asia/Taipei")
             reply = (
                 f"📱 {existing.phone}\n"
@@ -322,7 +336,7 @@ def handle_message(event):
             event.reply_token,
             [
                 TextSendMessage(text="📱 手機已登記囉～請接著輸入您的 LINE ID"),
-                TextSendMessage(text="若您有設定 LINE ID → ✅ 直接輸入即可\n若尚未設定 ID → 請輸入：「尚未設定」\n若您的 LINE ID 是手機號碼本身（例如 09xxxxxxxx）→ 請在開頭加上「ID」兩個字")
+                TextSendMessage(text="若您有設定 LINE ID → ✅ 直接輸入即可\n若尚未設定 ID → 請輸入：「尚未設定」\n若您的 LINE ID 是手機號碼本身（例如 09xxxx...），請直接輸入。")
             ]
         )
         return
@@ -416,8 +430,32 @@ def handle_image(event):
     input_lineid = temp_users[user_id].get("line_id")
     record = temp_users[user_id]
 
+    # ==== 新增：OCR與手動輸入完全吻合則自動通關 ====
+    if (
+        phone_ocr and lineid_ocr
+        and normalize_phone(phone_ocr) == normalize_phone(input_phone)
+        and input_lineid is not None and lineid_ocr.lower() == input_lineid.lower()
+    ):
+        tz = pytz.timezone("Asia/Taipei")
+        now = datetime.now(tz)
+        record["date"] = now.strftime("%Y-%m-%d")
+        whitelist_record, is_new = update_or_create_whitelist_from_data(record, user_id)
+        reply = (
+            f"📱 {record['phone']}\n"
+            f"🌸 暱稱：{record['name']}\n"
+            f"       個人編號：{whitelist_record.id}\n"
+            f"🔗 LINE ID：{record['line_id']}\n"
+            f"🕒 {whitelist_record.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
+            f"✅ 驗證成功，歡迎加入茗殿\n"
+            f"🌟 加入密碼：ming666"
+        )
+        line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_function_menu_flex()])
+        temp_users.pop(user_id, None)
+        return
+    # ==== END 新增區塊 ====
+
     if input_lineid == "尚未設定":
-        if phone_ocr == input_phone:
+        if normalize_phone(phone_ocr) == normalize_phone(input_phone):
             reply = (
                 f"📱 {record['phone']}\n"
                 f"🌸 暱稱：{record['name']}\n"
@@ -436,7 +474,7 @@ def handle_image(event):
             )
     else:
         lineid_match = (lineid_ocr is not None and input_lineid is not None and lineid_ocr.lower() == input_lineid.lower())
-        if phone_ocr == input_phone and (lineid_match or lineid_ocr == "尚未設定"):
+        if normalize_phone(phone_ocr) == normalize_phone(input_phone) and (lineid_match or lineid_ocr == "尚未設定"):
             reply = (
                 f"📱 {record['phone']}\n"
                 f"🌸 暱稱：{record['name']}\n"
