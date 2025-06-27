@@ -1,7 +1,6 @@
 from linebot.models import FlexSendMessage
 
 def get_menu_carousel():
-    # 分成兩頁，每頁五個按鈕，共 10 個按鈕（可自行調整 label/text/uri）
     bubbles = []
 
     # 第一頁
