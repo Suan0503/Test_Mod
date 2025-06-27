@@ -6,6 +6,7 @@ load_dotenv()
 
 from extensions import db
 from routes.message import message_bp
+from routes.report_article import report_bp  # 回報文藍圖
 
 app = Flask(__name__)
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -17,6 +18,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 
 app.register_blueprint(message_bp)
+app.register_blueprint(report_bp)  # 註冊回報文功能
 
 @app.route("/")
 def home():
