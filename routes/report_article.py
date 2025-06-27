@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import pytz
 
 ADMIN_USER_IDS = [
-    "U2bcd63000805da076721eb62872bc39f",  # 換成你的管理員 LINE ID
+    "Uea1646aa1a57861c85270d846aaee0eb",  # 換成你的管理員 LINE ID
 ]
 
 report_bp = Blueprint('report', __name__)
