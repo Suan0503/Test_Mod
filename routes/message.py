@@ -1,6 +1,5 @@
 from flask import Blueprint, request, abort, jsonify
 from extensions import line_bot_api, handler, db
-from models import Whitelist, Blacklist, Coupon, ReportArticle
 from linebot.models import (
     MessageEvent, TextMessage, FlexSendMessage, FollowEvent, ImageMessage, TextSendMessage
 )
@@ -13,10 +12,12 @@ import random
 import string
 import traceback
 
+from models import Whitelist, Blacklist, Coupon
 from utils.draw_utils import draw_coupon, get_today_coupon_flex, has_drawn_today, save_coupon_record
 from utils.image_verification import extract_lineid_phone
 from utils.special_case import is_special_case
 from utils.menu import get_menu_carousel
+from utils.temp_users import temp_users, manual_verify_pending  # 建議從這裡 import
 
 message_bp = Blueprint('message', __name__)
 
@@ -25,9 +26,6 @@ ADMIN_IDS = [
     "U5ce6c382d12eaea28d98f2d48673b4b8",
     "U8f3cc921a9dd18d3e257008a34dd07c1",
 ]
-
-temp_users = {}
-manual_verify_pending = {}
 
 def generate_verify_code(length=8):
     return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
