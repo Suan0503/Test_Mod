@@ -1,4 +1,5 @@
-from models import db, Whitelist
+from extensions import db
+from models import Whitelist
 from datetime import datetime
 
 def update_or_create_whitelist_from_data(data, user_id=None):
