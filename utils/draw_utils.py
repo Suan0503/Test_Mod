@@ -1,65 +1,45 @@
-import random
+from models import db, Whitelist
 from datetime import datetime
-from pytz import timezone
-from linebot.models import FlexSendMessage
 
-def draw_coupon():
-    chance = random.random()
-    if chance < 0.02:
-        return 300
-    elif chance < 0.06:
-        return 200
-    elif chance < 0.40:
-        return 100
+def update_or_create_whitelist_from_data(data, user_id=None):
+    """
+    用戶手機號碼重複時，直接補齊原本缺的欄位，不會覆蓋已填寫的舊值。若無則新增。
+    :param data: dict, 包含 phone、name、line_id、reason、date 等欄位
+    :param user_id: LINE 用戶 id
+    :return: (record, is_new) -> record: Whitelist 物件, is_new: 是否新建
+    """
+    existing = Whitelist.query.filter_by(phone=data["phone"]).first()
+    need_commit = False
+    if existing:
+        # 只補空的欄位，不覆蓋已存在的值
+        if data.get("name") and not existing.name:
+            existing.name = data["name"]
+            need_commit = True
+        if data.get("line_id") and not existing.line_id:
+            existing.line_id = data["line_id"]
+            need_commit = True
+        if user_id and not existing.line_user_id:
+            existing.line_user_id = user_id
+            need_commit = True
+        if data.get("reason") and not existing.reason:
+            existing.reason = data["reason"]
+            need_commit = True
+        if data.get("date") and not existing.date:
+            existing.date = data["date"]
+            need_commit = True
+        if need_commit:
+            db.session.commit()
+        return existing, False  # False 代表覆寫
     else:
-        return 0
-
-def has_drawn_today(user_id, CouponModel):
-    tz = timezone("Asia/Taipei")
-    today = datetime.now(tz).date()
-    return CouponModel.query.filter_by(line_user_id=user_id, date=str(today)).first()
-
-def save_coupon_record(user_id, amount, CouponModel, db):
-    tz = timezone("Asia/Taipei")
-    today = datetime.now(tz).date()
-    new_coupon = CouponModel(
-        line_user_id=user_id,
-        amount=amount,
-        date=str(today),
-        created_at=datetime.now(tz)
-    )
-    db.session.add(new_coupon)
-    db.session.commit()
-    return new_coupon
-
-def get_today_coupon_flex(user_id, display_name, amount):
-    now = datetime.now(timezone("Asia/Taipei"))
-    today_str = now.strftime("%Y/%m/%d")
-    emoji_date = f"📅 {now.strftime('%m/%d')}"
-    expire_time = "23:59"
-    if amount == 0:
-        text = "很可惜沒中獎呢～明天再試試看吧🌙"
-        color = "#999999"
-    else:
-        text = f"🎁 恭喜你抽中 {amount} 元折價券"
-        color = "#FF9900"
-    return FlexSendMessage(
-        alt_text="每日抽獎結果",
-        contents={
-            "type": "bubble",
-            "size": "mega",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "spacing": "md",
-                "contents": [
-                    {"type": "text", "text": emoji_date, "weight": "bold", "size": "lg"},
-                    {"type": "text", "text": f"用戶：{display_name}", "size": "sm", "color": "#888888"},
-                    {"type": "text", "text": f"日期：{today_str}", "size": "sm", "color": "#888888"},
-                    {"type": "separator"},
-                    {"type": "text", "text": text, "size": "xl", "weight": "bold", "color": color, "align": "center", "margin": "md"},
-                    {"type": "text", "text": f"🕒 有效至：今日 {expire_time}", "size": "sm", "color": "#999999", "align": "center"}
-                ]
-            }
-        }
-    )
+        new_user = Whitelist(
+            phone=data["phone"],
+            name=data.get("name"),
+            line_id=data.get("line_id"),
+            line_user_id=user_id if user_id else data.get("line_user_id"),
+            reason=data.get("reason"),
+            date=data.get("date"),
+            created_at=datetime.utcnow()
+        )
+        db.session.add(new_user)
+        db.session.commit()
+        return new_user, True  # True 代表新建
