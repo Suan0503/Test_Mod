@@ -6,7 +6,6 @@ load_dotenv()
 
 from extensions import db
 from routes.message import message_bp
-from routes.report_article import report_bp  # 回報文藍圖
 
 app = Flask(__name__)
 
