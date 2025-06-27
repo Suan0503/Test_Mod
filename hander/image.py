@@ -2,7 +2,7 @@ from linebot.models import MessageEvent, ImageMessage, TextSendMessage
 from extensions import handler, line_bot_api
 from utils.image_verification import extract_lineid_phone
 from utils.special_case import is_special_case
-from utils.temp_users import temp_users  # 建議將 temp_users 移到 utils/temp_users.py
+from utils.temp_users import temp_users  # 請在 utils/temp_users.py 定義 temp_users 字典
 
 import os
 
