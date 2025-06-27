@@ -1,7 +1,6 @@
 from flask import Blueprint, request, abort, jsonify
 from extensions import db
 from models import ReportArticle, Whitelist
-from models.report_article import ReportArticle
 from utils.report_approve_flex import get_admin_approve_flex
 from datetime import datetime, timedelta
 import pytz
