@@ -1,6 +1,6 @@
 from flask import Blueprint, request, abort, jsonify
 from extensions import line_bot_api, handler, db
-from linebot.models import (
+from models import Whitelist, Blacklist, Coupon, ReportArticle
     MessageEvent, TextMessage, FlexSendMessage, FollowEvent, ImageMessage, TextSendMessage
 )
 from linebot.exceptions import InvalidSignatureError
