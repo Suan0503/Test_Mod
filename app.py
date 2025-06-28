@@ -6,10 +6,10 @@ load_dotenv()
 
 from extensions import db
 from routes.message import message_bp
+from routes.report import report_bp
 
 app = Flask(__name__)
 
-# 資料庫連線字串轉換（Heroku/Railway 相容性處理）
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
@@ -20,7 +20,7 @@ db.init_app(app)
 
 # Blueprint 註冊
 app.register_blueprint(message_bp)
-# app.register_blueprint(report_bp)  # 已移除此行
+app.register_blueprint(report_bp)
 
 @app.route("/")
 def home():
