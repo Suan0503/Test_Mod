@@ -17,17 +17,9 @@ from utils.draw_utils import draw_coupon, get_today_coupon_flex, has_drawn_today
 from utils.image_verification import extract_lineid_phone
 from utils.special_case import is_special_case
 from utils.menu import get_menu_carousel
+from storage import ADMIN_IDS, temp_users, manual_verify_pending  # 這行請務必加上
 
 message_bp = Blueprint('message', __name__)
-
-ADMIN_IDS = [
-    "U2bcd63000805da076721eb62872bc39f",
-    "U5ce6c382d12eaea28d98f2d48673b4b8",
-    "U8f3cc921a9dd18d3e257008a34dd07c1",
-]
-
-temp_users = {}
-manual_verify_pending = {}
 
 def generate_verify_code(length=8):
     return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
@@ -119,6 +111,17 @@ def handle_message(event):
     # 主選單指令
     if user_text in ["主選單", "功能選單", "選單", "menu", "Menu"]:
         line_bot_api.reply_message(event.reply_token, get_menu_carousel())
+        return
+
+    # === 呼叫管理員功能 ===
+    if user_text in ["呼叫管理員", "聯絡管理員", "聯繫管理員", "找管理員"]:
+        notify_text = f"【用戶呼叫管理員】\n暱稱：{display_name}\n用戶ID：{user_id}\n訊息：{user_text}"
+        for admin_id in ADMIN_IDS:
+            try:
+                line_bot_api.push_message(admin_id, TextSendMessage(text=notify_text))
+            except Exception as e:
+                print(f"推播給管理員 {admin_id} 失敗：", e)
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="✅ 已通知管理員，請稍候協助！"))
         return
 
     # === 手動驗證 - 僅限管理員流程 ===
