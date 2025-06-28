@@ -79,15 +79,15 @@ def get_menu_carousel():
                         },
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "📖 查詢規則", "text": "規則查詢"},
+                            "action": {"type": "message", "label": "🛎️ 呼叫管理員", "text": "呼叫管理員"},
                             "style": "secondary",
-                            "color": "#C8C6A7"
+                            "color": "#B1E1FF"
                         },
                         {
                             "type": "button",
-                            "action": {"type": "uri", "label": "🛎️ 客服中心", "uri": "https://lin.ee/xxx"},
+                            "action": {"type": "message", "label": "📖 查詢規則", "text": "規則查詢"},
                             "style": "secondary",
-                            "color": "#B1E1FF"
+                            "color": "#C8C6A7"
                         },
                         {
                             "type": "button",
