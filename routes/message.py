@@ -17,7 +17,7 @@ from utils.draw_utils import draw_coupon, get_today_coupon_flex, has_drawn_today
 from utils.image_verification import extract_lineid_phone
 from utils.special_case import is_special_case
 from utils.menu import get_menu_carousel
-from storage import ADMIN_IDS, temp_users, manual_verify_pending  # 這行請務必加上
+from storage import ADMIN_IDS, temp_users, manual_verify_pending
 
 message_bp = Blueprint('message', __name__)
 
@@ -105,8 +105,12 @@ def handle_message(event):
     user_id = event.source.user_id
     user_text = event.message.text.strip()
     tz = pytz.timezone("Asia/Taipei")
-    profile = line_bot_api.get_profile(user_id)
-    display_name = profile.display_name
+    try:
+        profile = line_bot_api.get_profile(user_id)
+        display_name = profile.display_name
+    except Exception as e:
+        print(f"取得用戶 {user_id} profile 失敗：{e}")
+        display_name = "用戶"
 
     # 主選單指令
     if user_text in ["主選單", "功能選單", "選單", "menu", "Menu"]:
@@ -115,13 +119,39 @@ def handle_message(event):
 
     # === 呼叫管理員功能 ===
     if user_text in ["呼叫管理員", "聯絡管理員", "聯繫管理員", "找管理員"]:
-        notify_text = f"【用戶呼叫管理員】\n暱稱：{display_name}\n用戶ID：{user_id}\n訊息：{user_text}"
+        wl = Whitelist.query.filter_by(line_user_id=user_id).first()
+        user_number = wl.id if wl else ""
+        user_lineid = wl.line_id if wl else ""
+        notify_text = (
+            f"【用戶呼叫管理員】\n"
+            f"暱稱：{display_name}\n"
+            f"用戶編號：{user_number}\n"
+            f"LINE ID：{user_lineid}\n"
+            f"訊息：{user_text}\n\n"
+            f"➡️ 若要私訊此用戶，請輸入：/msg {user_id} 你的回覆內容"
+        )
         for admin_id in ADMIN_IDS:
             try:
                 line_bot_api.push_message(admin_id, TextSendMessage(text=notify_text))
             except Exception as e:
                 print(f"推播給管理員 {admin_id} 失敗：", e)
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text="✅ 已通知管理員，請稍候協助！"))
+        return
+
+    # === 管理員私訊用戶：/msg <user_id> <內容> ===
+    if user_id in ADMIN_IDS and user_text.startswith("/msg "):
+        try:
+            parts = user_text.split(" ", 2)
+            if len(parts) < 3:
+                line_bot_api.reply_message(event.reply_token, TextSendMessage(text="格式錯誤，請用 /msg <user_id> <內容>"))
+                return
+            target_user_id = parts[1].strip()
+            msg = parts[2].strip()
+            line_bot_api.push_message(target_user_id, TextSendMessage(text=f"【管理員回覆】\n{msg}"))
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="已發送訊息給用戶"))
+        except Exception as e:
+            print("管理員私訊失敗：", e)
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="發送失敗，請檢查 user_id 是否正確"))
         return
 
     # === 手動驗證 - 僅限管理員流程 ===
@@ -229,7 +259,6 @@ def handle_message(event):
         return
 
     if user_text == "每日抽獎":
-        # 先檢查是否已驗證（在白名單）
         if not Whitelist.query.filter_by(line_user_id=user_id).first():
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 你尚未完成驗證，請先完成驗證才能參加每日抽獎！"))
             return
@@ -282,7 +311,14 @@ def handle_message(event):
             event.reply_token,
             [
                 TextSendMessage(text="📱 手機已登記囉～請接著輸入您的 LINE ID"),
-                TextSendMessage(text="若您有設定 LINE ID → ✅ 直接輸入即可\n若尚未設定 ID → 請輸入：「尚未設定」\n若您的 LINE ID 是手機號碼本身（例如 09xxxx...），請直接輸入。")
+                TextSendMessage(
+                    text=(
+                        "若您有設定 LINE ID → ✅ 直接輸入即可\n"
+                        "若尚未設定 ID → 請輸入：「尚未設定」\n"
+                        "若您的 LINE ID 是手機號碼本身（例如 09xxxxxxxx）→ 請在開頭加上「ID」兩個字\n"
+                        "例如：ID 0912345678"
+                    )
+                )
             ]
         )
         return
@@ -290,12 +326,17 @@ def handle_message(event):
     if user_id in temp_users and temp_users[user_id].get("step", "waiting_lineid") == "waiting_lineid" and len(user_text) >= 2:
         record = temp_users[user_id]
         input_lineid = user_text.strip()
-        if input_lineid.lower().startswith("id") and len(input_lineid) >= 11:
+        if input_lineid.lower().startswith("id"):
             phone_candidate = re.sub(r"[^\d]", "", input_lineid)
-            if len(phone_candidate) == 10 and phone_candidate.startswith("09"):
+            # 必須有 ID+空白+09xxxxxxxx 共至少12字元
+            if re.match(r"^id\s*09\d{8}$", input_lineid.lower().replace(" ", "")):
                 record["line_id"] = phone_candidate
             else:
-                record["line_id"] = input_lineid
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text="❌ 請輸入正確格式：ID 09xxxxxxxx（例如：ID 0912345678）")
+                )
+                return
         elif input_lineid in ["尚未設定", "無ID", "無", "沒有", "未設定"]:
             record["line_id"] = "尚未設定"
         else:
@@ -376,7 +417,6 @@ def handle_image(event):
     input_lineid = temp_users[user_id].get("line_id")
     record = temp_users[user_id]
 
-    # ==== 新增：OCR與手動輸入完全吻合則自動通關 ====
     if (
         phone_ocr and lineid_ocr
         and normalize_phone(phone_ocr) == normalize_phone(input_phone)
@@ -398,7 +438,6 @@ def handle_image(event):
         line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_menu_carousel()])
         temp_users.pop(user_id, None)
         return
-    # ==== END 新增區塊 ====
 
     if input_lineid == "尚未設定":
         if normalize_phone(phone_ocr) == normalize_phone(input_phone):
