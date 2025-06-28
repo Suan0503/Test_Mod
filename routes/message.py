@@ -102,287 +102,291 @@ def handle_follow(event):
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    user_id = event.source.user_id
-    user_text = event.message.text.strip()
-    tz = pytz.timezone("Asia/Taipei")
     try:
-        profile = line_bot_api.get_profile(user_id)
-        display_name = profile.display_name
-    except Exception as e:
-        print(f"取得用戶 {user_id} profile 失敗：{e}")
-        display_name = "用戶"
-
-    # 主選單指令
-    if user_text in ["主選單", "功能選單", "選單", "menu", "Menu"]:
-        line_bot_api.reply_message(event.reply_token, get_menu_carousel())
-        return
-
-    # === 呼叫管理員功能 ===
-    if user_text in ["呼叫管理員", "聯絡管理員", "聯繫管理員", "找管理員"]:
-        wl = Whitelist.query.filter_by(line_user_id=user_id).first()
-        user_number = wl.id if wl else ""
-        user_lineid = wl.line_id if wl else ""
-        notify_text = (
-            f"【用戶呼叫管理員】\n"
-            f"暱稱：{display_name}\n"
-            f"用戶編號：{user_number}\n"
-            f"LINE ID：{user_lineid}\n"
-            f"訊息：{user_text}\n\n"
-            f"➡️ 若要私訊此用戶，請輸入：/msg {user_id} 你的回覆內容"
-        )
-        for admin_id in ADMIN_IDS:
-            try:
-                line_bot_api.push_message(admin_id, TextSendMessage(text=notify_text))
-            except Exception as e:
-                print(f"推播給管理員 {admin_id} 失敗：", e)
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="✅ 已通知管理員，請稍候協助！"))
-        return
-
-    # === 管理員私訊用戶：/msg <user_id> <內容> ===
-    if user_id in ADMIN_IDS and user_text.startswith("/msg "):
+        user_id = event.source.user_id
+        user_text = event.message.text.strip()
+        tz = pytz.timezone("Asia/Taipei")
         try:
-            parts = user_text.split(" ", 2)
-            if len(parts) < 3:
-                line_bot_api.reply_message(event.reply_token, TextSendMessage(text="格式錯誤，請用 /msg <user_id> <內容>"))
-                return
-            target_user_id = parts[1].strip()
-            msg = parts[2].strip()
-            line_bot_api.push_message(target_user_id, TextSendMessage(text=f"【管理員回覆】\n{msg}"))
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="已發送訊息給用戶"))
+            profile = line_bot_api.get_profile(user_id)
+            display_name = profile.display_name
         except Exception as e:
-            print("管理員私訊失敗：", e)
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="發送失敗，請檢查 user_id 是否正確"))
-        return
+            print(f"取得用戶 {user_id} profile 失敗：{e}")
+            display_name = "用戶"
 
-    # === 手動驗證 - 僅限管理員流程 ===
-    if user_text.startswith("手動驗證 - "):
-        if user_id not in ADMIN_IDS:
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 只有管理員可使用此功能"))
-            return
-        parts = user_text.split(" - ", 1)
-        if len(parts) == 2:
-            temp_users[user_id] = {"manual_step": "wait_lineid", "name": parts[1]}
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入該用戶的 LINE ID"))
-        else:
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="格式錯誤，請用：手動驗證 - 暱稱"))
-        return
-
-    if user_id in temp_users and temp_users[user_id].get("manual_step") == "wait_lineid":
-        temp_users[user_id]['line_id'] = user_text
-        temp_users[user_id]['manual_step'] = "wait_phone"
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入該用戶的手機號碼"))
-        return
-
-    if user_id in temp_users and temp_users[user_id].get("manual_step") == "wait_phone":
-        temp_users[user_id]['phone'] = user_text
-        code = generate_verify_code()
-        manual_verify_pending[code] = {
-            'name': temp_users[user_id]['name'],
-            'line_id': temp_users[user_id]['line_id'],
-            'phone': temp_users[user_id]['phone'],
-            'step': 'wait_user_input'
-        }
-        del temp_users[user_id]
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=f"驗證碼產生：{code}\n請將此8位驗證碼自行輸入聊天室")
-        )
-        return
-
-    if len(user_text) == 8 and user_text in manual_verify_pending:
-        record = manual_verify_pending[user_text]
-        temp_users[user_id] = {
-            "manual_step": "wait_confirm",
-            "name": record['name'],
-            "line_id": record['line_id'],
-            "phone": record['phone'],
-            "verify_code": user_text
-        }
-        reply = (
-            f"📱 手機號碼：{record['phone']}\n"
-            f"🌸 暱稱：{record['name']}\n"
-            f"       個人編號：待驗證後產生\n"
-            f"🔗 LINE ID：{record['line_id']}\n"
-            f"（此用戶為手動通過）\n"
-            f"請問以上資料是否正確？正確請回復 1\n"
-            f"⚠️輸入錯誤請從新輸入手機號碼即可⚠️"
-        )
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
-        manual_verify_pending.pop(user_text, None)
-        return
-
-    if user_id in temp_users and temp_users[user_id].get("manual_step") == "wait_confirm" and user_text == "1":
-        data = temp_users[user_id]
-        now = datetime.now(tz)
-        data["date"] = now.strftime("%Y-%m-%d")
-        record, is_new = update_or_create_whitelist_from_data(data, user_id)
-        if is_new:
-            reply = (
-                f"📱 手機號碼：{data['phone']}\n"
-                f"🌸 暱稱：{data['name']}\n"
-                f"       個人編號：{record.id}\n"
-                f"🔗 LINE ID：{data['line_id']}\n"
-                f"✅ 驗證成功，歡迎加入茗殿"
-            )
-        else:
-            reply = (
-                f"📱 手機號碼：{record.phone}\n"
-                f"🌸 暱稱：{record.name or data.get('name')}\n"
-                f"       個人編號：{record.id}\n"
-                f"🔗 LINE ID：{record.line_id or data.get('line_id')}\n"
-                f"✅ 你的資料已補全，歡迎加入茗殿"
-            )
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
-        temp_users.pop(user_id)
-        return
-
-    if user_text == "手動通過":
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 此功能已關閉"))
-        return
-
-    if user_text == "驗證資訊":
-        existing = Whitelist.query.filter_by(line_user_id=user_id).first()
-        if existing:
-            tz = pytz.timezone("Asia/Taipei")
-            reply = (
-                f"📱 {existing.phone}\n"
-                f"🌸 暱稱：{existing.name or display_name}\n"
-                f"       個人編號：{existing.id}\n"
-                f"🔗 LINE ID：{existing.line_id or '未登記'}\n"
-                f"🕒 {existing.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
-                f"✅ 驗證成功，歡迎加入茗殿\n"
-                f"🌟 加入密碼：ming666"
-            )
-            line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_menu_carousel()])
-        else:
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 你尚未完成驗證，請輸入手機號碼進行驗證。"))
-        return
-
-    if user_text == "每日抽獎":
-        if not Whitelist.query.filter_by(line_user_id=user_id).first():
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 你尚未完成驗證，請先完成驗證才能參加每日抽獎！"))
+        # 主選單指令
+        if user_text in ["主選單", "功能選單", "選單", "menu", "Menu"]:
+            line_bot_api.reply_message(event.reply_token, get_menu_carousel())
             return
 
-        today_str = datetime.now(tz).strftime("%Y-%m-%d")
-        if has_drawn_today(user_id, Coupon):
-            coupon = Coupon.query.filter_by(line_user_id=user_id, date=today_str).first()
-            flex = get_today_coupon_flex(user_id, display_name, coupon.amount)
-            line_bot_api.reply_message(event.reply_token, flex)
-            return
-        amount = draw_coupon()
-        save_coupon_record(user_id, amount, Coupon, db)
-        flex = get_today_coupon_flex(user_id, display_name, amount)
-        line_bot_api.reply_message(event.reply_token, flex)
-        return
-
-    existing = Whitelist.query.filter_by(line_user_id=user_id).first()
-    if existing:
-        if normalize_phone(user_text) == normalize_phone(existing.phone):
-            tz = pytz.timezone("Asia/Taipei")
-            reply = (
-                f"📱 {existing.phone}\n"
-                f"🌸 暱稱：{existing.name or display_name}\n"
-                f"       個人編號：{existing.id}\n"
-                f"🔗 LINE ID：{existing.line_id or '未登記'}\n"
-                f"🕒 {existing.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
-                f"✅ 驗證成功，歡迎加入茗殿\n"
-                f"🌟 加入密碼：ming666"
+        # === 呼叫管理員功能 ===
+        if user_text in ["呼叫管理員", "聯絡管理員", "聯繫管理員", "找管理員"]:
+            wl = Whitelist.query.filter_by(line_user_id=user_id).first()
+            user_number = wl.id if wl else ""
+            user_lineid = wl.line_id if wl else ""
+            notify_text = (
+                f"【用戶呼叫管理員】\n"
+                f"暱稱：{display_name}\n"
+                f"用戶編號：{user_number}\n"
+                f"LINE ID：{user_lineid}\n"
+                f"訊息：{user_text}\n\n"
+                f"➡️ 若要私訊此用戶，請輸入：/msg {user_id} 你的回覆內容"
             )
-            line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_menu_carousel()])
-        else:
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 你已驗證完成，請輸入手機號碼查看驗證資訊"))
-        return
-
-    if re.match(r"^09\d{8}$", user_text):
-        black = Blacklist.query.filter_by(phone=user_text).first()
-        if black:
+            for admin_id in ADMIN_IDS:
+                try:
+                    line_bot_api.push_message(admin_id, TextSendMessage(text=notify_text))
+                except Exception as e:
+                    print(f"推播給管理員 {admin_id} 失敗：", e)
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="✅ 已通知管理員，請稍候協助！"))
             return
-        repeated = Whitelist.query.filter_by(phone=user_text).first()
-        data = {"phone": user_text, "name": display_name}
-        if repeated and repeated.line_user_id:
-            update_or_create_whitelist_from_data(data)
+
+        # === 管理員私訊用戶：/msg <user_id> <內容> ===
+        if user_id in ADMIN_IDS and user_text.startswith("/msg "):
+            try:
+                parts = user_text.split(" ", 2)
+                if len(parts) < 3:
+                    line_bot_api.reply_message(event.reply_token, TextSendMessage(text="格式錯誤，請用 /msg <user_id> <內容>"))
+                    return
+                target_user_id = parts[1].strip()
+                msg = parts[2].strip()
+                line_bot_api.push_message(target_user_id, TextSendMessage(text=f"【管理員回覆】\n{msg}"))
+                line_bot_api.reply_message(event.reply_token, TextSendMessage(text="已發送訊息給用戶"))
+            except Exception as e:
+                print("管理員私訊失敗：", e)
+                line_bot_api.reply_message(event.reply_token, TextSendMessage(text="發送失敗，請檢查 user_id 是否正確"))
+            return
+
+        # === 手動驗證 - 僅限管理員流程 ===
+        if user_text.startswith("手動驗證 - "):
+            if user_id not in ADMIN_IDS:
+                line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 只有管理員可使用此功能"))
+                return
+            parts = user_text.split(" - ", 1)
+            if len(parts) == 2:
+                temp_users[user_id] = {"manual_step": "wait_lineid", "name": parts[1]}
+                line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入該用戶的 LINE ID"))
+            else:
+                line_bot_api.reply_message(event.reply_token, TextSendMessage(text="格式錯誤，請用：手動驗證 - 暱稱"))
+            return
+
+        if user_id in temp_users and temp_users[user_id].get("manual_step") == "wait_lineid":
+            temp_users[user_id]['line_id'] = user_text
+            temp_users[user_id]['manual_step'] = "wait_phone"
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入該用戶的手機號碼"))
+            return
+
+        if user_id in temp_users and temp_users[user_id].get("manual_step") == "wait_phone":
+            temp_users[user_id]['phone'] = user_text
+            code = generate_verify_code()
+            manual_verify_pending[code] = {
+                'name': temp_users[user_id]['name'],
+                'line_id': temp_users[user_id]['line_id'],
+                'phone': temp_users[user_id]['phone'],
+                'step': 'wait_user_input'
+            }
+            del temp_users[user_id]
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(text="⚠️ 此手機號碼已被使用，已補全缺失資料。")
+                TextSendMessage(text=f"驗證碼產生：{code}\n請將此8位驗證碼自行輸入聊天室")
             )
             return
-        temp_users[user_id] = {"phone": user_text, "name": display_name, "step": "waiting_lineid"}
-        line_bot_api.reply_message(
-            event.reply_token,
-            [
-                TextSendMessage(text="📱 手機已登記囉～請接著輸入您的 LINE ID"),
-                TextSendMessage(
-                    text=(
-                        "若您有設定 LINE ID → ✅ 直接輸入即可\n"
-                        "若尚未設定 ID → 請輸入：「尚未設定」\n"
-                        "若您的 LINE ID 是手機號碼本身（例如 09xxxxxxxx）→ 請在開頭加上「ID」兩個字\n"
-                        "例如：ID 0912345678"
-                    )
-                )
-            ]
-        )
-        return
 
-    if user_id in temp_users and temp_users[user_id].get("step", "waiting_lineid") == "waiting_lineid" and len(user_text) >= 2:
-        record = temp_users[user_id]
-        input_lineid = user_text.strip()
-        if input_lineid.lower().startswith("id"):
-            phone_candidate = re.sub(r"[^\d]", "", input_lineid)
-            # 必須有 ID+空白+09xxxxxxxx 共至少12字元
-            if re.match(r"^id\s*09\d{8}$", input_lineid.lower().replace(" ", "")):
-                record["line_id"] = phone_candidate
+        if len(user_text) == 8 and user_text in manual_verify_pending:
+            record = manual_verify_pending[user_text]
+            temp_users[user_id] = {
+                "manual_step": "wait_confirm",
+                "name": record['name'],
+                "line_id": record['line_id'],
+                "phone": record['phone'],
+                "verify_code": user_text
+            }
+            reply = (
+                f"📱 手機號碼：{record['phone']}\n"
+                f"🌸 暱稱：{record['name']}\n"
+                f"       個人編號：待驗證後產生\n"
+                f"🔗 LINE ID：{record['line_id']}\n"
+                f"（此用戶為手動通過）\n"
+                f"請問以上資料是否正確？正確請回復 1\n"
+                f"⚠️輸入錯誤請從新輸入手機號碼即可⚠️"
+            )
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+            manual_verify_pending.pop(user_text, None)
+            return
+
+        if user_id in temp_users and temp_users[user_id].get("manual_step") == "wait_confirm" and user_text == "1":
+            data = temp_users[user_id]
+            now = datetime.now(tz)
+            data["date"] = now.strftime("%Y-%m-%d")
+            record, is_new = update_or_create_whitelist_from_data(data, user_id)
+            if is_new:
+                reply = (
+                    f"📱 手機號碼：{data['phone']}\n"
+                    f"🌸 暱稱：{data['name']}\n"
+                    f"       個人編號：{record.id}\n"
+                    f"🔗 LINE ID：{data['line_id']}\n"
+                    f"✅ 驗證成功，歡迎加入茗殿"
+                )
             else:
+                reply = (
+                    f"📱 手機號碼：{record.phone}\n"
+                    f"🌸 暱稱：{record.name or data.get('name')}\n"
+                    f"       個人編號：{record.id}\n"
+                    f"🔗 LINE ID：{record.line_id or data.get('line_id')}\n"
+                    f"✅ 你的資料已補全，歡迎加入茗殿"
+                )
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+            temp_users.pop(user_id)
+            return
+
+        if user_text == "手動通過":
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 此功能已關閉"))
+            return
+
+        if user_text == "驗證資訊":
+            existing = Whitelist.query.filter_by(line_user_id=user_id).first()
+            if existing:
+                tz = pytz.timezone("Asia/Taipei")
+                reply = (
+                    f"📱 {existing.phone}\n"
+                    f"🌸 暱稱：{existing.name or display_name}\n"
+                    f"       個人編號：{existing.id}\n"
+                    f"🔗 LINE ID：{existing.line_id or '未登記'}\n"
+                    f"🕒 {existing.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
+                    f"✅ 驗證成功，歡迎加入茗殿\n"
+                    f"🌟 加入密碼：ming666"
+                )
+                line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_menu_carousel()])
+            else:
+                line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 你尚未完成驗證，請輸入手機號碼進行驗證。"))
+            return
+
+        if user_text == "每日抽獎":
+            if not Whitelist.query.filter_by(line_user_id=user_id).first():
+                line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 你尚未完成驗證，請先完成驗證才能參加每日抽獎！"))
+                return
+
+            today_str = datetime.now(tz).strftime("%Y-%m-%d")
+            if has_drawn_today(user_id, Coupon):
+                coupon = Coupon.query.filter_by(line_user_id=user_id, date=today_str).first()
+                flex = get_today_coupon_flex(user_id, display_name, coupon.amount)
+                line_bot_api.reply_message(event.reply_token, flex)
+                return
+            amount = draw_coupon()
+            save_coupon_record(user_id, amount, Coupon, db)
+            flex = get_today_coupon_flex(user_id, display_name, amount)
+            line_bot_api.reply_message(event.reply_token, flex)
+            return
+
+        existing = Whitelist.query.filter_by(line_user_id=user_id).first()
+        if existing:
+            if normalize_phone(user_text) == normalize_phone(existing.phone):
+                tz = pytz.timezone("Asia/Taipei")
+                reply = (
+                    f"📱 {existing.phone}\n"
+                    f"🌸 暱稱：{existing.name or display_name}\n"
+                    f"       個人編號：{existing.id}\n"
+                    f"🔗 LINE ID：{existing.line_id or '未登記'}\n"
+                    f"🕒 {existing.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
+                    f"✅ 驗證成功，歡迎加入茗殿\n"
+                    f"🌟 加入密碼：ming666"
+                )
+                line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_menu_carousel()])
+            else:
+                line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 你已驗證完成，請輸入手機號碼查看驗證資訊"))
+            return
+
+        if re.match(r"^09\d{8}$", user_text):
+            black = Blacklist.query.filter_by(phone=user_text).first()
+            if black:
+                return
+            repeated = Whitelist.query.filter_by(phone=user_text).first()
+            data = {"phone": user_text, "name": display_name}
+            if repeated and repeated.line_user_id:
+                update_or_create_whitelist_from_data(data)
                 line_bot_api.reply_message(
                     event.reply_token,
-                    TextSendMessage(text="❌ 請輸入正確格式：ID 09xxxxxxxx（例如：ID 0912345678）")
+                    TextSendMessage(text="⚠️ 此手機號碼已被使用，已補全缺失資料。")
                 )
                 return
-        elif input_lineid in ["尚未設定", "無ID", "無", "沒有", "未設定"]:
-            record["line_id"] = "尚未設定"
-        else:
-            record["line_id"] = input_lineid
-        record["step"] = "waiting_screenshot"
-        temp_users[user_id] = record
+            temp_users[user_id] = {"phone": user_text, "name": display_name, "step": "waiting_lineid"}
+            line_bot_api.reply_message(
+                event.reply_token,
+                [
+                    TextSendMessage(text="📱 手機已登記囉～請接著輸入您的 LINE ID"),
+                    TextSendMessage(
+                        text=(
+                            "若您有設定 LINE ID → ✅ 直接輸入即可\n"
+                            "若尚未設定 ID → 請輸入：「尚未設定」\n"
+                            "若您的 LINE ID 是手機號碼本身（例如 09xxxxxxxx）→ 請在開頭加上「ID」兩個字\n"
+                            "例如：ID 0912345678"
+                        )
+                    )
+                ]
+            )
+            return
 
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(
-                text=(
-                    "請上傳您的 LINE 個人頁面截圖（需清楚顯示手機號與 LINE ID）以供驗證。\n"
-                    "📸 操作教學：LINE主頁 > 右上角設定 > 個人檔案（點進去之後截圖）"
+        if user_id in temp_users and temp_users[user_id].get("step", "waiting_lineid") == "waiting_lineid" and len(user_text) >= 2:
+            record = temp_users[user_id]
+            input_lineid = user_text.strip()
+            if input_lineid.lower().startswith("id"):
+                phone_candidate = re.sub(r"[^\d]", "", input_lineid)
+                # 必須有 ID+空白+09xxxxxxxx 共至少12字元
+                if re.match(r"^id\s*09\d{8}$", input_lineid.lower().replace(" ", "")):
+                    record["line_id"] = phone_candidate
+                else:
+                    line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text="❌ 請輸入正確格式：ID 09xxxxxxxx（例如：ID 0912345678）")
+                    )
+                    return
+            elif input_lineid in ["尚未設定", "無ID", "無", "沒有", "未設定"]:
+                record["line_id"] = "尚未設定"
+            else:
+                record["line_id"] = input_lineid
+            record["step"] = "waiting_screenshot"
+            temp_users[user_id] = record
+
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(
+                    text=(
+                        "請上傳您的 LINE 個人頁面截圖（需清楚顯示手機號與 LINE ID）以供驗證。\n"
+                        "📸 操作教學：LINE主頁 > 右上角設定 > 個人檔案（點進去之後截圖）"
+                    )
                 )
             )
-        )
-        return
+            return
 
-    if user_text == "1" and user_id in temp_users and temp_users[user_id].get("step") == "waiting_confirm":
-        data = temp_users[user_id]
-        now = datetime.now(tz)
-        data["date"] = now.strftime("%Y-%m-%d")
-        record, is_new = update_or_create_whitelist_from_data(data, user_id)
-        if is_new:
-            reply = (
-                f"📱 {data['phone']}\n"
-                f"🌸 暱稱：{data['name']}\n"
-                f"       個人編號：{record.id}\n"
-                f"🔗 LINE ID：{data['line_id']}\n"
-                f"🕒 {record.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
-                f"✅ 驗證成功，歡迎加入茗殿\n"
-                f"🌟 加入密碼：ming666"
-            )
-        else:
-            reply = (
-                f"📱 {record.phone}\n"
-                f"🌸 暱稱：{record.name or data.get('name')}\n"
-                f"       個人編號：{record.id}\n"
-                f"🔗 LINE ID：{record.line_id or data.get('line_id')}\n"
-                f"🕒 {record.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
-                f"✅ 你的資料已補全，歡迎加入茗殿\n"
-                f"🌟 加入密碼：ming666"
-            )
-        line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_menu_carousel()])
-        temp_users.pop(user_id)
-        return
+        if user_text == "1" and user_id in temp_users and temp_users[user_id].get("step") == "waiting_confirm":
+            data = temp_users[user_id]
+            now = datetime.now(tz)
+            data["date"] = now.strftime("%Y-%m-%d")
+            record, is_new = update_or_create_whitelist_from_data(data, user_id)
+            if is_new:
+                reply = (
+                    f"📱 {data['phone']}\n"
+                    f"🌸 暱稱：{data['name']}\n"
+                    f"       個人編號：{record.id}\n"
+                    f"🔗 LINE ID：{data['line_id']}\n"
+                    f"🕒 {record.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
+                    f"✅ 驗證成功，歡迎加入茗殿\n"
+                    f"🌟 加入密碼：ming666"
+                )
+            else:
+                reply = (
+                    f"📱 {record.phone}\n"
+                    f"🌸 暱稱：{record.name or data.get('name')}\n"
+                    f"       個人編號：{record.id}\n"
+                    f"🔗 LINE ID：{record.line_id or data.get('line_id')}\n"
+                    f"🕒 {record.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
+                    f"✅ 你的資料已補全，歡迎加入茗殿\n"
+                    f"🌟 加入密碼：ming666"
+                )
+            line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_menu_carousel()])
+            temp_users.pop(user_id)
+            return
+    except Exception as e:
+        print("handle_message error:", e)
+        traceback.print_exc()
 
 @handler.add(MessageEvent, message=ImageMessage)
 def handle_image(event):
