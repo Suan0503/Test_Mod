@@ -22,6 +22,12 @@ db.init_app(app)
 app.register_blueprint(message_bp)
 app.register_blueprint(report_bp)
 
+# 強制 import 所有 handler module，確保 handler.add 都被註冊
+import routes.message
+import routes.report
+import hander.image
+import hander.follow
+
 @app.route("/")
 def home():
     try:
