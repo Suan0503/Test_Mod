@@ -138,12 +138,19 @@ def handle_message(event):
         wl = Whitelist.query.filter_by(line_user_id=user_id).first()
         user_number = wl.id if wl else ""
         user_lineid = wl.line_id if wl else ""
+        # 取得目前最新的報號
+        last_coupon = Coupon.query.filter(Coupon.report_no != None).order_by(Coupon.id.desc()).first()
+        if last_coupon and last_coupon.report_no and last_coupon.report_no.isdigit():
+            report_no = int(last_coupon.report_no) + 1
+        else:
+            report_no = 1
+        report_no_str = f"{report_no:03d}"
 
         # ButtonsTemplate text 最多60字，這裡只放網址或提示
         short_text = f"網址：{url}" if len(url) < 55 else "新回報文，請點選按鈕處理"
         # 詳細內容另發一則文字
         detail_text = (
-            f"【用戶回報文】\n"
+            f"【用戶回報文】編號-{report_no_str}\n"
             f"暱稱：{display_name}\n"
             f"用戶編號：{user_number}\n"
             f"LINE ID：{user_lineid}\n"
@@ -157,7 +164,8 @@ def handle_message(event):
                 "display_name": display_name,
                 "user_number": user_number,
                 "user_lineid": user_lineid,
-                "url": url
+                "url": url,
+                "report_no": report_no_str
             }
             # 發送審核按鈕
             line_bot_api.push_message(
@@ -485,16 +493,18 @@ def handle_postback(event):
         info = report_pending_map.get(report_id)
         if info:
             to_user_id = info["user_id"]
-            reply = "🟢 您的回報文已審核通過，獲得一張月底抽獎券！"
+            report_no = info.get("report_no", "未知")
+            reply = f"🟢 您的回報文已審核通過，獲得一張月底抽獎券！（編號：{report_no}）"
             # 新增：給用戶一張抽獎券資料庫記錄
             try:
                 tz = pytz.timezone("Asia/Taipei")
                 today = datetime.now(tz).strftime("%Y-%m-%d")
                 new_coupon = Coupon(
                     line_user_id=to_user_id,
-                    amount=1,  # 你可以視需求自訂 amount
+                    amount=1,
                     date=today,
-                    created_at=datetime.now(tz)
+                    created_at=datetime.now(tz),
+                    report_no=report_no
                 )
                 db.session.add(new_coupon)
                 db.session.commit()
