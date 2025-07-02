@@ -20,7 +20,7 @@ def callback():
     return "OK"
 
 # ✅ 載入所有 handler，才能觸發 @handler.add(...) 的註冊
-from handler import (
+from ..handler import (
     follow,
     image,
     verify,
