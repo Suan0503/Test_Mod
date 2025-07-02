@@ -7,7 +7,6 @@ import re, time
 from datetime import datetime
 import pytz
 
-# 全域變數，暫存回報狀態
 report_pending_map = {}
 
 def handle_report(event):
