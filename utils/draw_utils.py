@@ -19,14 +19,15 @@ def has_drawn_today(user_id, CouponModel):
     today = datetime.now(tz).date()
     return CouponModel.query.filter_by(line_user_id=user_id, date=str(today)).first()
 
-def save_coupon_record(user_id, amount, CouponModel, db):
+def save_coupon_record(user_id, amount, CouponModel, db, type="draw"):
     tz = timezone("Asia/Taipei")
     today = datetime.now(tz).date()
     new_coupon = CouponModel(
         line_user_id=user_id,
         amount=amount,
         date=str(today),
-        created_at=datetime.now(tz)
+        created_at=datetime.now(tz),
+        type=type
     )
     db.session.add(new_coupon)
     db.session.commit()
