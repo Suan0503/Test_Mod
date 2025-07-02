@@ -80,6 +80,7 @@ def handle_menu(event):
         if report_month:
             for c in report_month:
                 no = c.report_no or ""
+                # 只有中獎（amount>0）才顯示金額
                 if c.amount and c.amount > 0:
                     msg += f"　　• 日期：{c.date}｜編號：{no}｜金額：{c.amount}元\n"
                 else:
