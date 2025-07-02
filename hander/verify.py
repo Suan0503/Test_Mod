@@ -27,6 +27,42 @@ def handle_verify(event):
     except Exception:
         display_name = "用戶"
 
+    # ==== 手動驗證流程優先判斷 ====
+    # 如果正在進行手動驗證流程
+    if user_id in temp_users and temp_users[user_id].get("step") == "waiting_confirm":
+        # 只要是"1"就通過
+        if user_text == "1":
+            data = temp_users[user_id]
+            now = datetime.now(tz)
+            data["date"] = now.strftime("%Y-%m-%d")
+            record, is_new = update_or_create_whitelist_from_data(data, user_id)
+            if is_new:
+                reply = (
+                    f"📱 {data['phone']}\n"
+                    f"🌸 暱稱：{data['name']}\n"
+                    f"       個人編號：{record.id}\n"
+                    f"🔗 LINE ID：{data['line_id']}\n"
+                    f"🕒 {record.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
+                    f"✅ 驗證成功，歡迎加入茗殿\n"
+                    f"🌟 加入密碼：ming666"
+                )
+            else:
+                reply = (
+                    f"📱 {record.phone}\n"
+                    f"🌸 暱稱：{record.name or data.get('name')}\n"
+                    f"       個人編號：{record.id}\n"
+                    f"🔗 LINE ID：{record.line_id or data.get('line_id')}\n"
+                    f"🕒 {record.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
+                    f"✅ 你的資料已補全，歡迎加入茗殿\n"
+                    f"🌟 加入密碼：ming666"
+                )
+            line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_menu_carousel()])
+            temp_users.pop(user_id)
+            return
+        else:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 如果資料正確請回覆 1，錯誤請重新輸入手機號碼。"))
+            return
+
     # === 補回已驗證用戶再次輸入手機號的判斷 ===
     existing = Whitelist.query.filter_by(line_user_id=user_id).first()
     if existing:
@@ -109,7 +145,7 @@ def handle_verify(event):
         )
         return
 
-    # 最後確認
+    # 最後確認（for 圖片驗證流程）
     if user_text == "1" and user_id in temp_users and temp_users[user_id].get("step") == "waiting_confirm":
         data = temp_users[user_id]
         now = datetime.now(tz)
@@ -138,3 +174,7 @@ def handle_verify(event):
         line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_menu_carousel()])
         temp_users.pop(user_id)
         return
+
+    # fallback：尚未驗證
+    line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入手機號碼進行驗證。"))
+    return
