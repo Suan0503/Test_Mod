@@ -20,7 +20,7 @@ def callback():
     return "OK"
 
 # ⭐ 重點來了：import 你所有的 handler 模組，讓 @handler.add(...) 生效
-from hander import (
+from handler import (
     follow,
     image,
     verify,
