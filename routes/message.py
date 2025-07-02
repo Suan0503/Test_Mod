@@ -19,12 +19,7 @@ def callback():
         abort(500)
     return "OK"
 
-# ⭐ 讓 @handler.add(...) 生效
-from hander import (
-    follow,
-    image,
-    verify,
-    report,
-    admin,
-    menu,
-)
+# ⭐ 只 import entrypoint（這會自動帶入各功能模組）
+import hander.entrypoint
+import hander.follow
+import hander.image
