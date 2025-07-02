@@ -64,26 +64,29 @@ def handle_menu(event):
         month_str = today.strftime("%Y-%m")
         user_coupons = Coupon.query.filter_by(line_user_id=user_id).all()
 
-        # 當日抽獎券
+        # 今日抽獎券
         draw_today = [c for c in user_coupons if c.type == "draw" and c.date == str(today)]
         # 本月回報文
         report_month = [c for c in user_coupons if c.type == "report" and c.date.startswith(month_str)]
 
-        msg = ""
+        msg = "🎁【今日抽獎券】\n"
         if draw_today:
-            msg += "🎁【今日抽獎券】\n"
             for c in draw_today:
-                msg += f"日期：{c.date}｜金額：{c.amount}元\n"
+                msg += f"　　• 日期：{c.date}｜金額：{c.amount}元\n"
         else:
-            msg += "🎁【今日抽獎券】\n無紀錄\n"
+            msg += "　　無紀錄\n"
 
+        msg += "\n📝【本月回報文抽獎券】\n"
         if report_month:
-            msg += "\n📝【本月回報文抽獎券】\n"
             for c in report_month:
                 no = c.report_no or ""
-                msg += f"日期：{c.date}｜編號：{no}｜金額：{c.amount}元\n"
+                if c.amount and c.amount > 0:
+                    msg += f"　　• 日期：{c.date}｜編號：{no}｜金額：{c.amount}元\n"
+                else:
+                    msg += f"　　• 日期：{c.date}｜編號：{no}\n"
         else:
-            msg += "\n📝【本月回報文抽獎券】\n無紀錄\n"
+            msg += "　　無紀錄\n"
 
+        msg += "\n※ 回報文抽獎券中獎名單與金額，將於每月抽獎公布"
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
         return
