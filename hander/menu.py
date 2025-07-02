@@ -59,7 +59,7 @@ def handle_menu(event):
         return
 
     # 券紀錄
-    if user_text == "券紀錄":
+    if user_text in ["券紀錄", "我的券紀錄"]:
         today = datetime.now(tz).date()
         month_str = today.strftime("%Y-%m")
         user_coupons = Coupon.query.filter_by(line_user_id=user_id).all()
