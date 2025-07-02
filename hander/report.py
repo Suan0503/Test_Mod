@@ -1,5 +1,5 @@
 from linebot.models import MessageEvent, TextMessage, TemplateSendMessage, ButtonsTemplate, PostbackAction, PostbackEvent, TextSendMessage
-from extensions import handler, line_bot_api, db
+from extensions import line_bot_api, db
 from models import Whitelist, Coupon
 from utils.temp_users import temp_users
 from storage import ADMIN_IDS
@@ -7,9 +7,9 @@ import re, time
 from datetime import datetime
 import pytz
 
+# 全域變數，暫存回報狀態
 report_pending_map = {}
 
-@handler.add(MessageEvent, message=TextMessage)
 def handle_report(event):
     user_id = event.source.user_id
     user_text = event.message.text.strip()
@@ -109,7 +109,6 @@ def handle_report(event):
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="找不到該回報資料（可能已處理過或超時）"))
         return
 
-@handler.add(PostbackEvent)
 def handle_report_postback(event):
     user_id = event.source.user_id
     data = event.postback.data
