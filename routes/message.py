@@ -1,7 +1,3 @@
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "main"))
-
 from flask import Blueprint, request, abort
 from extensions import handler
 from linebot.exceptions import InvalidSignatureError
@@ -24,7 +20,7 @@ def callback():
     return "OK"
 
 # ⭐ 讓 @handler.add(...) 生效
-from main.handler import (
+from hander import (
     follow,
     image,
     verify,
