@@ -25,7 +25,6 @@ from hander import (
     image,
     verify,
     report,
-    lottery,
     admin,
     menu,
 )
