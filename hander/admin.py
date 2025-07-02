@@ -1,4 +1,4 @@
-from linebot.models import TextMessage, TextSendMessage, MessageEvent
+from linebot.models import TextSendMessage
 from extensions import line_bot_api
 from storage import ADMIN_IDS
 
