@@ -57,3 +57,33 @@ def handle_menu(event):
         flex = get_today_coupon_flex(user_id, display_name, amount)
         line_bot_api.reply_message(event.reply_token, flex)
         return
+
+    # 券紀錄
+    if user_text == "券紀錄":
+        today = datetime.now(tz).date()
+        month_str = today.strftime("%Y-%m")
+        user_coupons = Coupon.query.filter_by(line_user_id=user_id).all()
+
+        # 當日抽獎券
+        draw_today = [c for c in user_coupons if c.type == "draw" and c.date == str(today)]
+        # 本月回報文
+        report_month = [c for c in user_coupons if c.type == "report" and c.date.startswith(month_str)]
+
+        msg = ""
+        if draw_today:
+            msg += "🎁【今日抽獎券】\n"
+            for c in draw_today:
+                msg += f"日期：{c.date}｜金額：{c.amount}元\n"
+        else:
+            msg += "🎁【今日抽獎券】\n無紀錄\n"
+
+        if report_month:
+            msg += "\n📝【本月回報文抽獎券】\n"
+            for c in report_month:
+                no = c.report_no or ""
+                msg += f"日期：{c.date}｜編號：{no}｜金額：{c.amount}元\n"
+        else:
+            msg += "\n📝【本月回報文抽獎券】\n無紀錄\n"
+
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
+        return
