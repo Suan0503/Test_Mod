@@ -11,6 +11,8 @@ def draw_coupon():
         return 200
     elif chance < 0.40:
         return 100
+    elif chance < 0.01:
+        return 500
     else:
         return 0
 
