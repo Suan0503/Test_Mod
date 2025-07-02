@@ -138,7 +138,11 @@ def handle_message(event):
         wl = Whitelist.query.filter_by(line_user_id=user_id).first()
         user_number = wl.id if wl else ""
         user_lineid = wl.line_id if wl else ""
-        notify_text = (
+
+        # ButtonsTemplate text 最多60字，這裡只放網址或提示
+        short_text = f"網址：{url}" if len(url) < 55 else "新回報文，請點選按鈕處理"
+        # 詳細內容另發一則文字
+        detail_text = (
             f"【用戶回報文】\n"
             f"暱稱：{display_name}\n"
             f"用戶編號：{user_number}\n"
@@ -155,14 +159,14 @@ def handle_message(event):
                 "user_lineid": user_lineid,
                 "url": url
             }
-            # 發送管理員審核按鈕
+            # 發送審核按鈕
             line_bot_api.push_message(
                 admin_id,
                 TemplateSendMessage(
                     alt_text="收到用戶回報文",
                     template=ButtonsTemplate(
                         title="收到新回報文",
-                        text=notify_text,
+                        text=short_text,
                         actions=[
                             PostbackAction(label="🟢 O", data=f"report_ok|{report_id}"),
                             PostbackAction(label="❌ X", data=f"report_ng|{report_id}")
@@ -170,6 +174,8 @@ def handle_message(event):
                     )
                 )
             )
+            # 另外發詳細資料
+            line_bot_api.push_message(admin_id, TextSendMessage(text=detail_text))
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(text="✅ 已收到您的回報，管理員會盡快處理！")
