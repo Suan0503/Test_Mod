@@ -17,8 +17,8 @@ def draw_coupon():
 def has_drawn_today(user_id, CouponModel):
     tz = timezone("Asia/Taipei")
     today = datetime.now(tz).date()
-    return CouponModel.query.filter_by(line_user_id=user_id, date=str(today)).first()
-
+    return CouponModel.query.filter_by(line_user_id=user_id, date=str(today), type="draw").first()
+    
 def save_coupon_record(user_id, amount, CouponModel, db, type="draw"):
     tz = timezone("Asia/Taipei")
     today = datetime.now(tz).date()
