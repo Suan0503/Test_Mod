@@ -28,4 +28,4 @@ class Coupon(db.Model):
     date = db.Column(db.String(20))
     amount = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    
+    report_no = db.Column(db.String(20))  # 新增的流水抽獎券編號
