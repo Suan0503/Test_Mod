@@ -24,7 +24,7 @@ def callback():
     return "OK"
 
 # ⭐ 讓 @handler.add(...) 生效
-from handler import (
+from main.handler import (
     follow,
     image,
     verify,
