@@ -121,10 +121,10 @@ def handle_report_postback(event):
             try:
                 tz = pytz.timezone("Asia/Taipei")
                 today = datetime.now(tz).strftime("%Y-%m-%d")
-                # 回報文寫入 coupon.amount=1, type="report"
+                # 回報文寫入 coupon.amount=0, type="report"（預設0，只有中獎才會改成大於0）
                 new_coupon = Coupon(
                     line_user_id=to_user_id,
-                    amount=1,
+                    amount=0,  # ← 修改為 0
                     date=today,
                     created_at=datetime.now(tz),
                     report_no=report_no,
