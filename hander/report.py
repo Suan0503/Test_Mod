@@ -122,12 +122,14 @@ def handle_report_postback(event):
             try:
                 tz = pytz.timezone("Asia/Taipei")
                 today = datetime.now(tz).strftime("%Y-%m-%d")
+                # 回報文寫入 coupon.amount=1, type="report"
                 new_coupon = Coupon(
                     line_user_id=to_user_id,
                     amount=1,
                     date=today,
                     created_at=datetime.now(tz),
-                    report_no=report_no
+                    report_no=report_no,
+                    type="report"
                 )
                 db.session.add(new_coupon)
                 db.session.commit()
