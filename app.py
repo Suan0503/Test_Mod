@@ -1,4 +1,7 @@
+import sys
 import os
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))  # ✅ 確保 handler 可被 import
+
 from flask import Flask
 from dotenv import load_dotenv
 
@@ -20,7 +23,6 @@ db.init_app(app)
 
 # Blueprint 註冊
 app.register_blueprint(message_bp)
-# app.register_blueprint(report_bp)  # 已移除此行
 
 @app.route("/")
 def home():
