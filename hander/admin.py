@@ -1,8 +1,7 @@
-from linebot.models import MessageEvent, TextMessage, TextSendMessage
-from extensions import handler, line_bot_api
+from linebot.models import TextMessage, TextSendMessage, MessageEvent
+from extensions import line_bot_api
 from storage import ADMIN_IDS
 
-@handler.add(MessageEvent, message=TextMessage)
 def handle_admin(event):
     user_id = event.source.user_id
     user_text = event.message.text.strip()
