@@ -1,7 +1,8 @@
 from linebot.models import MessageEvent, TextMessage, TemplateSendMessage, ButtonsTemplate, PostbackAction, PostbackEvent, TextSendMessage
 from extensions import handler, line_bot_api, db
 from models import Whitelist, Coupon
-from storage import temp_users, ADMIN_IDS
+from utils.temp_users import temp_users
+from storage import ADMIN_IDS
 import re, time
 from datetime import datetime
 import pytz
@@ -19,6 +20,7 @@ def handle_report(event):
     except Exception:
         display_name = "用戶"
 
+    # 啟動回報流程
     if user_text in ["回報文", "Report", "report"]:
         temp_users[user_id] = {"report_pending": True}
         line_bot_api.reply_message(
@@ -27,6 +29,7 @@ def handle_report(event):
         )
         return
 
+    # 用戶輸入網址
     if user_id in temp_users and temp_users[user_id].get("report_pending"):
         url = user_text
         if not re.match(r"^https?://", url):
@@ -86,6 +89,26 @@ def handle_report(event):
         temp_users.pop(user_id)
         return
 
+    # 管理員填寫拒絕原因
+    if user_id in temp_users and temp_users[user_id].get("report_ng_pending"):
+        report_id = temp_users[user_id]["report_ng_pending"]
+        info = report_pending_map.get(report_id)
+        if info:
+            reason = user_text
+            to_user_id = info["user_id"]
+            reply = f"❌ 您的回報文未通過審核，原因如下：\n{reason}"
+            try:
+                line_bot_api.push_message(to_user_id, TextSendMessage(text=reply))
+            except Exception as e:
+                print("推播用戶回報拒絕失敗", e)
+            temp_users.pop(user_id)
+            report_pending_map.pop(report_id, None)
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="已將原因回傳給用戶。"))
+        else:
+            temp_users.pop(user_id)
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="找不到該回報資料（可能已處理過或超時）"))
+        return
+
 @handler.add(PostbackEvent)
 def handle_report_postback(event):
     user_id = event.source.user_id
@@ -125,27 +148,4 @@ def handle_report_postback(event):
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入不通過的原因："))
         else:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="該回報已處理過或超時"))
-        return
-
-@handler.add(MessageEvent, message=TextMessage)
-def handle_report_ng_reason(event):
-    user_id = event.source.user_id
-    user_text = event.message.text.strip()
-    if user_id in temp_users and temp_users[user_id].get("report_ng_pending"):
-        report_id = temp_users[user_id]["report_ng_pending"]
-        info = report_pending_map.get(report_id)
-        if info:
-            reason = user_text
-            to_user_id = info["user_id"]
-            reply = f"❌ 您的回報文未通過審核，原因如下：\n{reason}"
-            try:
-                line_bot_api.push_message(to_user_id, TextSendMessage(text=reply))
-            except Exception as e:
-                print("推播用戶回報拒絕失敗", e)
-            temp_users.pop(user_id)
-            report_pending_map.pop(report_id, None)
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="已將原因回傳給用戶。"))
-        else:
-            temp_users.pop(user_id)
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="找不到該回報資料（可能已處理過或超時）"))
         return
