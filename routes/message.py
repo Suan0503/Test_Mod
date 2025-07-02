@@ -1,6 +1,3 @@
-import sys, os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # 🔧 加入 /app
-
 from flask import Blueprint, request, abort
 from extensions import handler
 from linebot.exceptions import InvalidSignatureError
