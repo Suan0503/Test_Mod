@@ -17,8 +17,9 @@ def draw_coupon():
 def has_drawn_today(user_id, CouponModel):
     tz = timezone("Asia/Taipei")
     today = datetime.now(tz).date()
+    # 注意: 若你的 Coupon 表要兼容 type 欄位，這裡建議加上 type="draw" 避免與回報文獎勵衝突
     return CouponModel.query.filter_by(line_user_id=user_id, date=str(today), type="draw").first()
-    
+
 def save_coupon_record(user_id, amount, CouponModel, db, type="draw"):
     tz = timezone("Asia/Taipei")
     today = datetime.now(tz).date()
