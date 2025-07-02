@@ -4,15 +4,14 @@ from hander.menu import handle_menu
 from hander.report import handle_report, handle_report_postback
 from hander.admin import handle_admin
 from hander.verify import handle_verify
+from utils.temp_users import temp_users
 
 @handler.add(MessageEvent, message=TextMessage)
 def entrypoint(event):
     user_text = event.message.text.strip()
-
-    # 最高優先權：回報文流程（如果用戶在回報文流程中）
-    # 檢查 temp_users 狀態
-    from utils.temp_users import temp_users
     user_id = event.source.user_id
+
+    # 回報文流程進行中（pending 狀態）
     if user_id in temp_users and (
         temp_users[user_id].get("report_pending") or
         temp_users[user_id].get("report_ng_pending")
@@ -40,9 +39,8 @@ def entrypoint(event):
 
 @handler.add(PostbackEvent)
 def entrypoint_postback(event):
-    # 將回報文的 postback 交給 handle_report_postback
     data = event.postback.data
     if data.startswith("report_ok|") or data.startswith("report_ng|"):
         handle_report_postback(event)
         return
-    # 其他 postback 邏輯（如有）
+    # 可在這裡加其他 postback 處理
