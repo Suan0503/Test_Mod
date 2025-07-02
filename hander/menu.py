@@ -1,12 +1,11 @@
-from linebot.models import MessageEvent, TextMessage, TextSendMessage
-from extensions import handler, line_bot_api, db
+from linebot.models import TextSendMessage
+from extensions import line_bot_api, db
 from models import Whitelist, Coupon
 from utils.menu import get_menu_carousel
 from utils.draw_utils import draw_coupon, get_today_coupon_flex, has_drawn_today, save_coupon_record
 import pytz
 from datetime import datetime
 
-@handler.add(MessageEvent, message=TextMessage)
 def handle_menu(event):
     user_id = event.source.user_id
     user_text = event.message.text.strip()
@@ -47,13 +46,14 @@ def handle_menu(event):
             return
 
         today_str = datetime.now(tz).strftime("%Y-%m-%d")
-        if has_drawn_today(user_id, Coupon):
-            coupon = Coupon.query.filter_by(line_user_id=user_id, date=today_str).first()
+        coupon = Coupon.query.filter_by(line_user_id=user_id, date=today_str, type="draw").first()
+        if coupon:
             flex = get_today_coupon_flex(user_id, display_name, coupon.amount)
             line_bot_api.reply_message(event.reply_token, flex)
             return
-        amount = draw_coupon()
-        save_coupon_record(user_id, amount, Coupon, db)
+
+        amount = draw_coupon()  # 0/100/200/300
+        save_coupon_record(user_id, amount, Coupon, db, type="draw")
         flex = get_today_coupon_flex(user_id, display_name, amount)
         line_bot_api.reply_message(event.reply_token, flex)
         return
