@@ -112,6 +112,47 @@ def handle_message(event):
         print(f"取得用戶 {user_id} profile 失敗：{e}")
         display_name = "用戶"
 
+    # === 新增：回報文流程 ===
+    if user_text in ["回報文", "Report", "report"]:
+        temp_users[user_id] = {"report_pending": True}
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="請輸入要回報的網址（請直接貼網址）：")
+        )
+        return
+
+    if user_id in temp_users and temp_users[user_id].get("report_pending"):
+        url = user_text
+        # 簡單網址檢查
+        if not re.match(r"^https?://", url):
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="請輸入正確的網址格式（必須以 http:// 或 https:// 開頭）")
+            )
+            return
+        # 取得用戶資料
+        wl = Whitelist.query.filter_by(line_user_id=user_id).first()
+        user_number = wl.id if wl else ""
+        user_lineid = wl.line_id if wl else ""
+        notify_text = (
+            f"【用戶回報文】\n"
+            f"暱稱：{display_name}\n"
+            f"用戶編號：{user_number}\n"
+            f"LINE ID：{user_lineid}\n"
+            f"網址：{url}"
+        )
+        for admin_id in ADMIN_IDS:
+            try:
+                line_bot_api.push_message(admin_id, TextSendMessage(text=notify_text))
+            except Exception as e:
+                print(f"推播給管理員 {admin_id} 失敗：", e)
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="✅ 已收到您的回報，管理員會盡快處理！")
+        )
+        temp_users.pop(user_id)
+        return
+
     # 主選單指令
     if user_text in ["主選單", "功能選單", "選單", "menu", "Menu"]:
         line_bot_api.reply_message(event.reply_token, get_menu_carousel())
