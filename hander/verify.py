@@ -3,7 +3,7 @@ from extensions import handler, line_bot_api, db
 from models import Whitelist, Blacklist
 from utils.menu import get_menu_carousel
 from utils.db_utils import update_or_create_whitelist_from_data
-from storage import temp_users, manual_verify_pending
+from utils.temp_users import temp_users, manual_verify_pending
 import re
 from datetime import datetime
 import pytz
@@ -26,6 +26,25 @@ def handle_verify(event):
         display_name = profile.display_name
     except Exception:
         display_name = "用戶"
+
+    # === 補回已驗證用戶再次輸入手機號的判斷 ===
+    existing = Whitelist.query.filter_by(line_user_id=user_id).first()
+    if existing:
+        # 用戶已驗證
+        if normalize_phone(user_text) == normalize_phone(existing.phone):
+            reply = (
+                f"📱 {existing.phone}\n"
+                f"🌸 暱稱：{existing.name or display_name}\n"
+                f"       個人編號：{existing.id}\n"
+                f"🔗 LINE ID：{existing.line_id or '未登記'}\n"
+                f"🕒 {existing.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
+                f"✅ 驗證成功，歡迎加入茗殿\n"
+                f"🌟 加入密碼：ming666"
+            )
+            line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_menu_carousel()])
+        else:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 你已驗證完成，請輸入手機號碼查看驗證資訊"))
+        return
 
     # 手機號碼驗證
     if re.match(r"^09\d{8}$", user_text):
