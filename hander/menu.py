@@ -1,116 +1,59 @@
-from linebot.models import FlexSendMessage
+from linebot.models import TextSendMessage
+from extensions import line_bot_api, db
+from models import Whitelist, Coupon
+from utils.menu import get_menu_carousel
+from utils.draw_utils import draw_coupon, get_today_coupon_flex, has_drawn_today, save_coupon_record
+import pytz
+from datetime import datetime
 
-def get_menu_carousel():
-    bubbles = []
+def handle_menu(event):
+    user_id = event.source.user_id
+    user_text = event.message.text.strip()
+    tz = pytz.timezone("Asia/Taipei")
+    try:
+        profile = line_bot_api.get_profile(user_id)
+        display_name = profile.display_name
+    except Exception:
+        display_name = "用戶"
 
-    # 第一頁
-    bubbles.append({
-        "type": "bubble",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "spacing": "md",
-            "contents": [
-                {"type": "text", "text": "🌸 茗殿功能選單 1/2", "weight": "bold", "size": "lg", "align": "center", "color": "#7D5FFF"},
-                {"type": "separator"},
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "margin": "lg",
-                    "spacing": "sm",
-                    "contents": [
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "📱 驗證資訊", "text": "驗證資訊"},
-                            "style": "primary",
-                            "color": "#FFB6B6"
-                        },
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "🎁 每日抽獎", "text": "每日抽獎"},
-                            "style": "primary",
-                            "color": "#A3DEE6"
-                        },
-                        {
-                            "type": "button",
-                            "action": {"type": "uri", "label": "📬 預約諮詢", "uri": "https://line.me/ti/p/g7TPO_lhAL"},
-                            "style": "primary",
-                            "color": "#B889F2"
-                        },
-                        {
-                            "type": "button",
-                            "action": {"type": "uri", "label": "📅 每日班表", "uri": "https://t.me/+LaFZixvTaMY3ODA1"},
-                            "style": "secondary",
-                            "color": "#FFF8B7"
-                        },
-                        {
-                            "type": "button",
-                            "action": {"type": "uri", "label": "🌸 茗殿討論區", "uri": "https://line.me/ti/g2/mq8VqBIVupL1lsIXuAulnqZNz5vw7VKrVYjNDg?utm_source=invitation&utm_medium=link_copy&u[...]"},
-                            "style": "primary",
-                            "color": "#FFDCFF"
-                        }
-                    ]
-                }
-            ]
-        }
-    })
+    # 主選單
+    if user_text in ["主選單", "功能選單", "選單", "menu", "Menu"]:
+        line_bot_api.reply_message(event.reply_token, get_menu_carousel())
+        return
 
-    # 第二頁
-    bubbles.append({
-        "type": "bubble",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "spacing": "md",
-            "contents": [
-                {"type": "text", "text": "🌸 茗殿功能選單 2/2", "weight": "bold", "size": "lg", "align": "center", "color": "#7D5FFF"},
-                {"type": "separator"},
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "margin": "lg",
-                    "spacing": "sm",
-                    "contents": [
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "📝 回報文登記", "text": "回報文"},
-                            "style": "primary",
-                            "color": "#F7B7A3"
-                        },
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "🛎️ 呼叫管理員", "text": "呼叫管理員"},
-                            "style": "secondary",
-                            "color": "#B1E1FF"
-                        },
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "📖 查詢規則", "text": "規則查詢"},
-                            "style": "secondary",
-                            "color": "#C8C6A7"
-                        },
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "💰 我的券紀錄", "text": "券紀錄"},
-                            "style": "primary",
-                            "color": "#A3DEA6"
-                        },
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "🔔 活動快訊", "text": "活動快訊"},
-                            "style": "primary",
-                            "color": "#FFC2C2"
-                        }
-                    ]
-                }
-            ]
-        }
-    })
+    # 驗證資訊
+    if user_text == "驗證資訊":
+        existing = Whitelist.query.filter_by(line_user_id=user_id).first()
+        if existing:
+            reply = (
+                f"📱 {existing.phone}\n"
+                f"🌸 暱稱：{existing.name or display_name}\n"
+                f"       個人編號：{existing.id}\n"
+                f"🔗 LINE ID：{existing.line_id or '未登記'}\n"
+                f"🕒 {existing.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
+                f"✅ 驗證成功，歡迎加入茗殿\n"
+                f"🌟 加入密碼：ming666"
+            )
+            line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_menu_carousel()])
+        else:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 你尚未完成驗證，請輸入手機號碼進行驗證。"))
+        return
 
-    return FlexSendMessage(
-        alt_text="主功能選單",
-        contents={
-            "type": "carousel",
-            "contents": bubbles
-        }
-    )
+    # 每日抽獎
+    if user_text == "每日抽獎":
+        if not Whitelist.query.filter_by(line_user_id=user_id).first():
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 你尚未完成驗證，請先完成驗證才能參加每日抽獎！"))
+            return
+
+        today_str = datetime.now(tz).strftime("%Y-%m-%d")
+        coupon = Coupon.query.filter_by(line_user_id=user_id, date=today_str, type="draw").first()
+        if coupon:
+            flex = get_today_coupon_flex(user_id, display_name, coupon.amount)
+            line_bot_api.reply_message(event.reply_token, flex)
+            return
+
+        amount = draw_coupon()  # 0/100/200/300
+        save_coupon_record(user_id, amount, Coupon, db, type="draw")
+        flex = get_today_coupon_flex(user_id, display_name, amount)
+        line_bot_api.reply_message(event.reply_token, flex)
+        return
