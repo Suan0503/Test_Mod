@@ -29,8 +29,11 @@ def entrypoint(event):
         handle_admin(event)
         return
 
-    # 主選單、抽獎、驗證資訊等
-    if user_text in ["主選單", "功能選單", "選單", "menu", "Menu", "每日抽獎", "驗證資訊"]:
+    # 主選單、抽獎、驗證資訊、券紀錄等
+    if user_text in [
+        "主選單", "功能選單", "選單", "menu", "Menu",
+        "每日抽獎", "驗證資訊", "券紀錄", "我的券紀錄"
+    ]:
         handle_menu(event)
         return
 
