@@ -6,6 +6,8 @@ from utils.temp_users import temp_users
 import re
 from datetime import datetime
 
+RICH_MENU_ID = "你的RichMenuId"  # <- 請換成你系統的 RichMenu ID
+
 def generate_welcome_message(record):
     now_str = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
     return (
@@ -46,12 +48,14 @@ def handle_image(event):
         and re.match(r"^09\d{8}$", phone_ocr_norm)
         and len(lineid_ocr) >= 3 and len(lineid_ocr) <= 20 and re.match(r"^[A-Za-z0-9_\-\.]+$", lineid_ocr)
     ):
-        # 這裡可根據你DB的邏輯決定如何產生個人編號 (record['code'])，下面以現有資料為主
         msg = generate_welcome_message(record)
         temp_users.pop(user_id, None)
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
-        # 如果有 RichMenu，這裡可以加開啟主選單，範例：
-        # line_bot_api.link_rich_menu_to_user(user_id, RICH_MENU_ID)
+        # 開啟主選單
+        try:
+            line_bot_api.link_rich_menu_to_user(user_id, RICH_MENU_ID)
+        except Exception as e:
+            print("Set RichMenu failed:", e)
         return
 
     # LINE ID 尚未設定時，僅允許 phone_ocr 完全正確且格式正確
