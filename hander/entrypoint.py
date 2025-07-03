@@ -1,5 +1,5 @@
-from linebot.models import MessageEvent, TextMessage, PostbackEvent
-from extensions import handler
+from linebot.models import MessageEvent, TextMessage, PostbackEvent, TextSendMessage
+from extensions import handler, line_bot_api
 from hander.menu import handle_menu
 from hander.report import handle_report, handle_report_postback
 from hander.admin import handle_admin
@@ -43,7 +43,32 @@ def entrypoint(event):
 @handler.add(PostbackEvent)
 def entrypoint_postback(event):
     data = event.postback.data
+    user_id = event.source.user_id
+
     if data.startswith("report_ok|") or data.startswith("report_ng|"):
         handle_report_postback(event)
         return
-    # 可在這裡加其他 postback 處理
+
+    # 處理 OCR 驗證失敗時「申請手動驗證」的 Postback
+    if data == "manual_verify":
+        record = temp_users.get(user_id)
+        if not record:
+            line_bot_api.reply_message(
+                event.reply_token, TextSendMessage(text="請先輸入手機號碼開始驗證流程。")
+            )
+            return
+        record["step"] = "waiting_confirm"
+        temp_users[user_id] = record
+        reply = (
+            f"📱 {record['phone']}\n"
+            f"🌸 暱稱：{record['name']}\n"
+            f"       個人編號：待驗證後產生\n"
+            f"🔗 LINE ID：{record['line_id']}\n"
+            f"（此用戶經手動通過）\n"
+            f"請問以上資料是否正確？正確請回復 1\n"
+            f"⚠️輸入錯誤請從新輸入手機號碼即可⚠️"
+        )
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+        return
+
+    # 你可在這裡加更多其他 Postback 邏輯
