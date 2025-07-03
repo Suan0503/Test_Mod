@@ -12,6 +12,7 @@ def handle_image(event):
     if user_id not in temp_users or temp_users[user_id].get("step") != "waiting_screenshot":
         return
 
+    # 管理員自動通關（如你不需自動通過可移除此段）
     if is_special_case(user_id):
         record = temp_users[user_id]
         reply = (
