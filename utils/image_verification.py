@@ -37,3 +37,8 @@ def extract_lineid_phone(image_path, debug=False):
         print("LINE ID:", lineid)
 
     return phone, lineid, text
+
+if __name__ == "__main__":
+    img_path = input("請輸入圖片路徑：")
+    phone, lineid, text = extract_lineid_phone(img_path, debug=True)
+    print(f"\n偵測結果：\n手機號碼：{phone or '未識別'}\nLINE ID：{lineid or '未識別'}")
