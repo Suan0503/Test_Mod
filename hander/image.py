@@ -2,18 +2,19 @@ from linebot.models import MessageEvent, ImageMessage, TextSendMessage, Template
 from extensions import handler, line_bot_api
 from utils.image_verification import extract_lineid_phone, normalize_phone
 from utils.temp_users import temp_users
-
-import re
+from utils.db_utils import update_or_create_whitelist_from_data
 from datetime import datetime
+import re
 
-RICH_MENU_ID = "你的RichMenuId"  # <- 請換成你系統的 RichMenu ID
+# 請將此值換成你自己 LINE RichMenu 的 ID
+RICH_MENU_ID = "你的RichMenuId"
 
-def generate_welcome_message(record):
+def generate_welcome_message(record, code):
     now_str = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
     return (
         f"📱 {record['phone']}\n"
         f"🌸 暱稱：{record['name']}\n"
-        f"       個人編號：{record.get('code','待驗證後產生')}\n"
+        f"       個人編號：{code}\n"
         f"🔗 LINE ID：{record['line_id']}\n"
         f"🕒 {now_str}\n"
         f"✅ 驗證成功，歡迎加入茗殿\n"
@@ -48,7 +49,19 @@ def handle_image(event):
         and re.match(r"^09\d{8}$", phone_ocr_norm)
         and len(lineid_ocr) >= 3 and len(lineid_ocr) <= 20 and re.match(r"^[A-Za-z0-9_\-\.]+$", lineid_ocr)
     ):
-        msg = generate_welcome_message(record)
+        # 進資料庫
+        now_str = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+        data = {
+            "phone": record['phone'],
+            "name": record['name'],
+            "line_id": record['line_id'],
+            "date": now_str,
+            "reason": "OCR自動通過"
+        }
+        db_record, _ = update_or_create_whitelist_from_data(data, user_id)
+        code = str(db_record.id) if getattr(db_record, "id", None) else "待驗證後產生"
+
+        msg = generate_welcome_message(record, code)
         temp_users.pop(user_id, None)
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
         # 開啟主選單
@@ -64,7 +77,7 @@ def handle_image(event):
             reply = (
                 f"📱 {record['phone']}\n"
                 f"🌸 暱稱：{record['name']}\n"
-                f"       個人編號：{record.get('code','待驗證後產生')}\n"
+                f"       個人編號：待驗證後產生\n"
                 f"🔗 LINE ID：尚未設定\n"
                 f"請問以上資料是否正確？正確請回復 1\n"
                 f"⚠️輸入錯誤請從新輸入手機號碼即可⚠️"
@@ -108,7 +121,7 @@ def handle_image(event):
         reply = (
             f"📱 {record['phone']}\n"
             f"🌸 暱稱：{record['name']}\n"
-            f"       個人編號：{record.get('code','待驗證後產生')}\n"
+            f"       個人編號：待驗證後產生\n"
             f"🔗 LINE ID：{record['line_id']}\n"
             f"請問以上資料是否正確？正確請回復 1\n"
             f"⚠️輸入錯誤請從新輸入手機號碼即可⚠️"
