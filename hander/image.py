@@ -1,4 +1,4 @@
-from linebot.models import MessageEvent, ImageMessage, TextSendMessage, TemplateSendMessage, ButtonsTemplate, PostbackAction
+from linebot.models import MessageEvent, ImageMessage, TextSendMessage
 from extensions import handler, line_bot_api
 from utils.image_verification import extract_lineid_phone, normalize_phone
 from utils.temp_users import temp_users
@@ -96,16 +96,6 @@ def handle_image(event):
                     ),
                     TextSendMessage(
                         text=f"【圖片偵測結果】\n手機:{detect_phone}\nLINE ID:{detect_lineid}"
-                    ),
-                    TemplateSendMessage(
-                        alt_text="OCR驗證未通過",
-                        template=ButtonsTemplate(
-                            title="OCR驗證未通過",
-                            text="若多次失敗，請申請手動驗證。",
-                            actions=[
-                                PostbackAction(label="🔔 申請手動驗證", data="manual_verify"),
-                            ]
-                        )
                     )
                 ]
             )
@@ -131,7 +121,7 @@ def handle_image(event):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
         return
 
-    # fallback: OCR 不符，顯示細節
+    # fallback: OCR 不符，顯示細節（完全拔掉手動驗證按鈕）
     detect_phone = phone_ocr_norm or '未識別'
     detect_lineid = lineid_ocr or '未識別'
     line_bot_api.reply_message(
@@ -142,16 +132,6 @@ def handle_image(event):
             ),
             TextSendMessage(
                 text=f"【圖片偵測結果】\n手機:{detect_phone}\nLINE ID:{detect_lineid}"
-            ),
-            TemplateSendMessage(
-                alt_text="OCR驗證未通過",
-                template=ButtonsTemplate(
-                    title="OCR驗證未通過",
-                    text="若多次失敗，請申請手動驗證。",
-                    actions=[
-                        PostbackAction(label="🔔 申請手動驗證", data="manual_verify"),
-                    ]
-                )
             )
         ]
     )
