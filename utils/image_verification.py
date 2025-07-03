@@ -3,37 +3,55 @@ import pytesseract
 from PIL import Image
 
 def normalize_phone(phone_raw):
-    # 去掉空白與 - 和 +號
+    if not phone_raw:
+        return None
+    # 去除空白、-、+號
     phone = re.sub(r"[ \-\+]", "", phone_raw)
-    # 若開頭為8869，變成09
+    # 台灣手機號處理
     if phone.startswith("8869") and len(phone) == 12:
         phone = "09" + phone[4:]
-    # 有些可能缺+，只有886
     elif phone.startswith("886") and len(phone) == 11:
         phone = "09" + phone[3:]
-    # 已經是09開頭
     elif phone.startswith("09") and len(phone) == 10:
         pass
     else:
-        # 其他不合法格式直接回傳原始
+        # 其他狀況直接回傳原樣
         return phone_raw
     return phone
 
 def extract_lineid_phone(image_path, debug=False):
-    image = Image.open(image_path)
-    text = pytesseract.image_to_string(image, lang='eng+chi_tra')
+    try:
+        image = Image.open(image_path)
+    except Exception as e:
+        if debug:
+            print(f"無法開啟圖片: {e}")
+        return None, None, ""
 
-    # 支援 +886 903 587 063、886903587063、09xxxxxxxx
-    phone_match = re.search(r'((?:\+?886)[ -]?\d{3}[ -]?\d{3}[ -]?\d{3}|09\d{8})', text)
+    # 只用英文和繁體中文辨識
+    try:
+        text = pytesseract.image_to_string(image, lang='eng+chi_tra')
+    except Exception as e:
+        if debug:
+            print(f"OCR辨識失敗: {e}")
+        return None, None, ""
+
+    # 手機號正則 (台灣號碼)
+    phone_regex = r"(09\d{8}|8869\d{8}|\+8869\d{8})"
+    phone_match = re.search(phone_regex, text.replace(" ", "").replace("-", ""))
     phone = normalize_phone(phone_match.group(0)) if phone_match else None
 
-    # LINE ID 抓法不變
-    lineid_match = re.search(r'ID[\s:：]{0,2}([A-Za-z0-9_\-\.]{3,})', text, re.IGNORECASE)
+    # LINE ID 正則
+    # 支援 ID: abc123 / ID：abc123 / Id: abc123 / ID abc123 / IDabc123
+    lineid_regex = r"(?:ID|Id|id)[\s:：\-]*([A-Za-z0-9_\-\.]{3,})"
+    lineid_match = re.search(lineid_regex, text)
     lineid = lineid_match.group(1) if lineid_match else None
 
     if debug:
-        print("OCR全文：\n", text)
-        print("手機:", phone)
-        print("LINE ID:", lineid)
+        print("====== OCR全文 ======")
+        print(text)
+        print("====== 手機號 ======")
+        print(phone or "未識別")
+        print("====== LINE ID ======")
+        print(lineid or "未識別")
 
     return phone, lineid, text
