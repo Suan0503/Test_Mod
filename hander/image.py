@@ -1,4 +1,4 @@
-from linebot.models import MessageEvent, ImageMessage, TextSendMessage
+from linebot.models import MessageEvent, ImageMessage, TextSendMessage, TemplateSendMessage, ButtonsTemplate, PostbackAction
 from extensions import handler, line_bot_api
 from utils.image_verification import extract_lineid_phone
 from utils.special_case import is_special_case
@@ -70,9 +70,19 @@ def handle_image(event):
             temp_users[user_id] = record
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
         else:
+            # 這裡加上手動驗證按鈕
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(text="❌ 截圖中的手機號碼與您輸入的不符，請重新上傳正確的 LINE 個人頁面截圖。")
+                TemplateSendMessage(
+                    alt_text="OCR驗證未通過",
+                    template=ButtonsTemplate(
+                        title="OCR驗證未通過",
+                        text="❌ 截圖中的手機號碼與您輸入的不符，請重新上傳正確的 LINE 個人頁面截圖，或申請手動驗證。",
+                        actions=[
+                            PostbackAction(label="🔔 申請手動驗證", data="manual_verify"),
+                        ]
+                    )
+                )
             )
     else:
         lineid_match = (lineid_ocr is not None and input_lineid is not None and lineid_ocr.lower() == input_lineid.lower())
@@ -89,12 +99,20 @@ def handle_image(event):
             temp_users[user_id] = record
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
         else:
+            # 這裡加上手動驗證按鈕
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(
-                    text=(
-                        "❌ 截圖中的手機號碼或 LINE ID 與您輸入的不符，請重新上傳正確的 LINE 個人頁面截圖。\n"
-                        f"【圖片偵測結果】手機:{phone_ocr or '未識別'}\nLINE ID:{lineid_ocr or '未識別'}"
+                TemplateSendMessage(
+                    alt_text="OCR驗證未通過",
+                    template=ButtonsTemplate(
+                        title="OCR驗證未通過",
+                        text=(
+                            "❌ 截圖中的手機號碼或 LINE ID 與您輸入的不符，請重新上傳正確的 LINE 個人頁面截圖，或申請手動驗證。\n"
+                            f"【圖片偵測結果】手機:{phone_ocr or '未識別'}\nLINE ID:{lineid_ocr or '未識別'}"
+                        ),
+                        actions=[
+                            PostbackAction(label="🔔 申請手動驗證", data="manual_verify"),
+                        ]
                     )
                 )
             )
