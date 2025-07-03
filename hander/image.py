@@ -6,8 +6,7 @@ from utils.db_utils import update_or_create_whitelist_from_data
 from datetime import datetime
 import re
 
-# 請將此值換成你自己 LINE RichMenu 的 ID
-RICH_MENU_ID = "你的RichMenuId"
+RICH_MENU_ID = "你的RichMenuId"  # 替換為你的 RichMenu ID
 
 def generate_welcome_message(record, code):
     now_str = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
@@ -49,7 +48,6 @@ def handle_image(event):
         and re.match(r"^09\d{8}$", phone_ocr_norm)
         and len(lineid_ocr) >= 3 and len(lineid_ocr) <= 20 and re.match(r"^[A-Za-z0-9_\-\.]+$", lineid_ocr)
     ):
-        # 進資料庫
         now_str = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
         data = {
             "phone": record['phone'],
@@ -63,10 +61,12 @@ def handle_image(event):
 
         msg = generate_welcome_message(record, code)
         temp_users.pop(user_id, None)
+        # 先回覆歡迎訊息
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
-        # 開啟主選單
+        # 再綁定 RichMenu 並推一個不可見訊息，強制觸發主選單
         try:
             line_bot_api.link_rich_menu_to_user(user_id, RICH_MENU_ID)
+            line_bot_api.push_message(user_id, TextSendMessage(text="."))  # "." 可換成你想要的提示或直接用空白
         except Exception as e:
             print("Set RichMenu failed:", e)
         return
@@ -88,17 +88,11 @@ def handle_image(event):
         else:
             detect_phone = phone_ocr_norm or '未識別'
             detect_lineid = lineid_ocr or '未識別'
-            line_bot_api.reply_message(
-                event.reply_token,
-                [
-                    TextSendMessage(
-                        text="❌ 截圖中的手機號碼或 LINE ID 與您輸入的不符，請重新上傳正確的 LINE 個人頁面截圖。"
-                    ),
-                    TextSendMessage(
-                        text=f"【圖片偵測結果】\n手機:{detect_phone}\nLINE ID:{detect_lineid}"
-                    )
-                ]
+            msg = (
+                "❌ 截圖中的手機號碼或 LINE ID 與您輸入的不符，請重新上傳正確的 LINE 個人頁面截圖。\n"
+                f"【圖片偵測結果】手機:{detect_phone}\nLINE ID:{detect_lineid}"
             )
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
         return
 
     # 兩者都必須格式正確且完全吻合才能通過
@@ -121,17 +115,11 @@ def handle_image(event):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
         return
 
-    # fallback: OCR 不符，顯示細節（完全拔掉手動驗證按鈕）
+    # fallback: OCR 不符，顯示細節（合併為一則訊息）
     detect_phone = phone_ocr_norm or '未識別'
     detect_lineid = lineid_ocr or '未識別'
-    line_bot_api.reply_message(
-        event.reply_token,
-        [
-            TextSendMessage(
-                text="❌ 截圖中的手機號碼或 LINE ID 與您輸入的不符，請重新上傳正確的 LINE 個人頁面截圖。"
-            ),
-            TextSendMessage(
-                text=f"【圖片偵測結果】\n手機:{detect_phone}\nLINE ID:{detect_lineid}"
-            )
-        ]
+    msg = (
+        "❌ 截圖中的手機號碼或 LINE ID 與您輸入的不符，請重新上傳正確的 LINE 個人頁面截圖。\n"
+        f"【圖片偵測結果】手機:{detect_phone}\nLINE ID:{detect_lineid}"
     )
+    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
