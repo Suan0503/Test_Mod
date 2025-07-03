@@ -1,7 +1,6 @@
 from linebot.models import MessageEvent, ImageMessage, TextSendMessage, TemplateSendMessage, ButtonsTemplate, PostbackAction
 from extensions import handler, line_bot_api
 from utils.image_verification import extract_lineid_phone, normalize_phone
-from utils.special_case import is_special_case
 from utils.temp_users import temp_users
 
 import os
@@ -11,22 +10,6 @@ import re
 def handle_image(event):
     user_id = event.source.user_id
     if user_id not in temp_users or temp_users[user_id].get("step") != "waiting_screenshot":
-        return
-
-    if is_special_case(user_id):
-        record = temp_users[user_id]
-        reply = (
-            f"📱 {record['phone']}\n"
-            f"🌸 暱稱：{record['name']}\n"
-            f"       個人編號：待驗證後產生\n"
-            f"🔗 LINE ID：{record['line_id']}\n"
-            f"（此用戶經手動通過）\n"
-            f"請問以上資料是否正確？正確請回復 1\n"
-            f"⚠️輸入錯誤請從新輸入手機號碼即可⚠️"
-        )
-        record["step"] = "waiting_confirm"
-        temp_users[user_id] = record
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
         return
 
     message_content = line_bot_api.get_message_content(event.message.id)
