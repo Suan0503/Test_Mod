@@ -4,6 +4,19 @@ from utils.image_verification import extract_lineid_phone, normalize_phone
 from utils.temp_users import temp_users
 
 import re
+from datetime import datetime
+
+def generate_welcome_message(record):
+    now_str = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+    return (
+        f"📱 {record['phone']}\n"
+        f"🌸 暱稱：{record['name']}\n"
+        f"       個人編號：{record.get('code','待驗證後產生')}\n"
+        f"🔗 LINE ID：{record['line_id']}\n"
+        f"🕒 {now_str}\n"
+        f"✅ 驗證成功，歡迎加入茗殿\n"
+        f"🌟 加入密碼：ming666"
+    )
 
 @handler.add(MessageEvent, message=ImageMessage)
 def handle_image(event):
@@ -33,15 +46,12 @@ def handle_image(event):
         and re.match(r"^09\d{8}$", phone_ocr_norm)
         and len(lineid_ocr) >= 3 and len(lineid_ocr) <= 20 and re.match(r"^[A-Za-z0-9_\-\.]+$", lineid_ocr)
     ):
-        reply = (
-            f"📱 {record['phone']}\n"
-            f"🌸 暱稱：{record['name']}\n"
-            f"       個人編號：待驗證後產生\n"
-            f"🔗 LINE ID：{record['line_id']}\n"
-            f"✅ 驗證成功，歡迎加入茗殿"
-        )
+        # 這裡可根據你DB的邏輯決定如何產生個人編號 (record['code'])，下面以現有資料為主
+        msg = generate_welcome_message(record)
         temp_users.pop(user_id, None)
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
+        # 如果有 RichMenu，這裡可以加開啟主選單，範例：
+        # line_bot_api.link_rich_menu_to_user(user_id, RICH_MENU_ID)
         return
 
     # LINE ID 尚未設定時，僅允許 phone_ocr 完全正確且格式正確
@@ -50,7 +60,7 @@ def handle_image(event):
             reply = (
                 f"📱 {record['phone']}\n"
                 f"🌸 暱稱：{record['name']}\n"
-                f"       個人編號：待驗證後產生\n"
+                f"       個人編號：{record.get('code','待驗證後產生')}\n"
                 f"🔗 LINE ID：尚未設定\n"
                 f"請問以上資料是否正確？正確請回復 1\n"
                 f"⚠️輸入錯誤請從新輸入手機號碼即可⚠️"
@@ -59,7 +69,6 @@ def handle_image(event):
             temp_users[user_id] = record
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
         else:
-            # OCR 不符，顯示細節
             detect_phone = phone_ocr_norm or '未識別'
             detect_lineid = lineid_ocr or '未識別'
             line_bot_api.reply_message(
@@ -95,7 +104,7 @@ def handle_image(event):
         reply = (
             f"📱 {record['phone']}\n"
             f"🌸 暱稱：{record['name']}\n"
-            f"       個人編號：待驗證後產生\n"
+            f"       個人編號：{record.get('code','待驗證後產生')}\n"
             f"🔗 LINE ID：{record['line_id']}\n"
             f"請問以上資料是否正確？正確請回復 1\n"
             f"⚠️輸入錯誤請從新輸入手機號碼即可⚠️"
