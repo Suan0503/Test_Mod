@@ -59,22 +59,27 @@ def handle_image(event):
             temp_users[user_id] = record
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
         else:
-            # 只給簡短訊息，偵測結果用第二則訊息補充
+            # OCR 不符，顯示細節
+            detect_phone = phone_ocr_norm or '未識別'
+            detect_lineid = lineid_ocr or '未識別'
             line_bot_api.reply_message(
                 event.reply_token,
                 [
+                    TextSendMessage(
+                        text="❌ 截圖中的手機號碼或 LINE ID 與您輸入的不符，請重新上傳正確的 LINE 個人頁面截圖。"
+                    ),
+                    TextSendMessage(
+                        text=f"【圖片偵測結果】\n手機:{detect_phone}\nLINE ID:{detect_lineid}"
+                    ),
                     TemplateSendMessage(
                         alt_text="OCR驗證未通過",
                         template=ButtonsTemplate(
                             title="OCR驗證未通過",
-                            text="手機號碼不符，請重新上傳或申請手動驗證。",
+                            text="若多次失敗，請申請手動驗證。",
                             actions=[
                                 PostbackAction(label="🔔 申請手動驗證", data="manual_verify"),
                             ]
                         )
-                    ),
-                    TextSendMessage(
-                        text=f"【圖片偵測結果】手機:{phone_ocr or '未識別'}\nLINE ID:{lineid_ocr or '未識別'}"
                     )
                 ]
             )
@@ -100,22 +105,27 @@ def handle_image(event):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
         return
 
-    # fallback: template + 詳細結果分開發送
+    # fallback: OCR 不符，顯示細節
+    detect_phone = phone_ocr_norm or '未識別'
+    detect_lineid = lineid_ocr or '未識別'
     line_bot_api.reply_message(
         event.reply_token,
         [
+            TextSendMessage(
+                text="❌ 截圖中的手機號碼或 LINE ID 與您輸入的不符，請重新上傳正確的 LINE 個人頁面截圖。"
+            ),
+            TextSendMessage(
+                text=f"【圖片偵測結果】\n手機:{detect_phone}\nLINE ID:{detect_lineid}"
+            ),
             TemplateSendMessage(
                 alt_text="OCR驗證未通過",
                 template=ButtonsTemplate(
                     title="OCR驗證未通過",
-                    text="手機號碼或LINE ID不符，請重新上傳或手動驗證。",
+                    text="若多次失敗，請申請手動驗證。",
                     actions=[
                         PostbackAction(label="🔔 申請手動驗證", data="manual_verify"),
                     ]
                 )
-            ),
-            TextSendMessage(
-                text=f"【圖片偵測結果】手機:{phone_ocr or '未識別'}\nLINE ID:{lineid_ocr or '未識別'}"
             )
         ]
     )
