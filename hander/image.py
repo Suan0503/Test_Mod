@@ -1,21 +1,11 @@
 from linebot.models import MessageEvent, ImageMessage, TextSendMessage, TemplateSendMessage, ButtonsTemplate, PostbackAction
 from extensions import handler, line_bot_api
-from utils.image_verification import extract_lineid_phone
+from utils.image_verification import extract_lineid_phone, normalize_phone
 from utils.special_case import is_special_case
 from utils.temp_users import temp_users
 
 import os
 import re
-
-def normalize_phone(phone):
-    if not phone:
-        return None
-    phone = phone.replace("-", "").replace(" ", "")
-    if phone.startswith("+8869"):
-        return "0" + phone[4:]
-    if phone.startswith("+886"):
-        return "0" + phone[4:]
-    return phone
 
 @handler.add(MessageEvent, message=ImageMessage)
 def handle_image(event):
@@ -50,9 +40,8 @@ def handle_image(event):
     input_lineid = temp_users[user_id].get("line_id")
     record = temp_users[user_id]
 
-    # 強化 phone_ocr 判斷
-    phone_ocr_norm = normalize_phone(phone_ocr)
-    input_phone_norm = normalize_phone(input_phone)
+    phone_ocr_norm = normalize_phone(phone_ocr) if phone_ocr else None
+    input_phone_norm = normalize_phone(input_phone) if input_phone else None
 
     # OCR 與手動輸入完全吻合才自動通關
     if (
