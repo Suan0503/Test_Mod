@@ -58,30 +58,38 @@ def entrypoint(event):
         today_str = now.strftime('%Y-%m-%d')
         month_str = now.strftime('%Y-%m')
 
-        # 今日每日抽獎
+        # 今日抽獎券
         today_draw = Coupon.query.filter_by(
             line_user_id=user_id, date=today_str, type="draw"
         ).first()
-        # 本月回報文
+
+        # 當月回報文券
         month_reports = Coupon.query.filter(
             Coupon.line_user_id == user_id,
             Coupon.type == "report",
             Coupon.date.startswith(month_str)
-        ).all()
+        ).order_by(Coupon.date, Coupon.id).all()
 
-        reply_lines = []
+        # 今日抽獎券區塊
+        coupon_msg = "🎁【今日抽獎券】\n"
         if today_draw:
-            reply_lines.append("🎁 今日的每日抽獎：已獲得折價券！")
+            coupon_msg += f"　　• 日期：{today_draw.date}｜金額：{today_draw.amount}元\n"
         else:
-            reply_lines.append("🎁 今日的每日抽獎：尚未抽獎或未中獎")
+            coupon_msg += "　　• 尚未中獎\n"
 
+        # 本月回報文券區塊
+        coupon_msg += "\n📝【本月回報文抽獎券】\n"
         if month_reports:
-            reply_lines.append(f"📝 本月回報文折價券：{len(month_reports)} 張")
+            for idx, c in enumerate(month_reports, 1):
+                # 金額0元時不顯示金額
+                amount_str = f"｜金額：{c.amount}元" if c.amount else ""
+                coupon_msg += f"　　• 日期：{c.date}｜編號：{idx:03}{amount_str}\n"
         else:
-            reply_lines.append("📝 本月回報文折價券：0 張")
+            coupon_msg += "　　• 無\n"
 
-        reply = "\n".join(reply_lines)
-        reply_with_menu(event.reply_token, reply)
+        coupon_msg += "\n※ 回報文抽獎券中獎名單與金額，將於每月抽獎公布"
+
+        reply_with_menu(event.reply_token, coupon_msg)
         return
 
     # 主選單/功能選單/每日抽獎/查詢規則/活動快訊
