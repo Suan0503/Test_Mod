@@ -96,7 +96,7 @@ def get_menu_carousel():
         }
     })
 
-    # 第二頁（折價券管理、查詢規則位置已更動）
+    # 第二頁
     bubbles.append({
         "type": "bubble",
         "body": {
@@ -195,12 +195,27 @@ def reply_with_menu(token, text=None):
 
 def notify_admins(user_id, display_name=None):
     """
-    呼叫管理員功能：發訊息給所有管理員ID
+    呼叫管理員功能：發訊息給所有管理員ID（含詳細用戶資訊）
     """
-    mention = f"來自用戶ID：{user_id}"
-    if display_name:
-        mention = f"來自 {display_name}（{user_id}）"
-    msg = f"🛎️ 有人呼叫管理員！\n{mention}\n請盡快協助處理。"
+    from models import Whitelist  # 避免循環引用
+    user = Whitelist.query.filter_by(line_user_id=user_id).first()
+    if user:
+        code = user.id or "未登記"
+        name = user.name or (display_name or "未登記")
+        line_id = user.line_id or "未登記"
+    else:
+        code = "未登記"
+        name = display_name or "未登記"
+        line_id = "未登記"
+
+    msg = (
+        "【用戶呼叫管理員】\n"
+        f"暱稱：{name}\n"
+        f"用戶編號：{code}\n"
+        f"LINE ID：{line_id}\n"
+        f"訊息：呼叫管理員\n\n"
+        f"➡️ 若要私訊此用戶，請輸入：/msg {user_id} 你的回覆內容"
+    )
     for admin_id in ADMIN_IDS:
         try:
             line_bot_api.push_message(admin_id, TextSendMessage(text=msg))
