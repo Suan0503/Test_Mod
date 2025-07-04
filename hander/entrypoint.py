@@ -5,6 +5,9 @@ from hander.report import handle_report, handle_report_postback
 from hander.admin import handle_admin
 from hander.verify import handle_verify
 from utils.temp_users import temp_users
+from models import Whitelist
+import pytz
+from datetime import datetime
 
 @handler.add(MessageEvent, message=TextMessage)
 def entrypoint(event):
@@ -29,10 +32,29 @@ def entrypoint(event):
         handle_admin(event)
         return
 
-    # 主選單/功能選單/抽獎/驗證資訊/折價券管理/規則查詢/活動快訊
+    # 驗證資訊
+    if user_text in ["驗證資訊"]:
+        tz = pytz.timezone("Asia/Taipei")
+        user = Whitelist.query.filter_by(line_user_id=user_id).first()
+        if user:
+            reply = (
+                f"📱 {user.phone}\n"
+                f"🌸 暱稱：{user.name or '未登記'}\n"
+                f"       個人編號：{user.id}\n"
+                f"🔗 LINE ID：{user.line_id or '未登記'}\n"
+                f"🕒 {user.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
+                f"✅ 驗證成功，歡迎加入茗殿\n"
+                f"🌟 加入密碼：ming666"
+            )
+        else:
+            reply = "查無你的驗證資訊，請先完成驗證流程。"
+        reply_with_menu(event.reply_token, reply)
+        return
+
+    # 主選單/功能選單/抽獎/折價券管理/規則查詢/活動快訊
     if user_text in [
         "主選單", "功能選單", "選單", "menu", "Menu",
-        "每日抽獎", "驗證資訊", "折價券管理", "券紀錄", "我的券紀錄",
+        "每日抽獎", "折價券管理", "券紀錄", "我的券紀錄",
         "查詢規則", "規則查詢", "活動快訊"
     ]:
         reply_with_menu(event.reply_token)
