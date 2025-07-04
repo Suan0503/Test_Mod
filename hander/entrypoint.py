@@ -1,6 +1,6 @@
 from linebot.models import MessageEvent, TextMessage, PostbackEvent, TextSendMessage
 from extensions import handler, line_bot_api
-from hander.menu import handle_menu
+from utils.menu_helpers import reply_with_menu, notify_admins  # 統一選單與 admin 通知
 from hander.report import handle_report, handle_report_postback
 from hander.admin import handle_admin
 from hander.verify import handle_verify
@@ -29,12 +29,26 @@ def entrypoint(event):
         handle_admin(event)
         return
 
-    # 主選單、抽獎、驗證資訊、券紀錄等
+    # 主選單/功能選單/抽獎/驗證資訊/折價券管理/規則查詢/活動快訊
     if user_text in [
         "主選單", "功能選單", "選單", "menu", "Menu",
-        "每日抽獎", "驗證資訊", "券紀錄", "我的券紀錄"
+        "每日抽獎", "驗證資訊", "折價券管理", "券紀錄", "我的券紀錄",
+        "查詢規則", "規則查詢", "活動快訊"
     ]:
-        handle_menu(event)
+        reply_with_menu(event.reply_token)
+        return
+
+    # 呼叫管理員
+    if user_text in ["呼叫管理員"]:
+        # 嘗試取得用戶暱稱
+        display_name = None
+        try:
+            profile = line_bot_api.get_profile(user_id)
+            display_name = profile.display_name
+        except Exception:
+            pass
+        notify_admins(user_id, display_name)
+        reply_with_menu(event.reply_token, "已通知管理員，請稍候，主選單如下：")
         return
 
     # 其餘交給驗證流程
