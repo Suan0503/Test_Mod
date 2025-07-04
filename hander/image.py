@@ -1,109 +1,11 @@
-from linebot.models import MessageEvent, ImageMessage, TextSendMessage, FlexSendMessage
+from linebot.models import MessageEvent, ImageMessage, TextSendMessage
 from extensions import handler, line_bot_api
 from utils.image_verification import extract_lineid_phone, normalize_phone
 from utils.temp_users import temp_users
 from utils.db_utils import update_or_create_whitelist_from_data
 from datetime import datetime
 import re
-
-# --- Flex 主選單（多頁版） ---
-def get_function_menu_flex():
-    # 第一頁功能
-    page1 = {
-        "type": "bubble",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "spacing": "md",
-            "contents": [
-                {"type": "text", "text": "✨ 功能選單 1/2 ✨", "weight": "bold", "size": "lg", "align": "center", "color": "#C97CFD"},
-                {"type": "separator"},
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "margin": "lg",
-                    "spacing": "sm",
-                    "contents": [
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "📱 驗證資訊", "text": "驗證資訊"},
-                            "style": "primary",
-                            "color": "#FFB6B6"
-                        },
-                        {
-                            "type": "button",
-                            "action": {
-                                "type": "uri",
-                                "label": "📅 每日班表",
-                                "uri": "https://t.me/+xLO-S74sdZMyYjA1"
-                            },
-                            "style": "secondary",
-                            "color": "#FFF8B7"
-                        },
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "🎁 每日抽獎", "text": "每日抽獎"},
-                            "style": "primary",
-                            "color": "#A3DEE6"
-                        }
-                    ]
-                }
-            ]
-        }
-    }
-    # 第二頁功能
-    page2 = {
-        "type": "bubble",
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "spacing": "md",
-            "contents": [
-                {"type": "text", "text": "✨ 功能選單 2/2 ✨", "weight": "bold", "size": "lg", "align": "center", "color": "#C97CFD"},
-                {"type": "separator"},
-                {
-                    "type": "box",
-                    "layout": "vertical",
-                    "margin": "lg",
-                    "spacing": "sm",
-                    "contents": [
-                        {
-                            "type": "button",
-                            "action": {"type": "uri", "label": "📬 預約諮詢", "uri": choose_link()},
-                            "style": "primary",
-                            "color": "#B889F2"
-                        },
-                        {
-                            "type": "button",
-                            "action": {
-                                "type": "uri",
-                                "label": "🌸 茗殿討論區",
-                                "uri": "https://line.me/ti/g2/mq8VqBIVupL1lsIXuAulnqZNz5vw7VKrVYjNDg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default"
-                            },
-                            "style": "primary",
-                            "color": "#FFDCFF"
-                        }
-                    ]
-                }
-            ]
-        }
-    }
-    return FlexSendMessage(
-        alt_text="功能選單",
-        contents={
-            "type": "carousel",
-            "contents": [page1, page2]
-        }
-    )
-
-def choose_link():
-    group = [
-        "https://line.me/ti/p/g7TPO_lhAL",
-        "https://line.me/ti/p/emkjaMQkMK",
-        "https://line.me/ti/p/AKRUvSCLRC"
-    ]
-    import os
-    return group[hash(os.urandom(8)) % len(group)]
+from utils.menu_helpers import reply_with_menu
 
 def generate_welcome_message(record, code):
     now_str = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
@@ -158,11 +60,7 @@ def handle_image(event):
 
         msg = generate_welcome_message(record, code)
         temp_users.pop(user_id, None)
-        # 直接回覆歡迎詞 + Flex主選單（多頁）
-        line_bot_api.reply_message(event.reply_token, [
-            TextSendMessage(text=msg),
-            get_function_menu_flex()
-        ])
+        reply_with_menu(event.reply_token, msg)
         return
 
     # --- LINE ID 尚未設定時，僅允許 phone_ocr 完全正確且格式正確 ---
