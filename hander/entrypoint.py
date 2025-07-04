@@ -1,11 +1,11 @@
 from linebot.models import MessageEvent, TextMessage, PostbackEvent, TextSendMessage
-from extensions import handler, line_bot_api
-from utils.menu_helpers import reply_with_menu, notify_admins  # 統一選單與 admin 通知
+from extensions import handler, line_bot_api, db
+from utils.menu_helpers import reply_with_menu, notify_admins
 from hander.report import handle_report, handle_report_postback
 from hander.admin import handle_admin
 from hander.verify import handle_verify
 from utils.temp_users import temp_users
-from models import Whitelist
+from models import Whitelist, Coupon
 import pytz
 from datetime import datetime
 
@@ -33,7 +33,7 @@ def entrypoint(event):
         return
 
     # 驗證資訊
-    if user_text in ["驗證資訊"]:
+    if user_text == "驗證資訊":
         tz = pytz.timezone("Asia/Taipei")
         user = Whitelist.query.filter_by(line_user_id=user_id).first()
         if user:
@@ -51,18 +51,38 @@ def entrypoint(event):
         reply_with_menu(event.reply_token, reply)
         return
 
-    # 主選單/功能選單/抽獎/折價券管理/規則查詢/活動快訊
+    # 折價券管理
+    if user_text in ["折價券管理", "券紀錄", "我的券紀錄"]:
+        # 查詢該用戶所有折價券
+        coupons = Coupon.query.filter_by(line_user_id=user_id).order_by(Coupon.created_at.desc()).all()
+        if not coupons:
+            reply = "目前沒有折價券紀錄。"
+        else:
+            lines = []
+            tz = pytz.timezone("Asia/Taipei")
+            for c in coupons:
+                time_str = c.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')
+                lines.append(
+                    f"💵 面額：{c.amount} 元\n"
+                    f"🗓 日期：{c.date}\n"
+                    f"🆔 編號：{c.id}\n"
+                    f"📄 類型：{'每日抽獎' if c.type == 'draw' else '回報文'}\n"
+                    f"⏰ 領取：{time_str}"
+                )
+            reply = "您的折價券紀錄如下：\n\n" + "\n\n".join(lines)
+        reply_with_menu(event.reply_token, reply)
+        return
+
+    # 主選單/功能選單/每日抽獎/查詢規則/活動快訊
     if user_text in [
         "主選單", "功能選單", "選單", "menu", "Menu",
-        "每日抽獎", "折價券管理", "券紀錄", "我的券紀錄",
-        "查詢規則", "規則查詢", "活動快訊"
+        "每日抽獎", "查詢規則", "規則查詢", "活動快訊"
     ]:
         reply_with_menu(event.reply_token)
         return
 
     # 呼叫管理員
     if user_text in ["呼叫管理員"]:
-        # 嘗試取得用戶暱稱
         display_name = None
         try:
             profile = line_bot_api.get_profile(user_id)
@@ -106,5 +126,3 @@ def entrypoint_postback(event):
         )
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
         return
-
-    # 你可在這裡加更多其他 Postback 邏輯
