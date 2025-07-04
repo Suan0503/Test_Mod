@@ -52,31 +52,31 @@ def entrypoint(event):
         reply_with_menu(event.reply_token, reply)
         return
 
-    # 每日抽獎
+    # ======= 每日抽獎功能 =======
     if user_text in ["每日抽獎"]:
-        tz = pytz.timezone("Asia/Taipei")
-        profile = line_bot_api.get_profile(user_id)
-        display_name = profile.display_name if profile else "用戶"
+        profile = None
+        display_name = "用戶"
+        try:
+            profile = line_bot_api.get_profile(user_id)
+            display_name = profile.display_name
+        except Exception:
+            pass
 
-        # 判斷今天是否已抽
-        if has_drawn_today(user_id, Coupon):
-            reply_with_menu(event.reply_token, "今日已抽過獎囉，請明天再試！")
+        # 判斷今天是否已抽過
+        today_coupon = has_drawn_today(user_id, Coupon)
+        if today_coupon:
+            # 已抽過：直接顯示今日結果（Flex）
+            amount = today_coupon.amount
+            flex_msg = get_today_coupon_flex(user_id, display_name, amount)
+            line_bot_api.reply_message(event.reply_token, [flex_msg])
             return
-
-        # 執行抽獎
-        amount = draw_coupon()
-        save_coupon_record(user_id, amount, Coupon, db, type="draw")
-        flex_msg = get_today_coupon_flex(user_id, display_name, amount)
-        msgs = [flex_msg]
-        if amount > 0:
-            msgs.append(TextSendMessage(text=f"🎉 恭喜你獲得 {amount} 元折價券！\n快至主選單查看你的折價券紀錄。"))
         else:
-            msgs.append(TextSendMessage(text="很可惜沒中獎呢～明天再試試看吧🌙"))
-        # 主選單放最後
-        msgs.append(reply_with_menu(None))  # reply_with_menu(None) 只回主選單，不會 reply，會回傳 FlexMessage
-        # 直接用 push_message
-        line_bot_api.reply_message(event.reply_token, msgs)
-        return
+            # 沒抽過：抽獎、存檔、Flex
+            amount = draw_coupon()
+            save_coupon_record(user_id, amount, Coupon, db)
+            flex_msg = get_today_coupon_flex(user_id, display_name, amount)
+            line_bot_api.reply_message(event.reply_token, [flex_msg])
+            return
 
     # 折價券管理
     if user_text in ["折價券管理", "券紀錄", "我的券紀錄"]:
