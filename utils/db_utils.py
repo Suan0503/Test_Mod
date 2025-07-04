@@ -43,3 +43,6 @@ def update_or_create_whitelist_from_data(data, user_id=None):
         db.session.add(new_user)
         db.session.commit()
         return new_user, True  # True 代表新建
+
+def is_user_verified(line_user_id):
+    return Whitelist.query.filter_by(line_user_id=line_user_id).first() is not None
