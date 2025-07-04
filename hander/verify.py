@@ -1,7 +1,7 @@
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 from extensions import handler, line_bot_api, db
 from models import Whitelist, Blacklist
-from utils.menu import get_menu_carousel
+from utils.menu_helpers import reply_with_menu  # 修改這裡
 from utils.db_utils import update_or_create_whitelist_from_data
 from utils.temp_users import temp_users, manual_verify_pending
 import re
@@ -56,7 +56,7 @@ def handle_verify(event):
                     f"✅ 你的資料已補全，歡迎加入茗殿\n"
                     f"🌟 加入密碼：ming666"
                 )
-            line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_menu_carousel()])
+            reply_with_menu(event.reply_token, reply)
             temp_users.pop(user_id)
             return
         else:
@@ -77,7 +77,7 @@ def handle_verify(event):
                 f"✅ 驗證成功，歡迎加入茗殿\n"
                 f"🌟 加入密碼：ming666"
             )
-            line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_menu_carousel()])
+            reply_with_menu(event.reply_token, reply)
         else:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 你已驗證完成，請輸入手機號碼查看驗證資訊"))
         return
@@ -171,7 +171,7 @@ def handle_verify(event):
                 f"✅ 你的資料已補全，歡迎加入茗殿\n"
                 f"🌟 加入密碼：ming666"
             )
-        line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_menu_carousel()])
+        reply_with_menu(event.reply_token, reply)
         temp_users.pop(user_id)
         return
 
