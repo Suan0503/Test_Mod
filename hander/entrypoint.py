@@ -53,23 +53,34 @@ def entrypoint(event):
 
     # 折價券管理
     if user_text in ["折價券管理", "券紀錄", "我的券紀錄"]:
-        # 查詢該用戶所有折價券
-        coupons = Coupon.query.filter_by(line_user_id=user_id).order_by(Coupon.created_at.desc()).all()
-        if not coupons:
-            reply = "目前沒有折價券紀錄。"
+        tz = pytz.timezone("Asia/Taipei")
+        now = datetime.now(tz)
+        today_str = now.strftime('%Y-%m-%d')
+        month_str = now.strftime('%Y-%m')
+
+        # 今日每日抽獎
+        today_draw = Coupon.query.filter_by(
+            line_user_id=user_id, date=today_str, type="draw"
+        ).first()
+        # 本月回報文
+        month_reports = Coupon.query.filter(
+            Coupon.line_user_id == user_id,
+            Coupon.type == "report",
+            Coupon.date.startswith(month_str)
+        ).all()
+
+        reply_lines = []
+        if today_draw:
+            reply_lines.append("🎁 今日的每日抽獎：已獲得折價券！")
         else:
-            lines = []
-            tz = pytz.timezone("Asia/Taipei")
-            for c in coupons:
-                time_str = c.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')
-                lines.append(
-                    f"💵 面額：{c.amount} 元\n"
-                    f"🗓 日期：{c.date}\n"
-                    f"🆔 編號：{c.id}\n"
-                    f"📄 類型：{'每日抽獎' if c.type == 'draw' else '回報文'}\n"
-                    f"⏰ 領取：{time_str}"
-                )
-            reply = "您的折價券紀錄如下：\n\n" + "\n\n".join(lines)
+            reply_lines.append("🎁 今日的每日抽獎：尚未抽獎或未中獎")
+
+        if month_reports:
+            reply_lines.append(f"📝 本月回報文折價券：{len(month_reports)} 張")
+        else:
+            reply_lines.append("📝 本月回報文折價券：0 張")
+
+        reply = "\n".join(reply_lines)
         reply_with_menu(event.reply_token, reply)
         return
 
