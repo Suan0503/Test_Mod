@@ -5,7 +5,7 @@ from utils.temp_users import temp_users
 from utils.db_utils import update_or_create_whitelist_from_data
 from datetime import datetime
 import re
-from utils.menu_helpers import reply_with_menu
+from utils.menu_helpers import reply_with_menu  # 只要這個
 
 def generate_welcome_message(record, code):
     now_str = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
