@@ -184,7 +184,7 @@ def handle_image(event):
             detect_lineid = lineid_ocr or '未識別'
             msg = (
                 "❌ 截圖中的手機號碼或 LINE ID 與您輸入的不符，請重新上傳正確的 LINE 個人頁面截圖。\n"
-                f"【圖片偵測結果】手機:{detect_phone}\nLINE ID:{detect_lineid}"
+                f"【圖片偵測結果】\n手機:{detect_phone}\nLINE ID:{detect_lineid}"
             )
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
         return
@@ -214,6 +214,6 @@ def handle_image(event):
     detect_lineid = lineid_ocr or '未識別'
     msg = (
         "❌ 截圖中的手機號碼或 LINE ID 與您輸入的不符，請重新上傳正確的 LINE 個人頁面截圖。\n"
-        f"【圖片偵測結果】手機:{detect_phone}\nLINE ID:{detect_lineid}"
+        f"【圖片偵測結果】\n手機:{detect_phone}\nLINE ID:{detect_lineid}"
     )
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
