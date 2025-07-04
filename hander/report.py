@@ -1,4 +1,6 @@
-from linebot.models import MessageEvent, TextMessage, TemplateSendMessage, ButtonsTemplate, PostbackAction, PostbackEvent, TextSendMessage
+from linebot.models import (
+    MessageEvent, TextMessage, TemplateSendMessage, ButtonsTemplate, PostbackAction, PostbackEvent, TextSendMessage
+)
 from extensions import line_bot_api, db
 from models import Whitelist, Coupon
 from utils.temp_users import temp_users
@@ -24,17 +26,25 @@ def handle_report(event):
         temp_users[user_id] = {"report_pending": True}
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text="請輸入要回報的網址（請直接貼網址）：")
+            TextSendMessage(text="請輸入要回報的網址（請直接貼網址）：\n\n如需取消，請輸入「取消」")
         )
         return
 
-    # 用戶輸入網址
+    # 用戶取消回報流程
     if user_id in temp_users and temp_users[user_id].get("report_pending"):
+        if user_text == "取消":
+            temp_users.pop(user_id, None)
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="已取消回報流程，回到主選單！")
+            )
+            return
+
         url = user_text
         if not re.match(r"^https?://", url):
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(text="請輸入正確的網址格式（必須以 http:// 或 https:// 開頭）")
+                TextSendMessage(text="請輸入正確的網址格式（必須以 http:// 或 https:// 開頭）\n如需取消，請輸入「取消」")
             )
             return
         wl = Whitelist.query.filter_by(line_user_id=user_id).first()
