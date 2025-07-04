@@ -6,6 +6,7 @@ from hander.admin import handle_admin
 from hander.verify import handle_verify
 from utils.temp_users import temp_users
 from models import Whitelist, Coupon
+from utils.draw_utils import draw_coupon, has_drawn_today, save_coupon_record, get_today_coupon_flex
 import pytz
 from datetime import datetime
 
@@ -51,6 +52,32 @@ def entrypoint(event):
         reply_with_menu(event.reply_token, reply)
         return
 
+    # 每日抽獎
+    if user_text in ["每日抽獎"]:
+        tz = pytz.timezone("Asia/Taipei")
+        profile = line_bot_api.get_profile(user_id)
+        display_name = profile.display_name if profile else "用戶"
+
+        # 判斷今天是否已抽
+        if has_drawn_today(user_id, Coupon):
+            reply_with_menu(event.reply_token, "今日已抽過獎囉，請明天再試！")
+            return
+
+        # 執行抽獎
+        amount = draw_coupon()
+        save_coupon_record(user_id, amount, Coupon, db, type="draw")
+        flex_msg = get_today_coupon_flex(user_id, display_name, amount)
+        msgs = [flex_msg]
+        if amount > 0:
+            msgs.append(TextSendMessage(text=f"🎉 恭喜你獲得 {amount} 元折價券！\n快至主選單查看你的折價券紀錄。"))
+        else:
+            msgs.append(TextSendMessage(text="很可惜沒中獎呢～明天再試試看吧🌙"))
+        # 主選單放最後
+        msgs.append(reply_with_menu(None))  # reply_with_menu(None) 只回主選單，不會 reply，會回傳 FlexMessage
+        # 直接用 push_message
+        line_bot_api.reply_message(event.reply_token, msgs)
+        return
+
     # 折價券管理
     if user_text in ["折價券管理", "券紀錄", "我的券紀錄"]:
         tz = pytz.timezone("Asia/Taipei")
@@ -92,10 +119,10 @@ def entrypoint(event):
         reply_with_menu(event.reply_token, coupon_msg)
         return
 
-    # 主選單/功能選單/每日抽獎/查詢規則/活動快訊
+    # 主選單/功能選單/查詢規則/活動快訊
     if user_text in [
         "主選單", "功能選單", "選單", "menu", "Menu",
-        "每日抽獎", "查詢規則", "規則查詢", "活動快訊"
+        "查詢規則", "規則查詢", "活動快訊"
     ]:
         reply_with_menu(event.reply_token)
         return
