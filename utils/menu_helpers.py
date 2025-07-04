@@ -1,5 +1,5 @@
-from hander.image import get_function_menu_flex  # 你主選單 Flex function，若有更名請對應修改
 from linebot.models import TextSendMessage
+from hander.image import get_function_menu_flex
 from extensions import line_bot_api
 
 def reply_with_menu(token, text=None):
