@@ -79,7 +79,7 @@ def handle_verify(event):
         )
         return
 
-    # Step 4: 用戶輸入驗證碼（管理員流程）
+    # Step 4: 用戶輸入驗證碼，顯示資料確認訊息（不直接驗證）
     if user_text in manual_verify_pending:
         info = manual_verify_pending[user_text]
         now_ts = int(time.time())
@@ -87,34 +87,68 @@ def handle_verify(event):
             del manual_verify_pending[user_text]
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="驗證碼已過期，請重新申請。"))
             return
-        # 新增或補全白名單
-        record = Whitelist.query.filter_by(phone=info['phone']).first()
-        if record:
-            updated = False
-            if not record.line_id:
-                record.line_id = info['line_id']
-                updated = True
-            if not record.name:
-                record.name = info['name']
-                updated = True
-            if updated:
-                db.session.commit()
-        else:
-            record = Whitelist(
-                phone=info['phone'],
-                name=info['name'],
-                line_id=info['line_id'],
-                line_user_id=event.source.user_id
-            )
-            db.session.add(record)
-            db.session.commit()
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(
-            text=f"✅ 驗證成功，歡迎加入！\n暱稱：{info['name']}\nLINE ID：{info['line_id']}\n手機號：{info['phone']}"
-        ))
+        # 暫存資料到 temp_users，進入資料確認模式
+        temp_users[user_id] = {
+            "phone": info["phone"],
+            "name": info["name"],
+            "line_id": info["line_id"],
+            "step": "waiting_manual_confirm"
+        }
+        reply_msg = (
+            f"📱 手機號碼：{info['phone']}\n"
+            f"🌸 暱稱：{info['name']}\n"
+            f"       個人編號：待驗證後產生\n"
+            f"🔗 LINE ID：{info['line_id']}\n"
+            f"（此用戶為手動通過）\n"
+            f"請問以上資料是否正確？正確請回復 1\n"
+            f"⚠️輸入錯誤請重新輸入手機號碼即可⚠️"
+        )
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_msg))
         del manual_verify_pending[user_text]
         return
 
-    # Step 5: 管理員查詢待驗證名單
+    # Step 5: 用戶回覆 1，才正式寫入白名單並開啟選單
+    if user_id in temp_users and temp_users[user_id].get("step") == "waiting_manual_confirm":
+        if user_text == "1":
+            info = temp_users[user_id]
+            record = Whitelist.query.filter_by(phone=info['phone']).first()
+            is_new = False
+            if record:
+                updated = False
+                if not record.line_id:
+                    record.line_id = info['line_id']
+                    updated = True
+                if not record.name:
+                    record.name = info['name']
+                    updated = True
+                if updated:
+                    db.session.commit()
+            else:
+                record = Whitelist(
+                    phone=info['phone'],
+                    name=info['name'],
+                    line_id=info['line_id'],
+                    line_user_id=user_id
+                )
+                db.session.add(record)
+                db.session.commit()
+                is_new = True
+            reply = (
+                f"📱 {record.phone}\n"
+                f"🌸 暱稱：{record.name}\n"
+                f"       個人編號：{record.id}\n"
+                f"🔗 LINE ID：{record.line_id}\n"
+                f"✅ 驗證成功，歡迎加入茗殿\n"
+                f"🌟 加入密碼：ming666"
+            )
+            reply_with_menu(event.reply_token, reply)
+            temp_users.pop(user_id)
+            return
+        else:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 如果資料正確請回覆 1，錯誤請重新輸入手機號碼。"))
+            return
+
+    # Step 6: 管理員查詢待驗證名單
     if user_text == "查詢手動驗證":
         if user_id not in ADMIN_IDS:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 只有管理員可使用此功能"))
@@ -128,7 +162,6 @@ def handle_verify(event):
         return
 
     # ==== 一般用戶自助驗證流程 ====
-    # 正在進行圖片/LINE ID驗證
     if user_id in temp_users and temp_users[user_id].get("step") == "waiting_confirm":
         if user_text == "1":
             data = temp_users[user_id]
