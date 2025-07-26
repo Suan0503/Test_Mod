@@ -33,7 +33,68 @@ def handle_verify(event):
     except Exception:
         display_name = "用戶"
 
-    # ==== 管理員手動驗證流程（最高優先） ====
+    # ==== 管理員手動黑名單流程 ====
+    if user_text.startswith("手動黑名單 - "):
+        if user_id not in ADMIN_IDS:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 只有管理員可使用此功能"))
+            return
+        parts = user_text.split(" - ", 1)
+        if len(parts) == 2 and parts[1]:
+            temp_users[user_id] = {"blacklist_step": "wait_phone", "name": parts[1]}
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入該用戶的手機號碼"))
+        else:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="格式錯誤，請用：手動黑名單 - 暱稱"))
+        return
+
+    # 管理員輸入手機號（黑名單流程）
+    if user_id in temp_users and temp_users[user_id].get("blacklist_step") == "wait_phone":
+        phone = normalize_phone(user_text)
+        if not phone or not phone.startswith("09") or len(phone) != 10:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入正確的手機號碼（09xxxxxxxx）"))
+            return
+        temp_users[user_id]['phone'] = phone
+        temp_users[user_id]['blacklist_step'] = "confirm"
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(
+                text=(
+                    f"暱稱：{temp_users[user_id]['name']}\n"
+                    f"手機號：{phone}\n"
+                    f"確認加入黑名單？正確請回覆 1\n"
+                    f"⚠️ 如有誤請重新輸入手機號碼 ⚠️"
+                )
+            )
+        )
+        return
+
+    # 管理員回覆 1，正式寫入黑名單
+    if user_id in temp_users and temp_users[user_id].get("blacklist_step") == "confirm":
+        if user_text == "1":
+            info = temp_users[user_id]
+            record = Blacklist.query.filter_by(phone=info['phone']).first()
+            if not record:
+                record = Blacklist(
+                    phone=info['phone'],
+                    name=info['name'],
+                    line_user_id=user_id
+                )
+                db.session.add(record)
+                db.session.commit()
+                reply = (
+                    f"✅ 已將手機號 {info['phone']} (暱稱：{info['name']}) 加入黑名單！"
+                )
+            else:
+                reply = (
+                    f"⚠️ 手機號 {info['phone']} 已在黑名單名單中。"
+                )
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+            temp_users.pop(user_id)
+            return
+        else:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 如果資料正確請回覆 1，錯誤請重新輸入手機號碼。"))
+            return
+
+    # ==== 管理員手動驗證白名單流程（最高優先） ====
     if user_text.startswith("手動驗證 - "):
         if user_id not in ADMIN_IDS:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 只有管理員可使用此功能"))
@@ -87,7 +148,6 @@ def handle_verify(event):
             del manual_verify_pending[user_text]
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="驗證碼已過期，請重新申請。"))
             return
-        # 暫存資料到 temp_users，進入資料確認模式
         temp_users[user_id] = {
             "phone": info["phone"],
             "name": info["name"],
