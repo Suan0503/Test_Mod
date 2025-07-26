@@ -2,15 +2,13 @@ from linebot.models import MessageEvent, TextMessage, TextSendMessage
 from extensions import handler, line_bot_api, db
 from models import Whitelist
 from utils.temp_users import temp_users, manual_verify_pending
+from admin import ADMIN_IDS  # ⬅️ 引用管理員ID
 import random, string, time
-
-# 建議用 config 管理
-ADMIN_IDS = ["你的管理員ID"]
 
 def generate_verify_code(length=8):
     return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 
-VERIFY_CODE_EXPIRE = 86400  # 驗證碼有效期（秒），預設一天
+VERIFY_CODE_EXPIRE = 86400  # 驗證碼有效期（秒）
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_manual_verify(event):
@@ -18,7 +16,7 @@ def handle_manual_verify(event):
     user_text = event.message.text.strip()
     now_ts = int(time.time())
 
-    # Step 1: 管理員啟動手動驗證流程
+    # Step 1: 管理員啟動手動驗證流程（最高優先）
     if user_text.startswith("手動驗證 - "):
         if user_id not in ADMIN_IDS:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 只有管理員可使用此功能"))
@@ -75,14 +73,16 @@ def handle_manual_verify(event):
         # 新增或補全白名單
         record = Whitelist.query.filter_by(phone=info['phone']).first()
         if record:
-            # 補齊資料
+            updated = False
             if not record.line_id:
                 record.line_id = info['line_id']
+                updated = True
             if not record.name:
                 record.name = info['name']
-            db.session.commit()
+                updated = True
+            if updated:
+                db.session.commit()
         else:
-            # 新增
             record = Whitelist(
                 phone=info['phone'],
                 name=info['name'],
@@ -91,11 +91,10 @@ def handle_manual_verify(event):
             )
             db.session.add(record)
             db.session.commit()
-        # 成功通知
         line_bot_api.reply_message(event.reply_token, TextSendMessage(
             text=f"✅ 驗證成功，歡迎加入！\n暱稱：{info['name']}\nLINE ID：{info['line_id']}\n手機號：{info['phone']}"
         ))
-        # 通知管理員（可選）
+        # 可選：通知管理員
         # line_bot_api.push_message(info['admin_id'], TextSendMessage(text=f"{info['name']} 驗證成功！"))
         del manual_verify_pending[user_text]
         return
@@ -113,4 +112,4 @@ def handle_manual_verify(event):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
         return
 
-    # 你可以在這裡擴充其他管理員指令
+    # 可擴充其他管理員指令，例如刪除驗證碼、重發等
