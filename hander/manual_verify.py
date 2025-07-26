@@ -4,14 +4,13 @@ from models import Whitelist
 from utils.temp_users import temp_users, manual_verify_pending
 import random, string, time
 
-# 管理員 ID 清單
+# 建議用 config 管理
 ADMIN_IDS = ["你的管理員ID"]
 
 def generate_verify_code(length=8):
     return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 
-# 驗證碼有效期（秒），例如 1 小時
-VERIFY_CODE_EXPIRE = 86400
+VERIFY_CODE_EXPIRE = 86400  # 驗證碼有效期（秒），預設一天
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_manual_verify(event):
@@ -19,29 +18,36 @@ def handle_manual_verify(event):
     user_text = event.message.text.strip()
     now_ts = int(time.time())
 
-    # Step 1：管理員啟動手動驗證流程
+    # Step 1: 管理員啟動手動驗證流程
     if user_text.startswith("手動驗證 - "):
         if user_id not in ADMIN_IDS:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 只有管理員可使用此功能"))
             return
         parts = user_text.split(" - ", 1)
-        if len(parts) == 2:
+        if len(parts) == 2 and parts[1]:
             temp_users[user_id] = {"manual_step": "wait_lineid", "name": parts[1]}
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入該用戶的 LINE ID"))
         else:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="格式錯誤，請用：手動驗證 - 暱稱"))
         return
 
-    # Step 2：管理員輸入 LINE ID
+    # Step 2: 管理員輸入 LINE ID
     if user_id in temp_users and temp_users[user_id].get("manual_step") == "wait_lineid":
+        if not user_text:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入正確的 LINE ID"))
+            return
         temp_users[user_id]['line_id'] = user_text
         temp_users[user_id]['manual_step'] = "wait_phone"
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入該用戶的手機號碼"))
         return
 
-    # Step 3：管理員輸入手機號，產生驗證碼
+    # Step 3: 管理員輸入手機號並產生驗證碼
     if user_id in temp_users and temp_users[user_id].get("manual_step") == "wait_phone":
-        temp_users[user_id]['phone'] = user_text
+        phone = user_text.replace("-", "").replace(" ", "")
+        if not phone or not phone.startswith("09") or len(phone) != 10:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入正確的手機號碼（09xxxxxxxx）"))
+            return
+        temp_users[user_id]['phone'] = phone
         code = generate_verify_code()
         manual_verify_pending[code] = {
             'name': temp_users[user_id]['name'],
@@ -58,7 +64,7 @@ def handle_manual_verify(event):
         )
         return
 
-    # Step 4：用戶輸入驗證碼
+    # Step 4: 用戶輸入驗證碼
     if user_text in manual_verify_pending:
         info = manual_verify_pending[user_text]
         # 驗證碼有效期判斷
@@ -66,10 +72,10 @@ def handle_manual_verify(event):
             del manual_verify_pending[user_text]
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="驗證碼已過期，請重新申請。"))
             return
-        # 新增白名單
+        # 新增或補全白名單
         record = Whitelist.query.filter_by(phone=info['phone']).first()
         if record:
-            # 已存在，補齊資料
+            # 補齊資料
             if not record.line_id:
                 record.line_id = info['line_id']
             if not record.name:
@@ -89,11 +95,12 @@ def handle_manual_verify(event):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(
             text=f"✅ 驗證成功，歡迎加入！\n暱稱：{info['name']}\nLINE ID：{info['line_id']}\n手機號：{info['phone']}"
         ))
+        # 通知管理員（可選）
+        # line_bot_api.push_message(info['admin_id'], TextSendMessage(text=f"{info['name']} 驗證成功！"))
         del manual_verify_pending[user_text]
-        # 可加：通知管理員
         return
 
-    # 管理員查詢待驗證名單
+    # Step 5: 管理員查詢待驗證名單
     if user_text == "查詢手動驗證":
         if user_id not in ADMIN_IDS:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 只有管理員可使用此功能"))
@@ -106,4 +113,4 @@ def handle_manual_verify(event):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
         return
 
-    # 其他指令可擴充
+    # 你可以在這裡擴充其他管理員指令
