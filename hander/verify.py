@@ -4,7 +4,7 @@ from models import Whitelist, Blacklist
 from utils.menu_helpers import reply_with_menu
 from utils.db_utils import update_or_create_whitelist_from_data
 from utils.temp_users import temp_users, manual_verify_pending
-from admin import ADMIN_IDS
+from hander.admin import ADMIN_IDS
 import random, string, re, time
 from datetime import datetime
 import pytz
