@@ -1,18 +1,11 @@
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 from extensions import handler, line_bot_api, db
-from models import Whitelist, Blacklist
-from utils.menu_helpers import reply_with_menu
-from utils.db_utils import update_or_create_whitelist_from_data
-from utils.temp_users import temp_users, manual_verify_pending
+from models import Blacklist
+from utils.temp_users import temp_users
 from hander.admin import ADMIN_IDS
-import random, string, re, time
+import re, time
 from datetime import datetime
 import pytz
-
-def generate_verify_code(length=8):
-    return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
-
-VERIFY_CODE_EXPIRE = 86400  # 驗證碼有效期（秒）
 
 def normalize_phone(phone):
     phone = (phone or "").replace(" ", "").replace("-", "")
@@ -49,8 +42,12 @@ def handle_verify(event):
     # 管理員輸入手機號（黑名單流程）
     if user_id in temp_users and temp_users[user_id].get("blacklist_step") == "wait_phone":
         phone = normalize_phone(user_text)
+        if user_text == "取消":
+            temp_users.pop(user_id)
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 已取消黑名單流程。"))
+            return
         if not phone or not phone.startswith("09") or len(phone) != 10:
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入正確的手機號碼（09xxxxxxxx）"))
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入正確的手機號碼（09xxxxxxxx）\n或輸入「取消」結束流程。"))
             return
         temp_users[user_id]['phone'] = phone
         temp_users[user_id]['blacklist_step'] = "confirm"
@@ -61,7 +58,7 @@ def handle_verify(event):
                     f"暱稱：{temp_users[user_id]['name']}\n"
                     f"手機號：{phone}\n"
                     f"確認加入黑名單？正確請回覆 1\n"
-                    f"⚠️ 如有誤請重新輸入手機號碼 ⚠️"
+                    f"⚠️ 如有誤請重新輸入手機號碼，或輸入「取消」結束流程 ⚠️"
                 )
             )
         )
@@ -90,9 +87,21 @@ def handle_verify(event):
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
             temp_users.pop(user_id)
             return
-        else:
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 如果資料正確請回覆 1，錯誤請重新輸入手機號碼。"))
+        elif user_text == "取消":
+            temp_users.pop(user_id)
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 已取消黑名單流程。"))
             return
+        else:
+            # 重新進入輸入手機號碼狀態
+            temp_users[user_id]['blacklist_step'] = "wait_phone"
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(
+                text="⚠️ 如果資料正確請回覆 1，錯誤請重新輸入手機號碼。\n或輸入「取消」結束流程。"
+            ))
+            return
+
+    # fallback
+    line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請使用管理員『手動黑名單 - 暱稱』流程。"))
+    return
 
     # ==== 管理員手動驗證白名單流程（最高優先） ====
     if user_text.startswith("手動驗證 - "):
