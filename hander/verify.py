@@ -1,8 +1,10 @@
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 from extensions import handler, line_bot_api, db
-from models import Blacklist
+from models import Blacklist, Whitelist
 from utils.temp_users import temp_users
 from hander.admin import ADMIN_IDS
+from utils.menu_helpers import reply_with_menu
+from utils.db_utils import update_or_create_whitelist_from_data
 import re, time
 from datetime import datetime
 import pytz
@@ -98,10 +100,6 @@ def handle_verify(event):
             ))
             return
 
-    # fallback
-    line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請使用管理員『手動黑名單 - 暱稱』流程。"))
-    return
-
     # ==== 管理員手動驗證白名單流程（最高優先） ====
     if user_text.startswith("手動驗證 - "):
         if user_id not in ADMIN_IDS:
@@ -132,6 +130,7 @@ def handle_verify(event):
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入正確的手機號碼（09xxxxxxxx）"))
             return
         temp_users[user_id]['phone'] = phone
+        # 這裡應有 generate_verify_code 和 manual_verify_pending 的定義
         code = generate_verify_code()
         manual_verify_pending[code] = {
             'name': temp_users[user_id]['name'],
@@ -374,6 +373,6 @@ def handle_verify(event):
         temp_users.pop(user_id)
         return
 
-    # fallback
+    # fallback（僅保留這個，放最下方！）
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入手機號碼進行驗證。"))
     return
