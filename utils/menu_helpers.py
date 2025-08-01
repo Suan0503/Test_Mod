@@ -13,7 +13,7 @@ def choose_link():
 
 def get_menu_carousel():
     """
-    產生主功能選單的 Flex Message（兩頁，內容集中管理）
+    夏日主題版 ✨ 茗殿主功能選單 Flex Message
     """
     bubbles = []
 
@@ -27,11 +27,11 @@ def get_menu_carousel():
             "contents": [
                 {
                     "type": "text",
-                    "text": "🌸 茗殿功能選單 1/2",
+                    "text": "🌴 夏日茗殿選單 1/2",
                     "weight": "bold",
                     "size": "lg",
                     "align": "center",
-                    "color": "#7D5FFF"
+                    "color": "#0099CC"
                 },
                 {"type": "separator"},
                 {
@@ -44,51 +44,51 @@ def get_menu_carousel():
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "📱 驗證資訊",
+                                "label": "🍧 驗證資訊",
                                 "text": "驗證資訊"
                             },
                             "style": "primary",
-                            "color": "#FFB6B6"
+                            "color": "#66D8C2"
                         },
                         {
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "🎁 每日抽獎",
+                                "label": "🎁 夏日抽獎",
                                 "text": "每日抽獎"
                             },
                             "style": "primary",
-                            "color": "#A3DEE6"
+                            "color": "#FFD166"
                         },
                         {
                             "type": "button",
                             "action": {
                                 "type": "uri",
-                                "label": "📬 預約諮詢",
+                                "label": "🕶️ 預約諮詢",
                                 "uri": choose_link()
                             },
                             "style": "primary",
-                            "color": "#B889F2"
+                            "color": "#F4978E"
                         },
                         {
                             "type": "button",
                             "action": {
                                 "type": "uri",
-                                "label": "📅 每日班表",
+                                "label": "📅 夏季班表",
                                 "uri": "https://t.me/+LaFZixvTaMY3ODA1"
                             },
                             "style": "secondary",
-                            "color": "#FFF8B7"
+                            "color": "#FFF2A6"
                         },
                         {
                             "type": "button",
                             "action": {
                                 "type": "uri",
-                                "label": "🌸 茗殿討論區",
+                                "label": "🌺 討論區",
                                 "uri": "https://line.me/ti/g2/mq8VqBIVupL1lsIXuAulnqZNz5vw7VKrVYjNDg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default"
                             },
                             "style": "primary",
-                            "color": "#FFDCFF"
+                            "color": "#B5EAD7"
                         }
                     ]
                 }
@@ -106,11 +106,11 @@ def get_menu_carousel():
             "contents": [
                 {
                     "type": "text",
-                    "text": "🌸 茗殿功能選單 2/2",
+                    "text": "🌊 夏日茗殿選單 2/2",
                     "weight": "bold",
                     "size": "lg",
                     "align": "center",
-                    "color": "#7D5FFF"
+                    "color": "#0099CC"
                 },
                 {"type": "separator"},
                 {
@@ -133,7 +133,7 @@ def get_menu_carousel():
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "💰 折價券管理",
+                                "label": "💸 折價券管理",
                                 "text": "折價券管理"
                             },
                             "style": "primary",
@@ -147,13 +147,13 @@ def get_menu_carousel():
                                 "text": "規則查詢"
                             },
                             "style": "secondary",
-                            "color": "#C8C6A7"
+                            "color": "#E8F6EF"
                         },
                         {
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "🛎️ 呼叫管理員",
+                                "label": "🧊 管理員幫幫我",
                                 "text": "呼叫管理員"
                             },
                             "style": "secondary",
@@ -163,11 +163,11 @@ def get_menu_carousel():
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "🔔 活動快訊",
+                                "label": "🌞 活動快訊",
                                 "text": "活動快訊"
                             },
                             "style": "primary",
-                            "color": "#FFC2C2"
+                            "color": "#FFBCBC"
                         }
                     ]
                 }
@@ -176,7 +176,7 @@ def get_menu_carousel():
     })
 
     return FlexSendMessage(
-        alt_text="主功能選單",
+        alt_text="🌴 夏日主功能選單",
         contents={
             "type": "carousel",
             "contents": bubbles
@@ -185,7 +185,7 @@ def get_menu_carousel():
 
 def reply_with_menu(token, text=None):
     """
-    統一回覆主選單與可選的說明文字
+    回覆夏日主選單與可選的說明文字
     """
     msgs = []
     if text:
