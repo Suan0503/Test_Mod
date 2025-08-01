@@ -98,10 +98,6 @@ def handle_verify(event):
             ))
             return
 
-    # fallback
-    line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請使用管理員『手動黑名單 - 暱稱』流程。"))
-    return
-
     # ==== 管理員手動驗證白名單流程（最高優先） ====
     if user_text.startswith("手動驗證 - "):
         if user_id not in ADMIN_IDS:
