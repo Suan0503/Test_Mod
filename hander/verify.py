@@ -9,6 +9,8 @@ import re, time
 from datetime import datetime
 import pytz
 
+manual_verify_pending = {}  # <--- 加這一行
+
 def normalize_phone(phone):
     phone = (phone or "").replace(" ", "").replace("-", "")
     if phone.startswith("+8869"):
