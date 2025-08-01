@@ -72,8 +72,7 @@ def handle_verify(event):
             if not record:
                 record = Blacklist(
                     phone=info['phone'],
-                    name=info['name'],
-                    line_user_id=user_id
+                    name=info['name']
                 )
                 db.session.add(record)
                 db.session.commit()
