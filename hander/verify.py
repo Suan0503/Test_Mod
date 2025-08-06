@@ -29,7 +29,7 @@ def normalize_phone(phone):
 
 # ====== 主文字訊息處理器 ======
 @handler.add(MessageEvent, message=TextMessage)
-def handle_text(event):
+def handle_verify(event):
     user_id = event.source.user_id
     user_text = event.message.text.strip()
     tz = pytz.timezone("Asia/Taipei")
@@ -302,7 +302,7 @@ def handle_text(event):
         temp_users.pop(user_id)
         return
 
-    # 已驗證用戶查詢（可依需求保留或移除）
+    # 已驗證用戶查詢
     existing = Whitelist.query.filter_by(line_user_id=user_id).first()
     if existing:
         if normalize_phone(user_text) == normalize_phone(existing.phone):
