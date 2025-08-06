@@ -18,7 +18,6 @@ manual_verify_pending = {}
 
 VERIFY_CODE_EXPIRE = 900  # 驗證碼有效時間(秒)
 
-# ====== 處理電話號碼格式 ======
 def normalize_phone(phone):
     phone = (phone or "").replace(" ", "").replace("-", "")
     if phone.startswith("+8869"):
@@ -27,7 +26,6 @@ def normalize_phone(phone):
         return "0" + phone[4:]
     return phone
 
-# ====== 主文字訊息處理器 ======
 @handler.add(MessageEvent, message=TextMessage)
 def handle_verify(event):
     user_id = event.source.user_id
@@ -39,7 +37,7 @@ def handle_verify(event):
     except Exception:
         display_name = "用戶"
 
-    # ==== 管理員手動黑名單流程 ====
+    # 管理員手動黑名單流程
     if user_text.startswith("手動黑名單 - "):
         if user_id not in ADMIN_IDS:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 只有管理員可使用此功能"))
@@ -108,7 +106,7 @@ def handle_verify(event):
             ))
             return
 
-    # ==== 管理員手動驗證白名單流程 ====
+    # 管理員手動驗證白名單流程
     if user_text.startswith("手動驗證 - "):
         if user_id not in ADMIN_IDS:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 只有管理員可使用此功能"))
@@ -136,7 +134,7 @@ def handle_verify(event):
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入正確的手機號碼（09xxxxxxxx）"))
             return
         temp_users[user_id]['phone'] = phone
-        code = str(int(time.time()))[-8:]  # 產生8位驗證碼
+        code = str(int(time.time()))[-8:]
         manual_verify_pending[code] = {
             'name': temp_users[user_id]['name'],
             'line_id': temp_users[user_id]['line_id'],
@@ -230,35 +228,13 @@ def handle_verify(event):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
         return
 
-    # ==== 驗證流程入口/規則 ====
-    if user_text in ["規則", "我要驗證", "開始驗證"]:
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(
-                text=(
-                    "📜 驗證流程如下：\n"
-                    "1️⃣ 閱讀規則後點擊『我同意規則』\n"
-                    "2️⃣ 依步驟輸入手機號與 LINE ID\n"
-                    "3️⃣ 上傳 LINE 個人檔案截圖\n"
-                    "4️⃣ 系統進行快速 OCR 驗證\n"
-                    "5️⃣ 如無法辨識將交由客服人工處理\n\n"
-                    "✅ 完成驗證即可解鎖專屬客服＆預約功能💖"
-                ),
-                quick_reply=QuickReply(items=[
-                    QuickReplyButton(
-                        action=MessageAction(label="我同意規則", text="我同意規則")
-                    )
-                ])
-            )
-        )
-        return
-
+    # 驗證流程入口（只處理「我同意規則」）
     if user_text == "我同意規則":
         temp_users[user_id] = {"step": "waiting_phone", "name": display_name}
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入您的手機號碼（09開頭）開始驗證流程～"))
         return
 
-    # ==== 一般用戶驗證流程 ====
+    # Step 1: 輸入手機號碼
     if user_id in temp_users and temp_users[user_id].get("step") == "waiting_phone":
         phone = normalize_phone(user_text)
         if not phone.startswith("09") or len(phone) != 10:
@@ -269,6 +245,7 @@ def handle_verify(event):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text="✅ 手機號已登記～請輸入您的 LINE ID（未設定請輸入 尚未設定）"))
         return
 
+    # Step 2: 輸入 LINE ID
     if user_id in temp_users and temp_users[user_id].get("step") == "waiting_lineid":
         line_id = user_text
         if not line_id:
@@ -285,6 +262,7 @@ def handle_verify(event):
         ))
         return
 
+    # Step 3: 圖片驗證確認後用戶輸入 1
     if user_id in temp_users and temp_users[user_id].get("step") == "waiting_confirm" and user_text == "1":
         data = temp_users[user_id]
         now = datetime.now(tz)
@@ -325,7 +303,6 @@ def handle_verify(event):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請點擊『我同意規則』後開始驗證流程唷～👮‍♀️"))
         return
 
-# ====== 圖片處理（OCR） ======
 @handler.add(MessageEvent, message=ImageMessage)
 def handle_image(event):
     user_id = event.source.user_id
