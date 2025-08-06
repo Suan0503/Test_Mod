@@ -5,12 +5,13 @@ from extensions import handler, line_bot_api
 def handle_follow(event):
     welcome_msg = (
         "歡迎加入🍵茗殿🍵\n"
-        "請詳閱以下規則並同意後開始驗證：\n"
-        "1. 請輸入正確手機號碼（09開頭）\n"
-        "2. LINE ID 如未設定請輸入『尚未設定』\n"
-        "3. 請上傳LINE個人頁截圖\n"
-        "4. 禁止惡意操作，違者永久封鎖\n"
-        "\n請點擊下方『我同意規則』開始驗證。"
+        "📜 驗證流程如下：\n"
+        "1️⃣ 閱讀規則後點擊『我同意規則』\n"
+        "2️⃣ 依步驟輸入手機號與 LINE ID\n"
+        "3️⃣ 上傳 LINE 個人檔案截圖\n"
+        "4️⃣ 系統進行快速自動驗證\n"
+        "5️⃣ 如無法辨識將交由客服人工處理\n\n"
+        "✅ 完成驗證即可解鎖專屬客服＆預約功能💖"
     )
     line_bot_api.reply_message(
         event.reply_token,
