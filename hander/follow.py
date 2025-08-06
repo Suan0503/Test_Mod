@@ -24,3 +24,7 @@ def handle_follow(event):
             ])
         )
     )
+# ⭐ 只 import entrypoint（這會自動帶入各功能模組）
+import hander.entrypoint
+import hander.follow
+import hander.image
