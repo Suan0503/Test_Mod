@@ -20,4 +20,3 @@ def callback():
     return "OK"
 
 # ⭐ 只 import hand
-
