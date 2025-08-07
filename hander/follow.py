@@ -1,7 +1,6 @@
 from linebot.models import FollowEvent, TextSendMessage, QuickReply, QuickReplyButton, MessageAction
-from extensions import handler, line_bot_api
+from extensions import line_bot_api
 
-@handler.add(FollowEvent)
 def handle_follow(event):
     welcome_msg = (
         "歡迎加入🍵茗殿🍵\n"
@@ -24,7 +23,3 @@ def handle_follow(event):
             ])
         )
     )
-# ⭐ 只 import entrypoint（這會自動帶入各功能模組）
-import hander.entrypoint
-import hander.follow
-import hander.image
