@@ -1,6 +1,6 @@
 from linebot.models import MessageEvent, TextMessage, PostbackEvent, TextSendMessage
 from extensions import handler, line_bot_api, db
-from utils.menu_helpers import reply_with_menu, notify_admins
+from utils.menu_helpers import reply_with_menu, notify_admins, reply_with_ad_menu
 from hander.report import handle_report, handle_report_postback
 from hander.admin import handle_admin
 from hander.verify import handle_verify
@@ -14,6 +14,11 @@ from datetime import datetime
 def entrypoint(event):
     user_text = event.message.text.strip()
     user_id = event.source.user_id
+
+    # ===== 新增：廣告專區入口 =====
+    if user_text == "廣告專區":
+        reply_with_ad_menu(event.reply_token)
+        return
 
     # 回報文流程進行中（pending 狀態）
     if user_id in temp_users and (
