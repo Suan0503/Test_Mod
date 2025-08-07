@@ -3,6 +3,14 @@ from extensions import line_bot_api
 from storage import ADMIN_IDS  # 管理員清單
 import os
 
+def choose_link():
+    group = [
+        "https://line.me/ti/p/g7TPO_lhAL",
+        "https://line.me/ti/p/emkjaMQkMK",
+        "https://line.me/ti/p/AKRUvSCLRC"
+    ]
+    return group[hash(os.urandom(8)) % len(group)]
+
 def get_ad_menu():
     """
     廣告專區 Flex Message，10個JKF連結按鈕（點擊直接打開網址）
