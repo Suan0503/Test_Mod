@@ -16,11 +16,11 @@ def get_ad_menu():
     廣告專區 Flex Message，10個JKF連結按鈕（點擊直接打開網址）
     """
     jkf_links = [
-        "https://www.jkforum.net/thread-1-1-1.html",
-        "https://www.jkforum.net/thread-2-1-1.html",
-        "https://www.jkforum.net/thread-3-1-1.html",
-        "https://www.jkforum.net/thread-4-1-1.html",
-        "https://www.jkforum.net/thread-5-1-1.html",
+        "https://www.jkforum.net/p/thread-15744749-1-1.html",
+        "https://www.jkforum.net/p/thread-16422277-1-1.html",
+        "https://www.jkforum.net/p/thread-17781450-1-1.html",
+        "https://www.jkforum.net/p/thread-18976516-1-1.html",
+        "https://www.jkforum.net/p/thread-17742482-1-1.html",
         "https://www.jkforum.net/thread-6-1-1.html",
         "https://www.jkforum.net/thread-7-1-1.html",
         "https://www.jkforum.net/thread-8-1-1.html",
