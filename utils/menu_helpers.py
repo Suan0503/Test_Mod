@@ -11,30 +11,62 @@ def choose_link():
     ]
     return group[hash(os.urandom(8)) % len(group)]
 
+# === JKF 廣告連結與名稱可獨立修改 ===
+JKF_LINKS = [
+    {
+        "label": "JKF 廣告一",  # 這裡可自由修改名稱
+        "url": "https://www.jkforum.net/p/thread-15744749-1-1.html"
+    },
+    {
+        "label": "JKF 廣告二",
+        "url": "https://www.jkforum.net/p/thread-16422277-1-1.html"
+    },
+    {
+        "label": "JKF 廣告三",
+        "url": "https://www.jkforum.net/p/thread-17781450-1-1.html"
+    },
+    {
+        "label": "JKF 廣告四",
+        "url": "https://www.jkforum.net/p/thread-18976516-1-1.html"
+    },
+    {
+        "label": "JKF 廣告五",
+        "url": "https://www.jkforum.net/p/thread-17742482-1-1.html"
+    },
+    {
+        "label": "JKF 廣告六",
+        "url": "https://www.jkforum.net/thread-6-1-1.html"
+    },
+    {
+        "label": "JKF 廣告七",
+        "url": "https://www.jkforum.net/thread-7-1-1.html"
+    },
+    {
+        "label": "JKF 廣告八",
+        "url": "https://www.jkforum.net/thread-8-1-1.html"
+    },
+    {
+        "label": "JKF 廣告九",
+        "url": "https://www.jkforum.net/thread-9-1-1.html"
+    },
+    {
+        "label": "JKF 廣告十",
+        "url": "https://www.jkforum.net/thread-10-1-1.html"
+    },
+]
+
 def get_ad_menu():
     """
-    廣告專區 Flex Message，10個JKF連結按鈕（點擊直接打開網址）
+    廣告專區 Flex Message，10個JKF連結按鈕（名稱可獨立修改）
     """
-    jkf_links = [
-        "https://www.jkforum.net/p/thread-15744749-1-1.html",
-        "https://www.jkforum.net/p/thread-16422277-1-1.html",
-        "https://www.jkforum.net/p/thread-17781450-1-1.html",
-        "https://www.jkforum.net/p/thread-18976516-1-1.html",
-        "https://www.jkforum.net/p/thread-17742482-1-1.html",
-        "https://www.jkforum.net/thread-6-1-1.html",
-        "https://www.jkforum.net/thread-7-1-1.html",
-        "https://www.jkforum.net/thread-8-1-1.html",
-        "https://www.jkforum.net/thread-9-1-1.html",
-        "https://www.jkforum.net/thread-10-1-1.html",
-    ]
     buttons = []
-    for i, link in enumerate(jkf_links):
+    for i, link in enumerate(JKF_LINKS):
         buttons.append({
             "type": "button",
             "action": {
                 "type": "uri",
-                "label": f"JKF 廣告 {i+1}",
-                "uri": link
+                "label": link["label"],
+                "uri": link["url"]
             },
             "style": "primary" if i % 2 == 0 else "secondary",
             "color": "#FF5E5B" if i % 2 == 0 else "#FFD6E0"
