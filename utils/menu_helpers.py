@@ -42,16 +42,16 @@ JKF_LINKS = [
         "url": "https://www.jkforum.net/p/thread-20275231-1-1.html"
     },
     {
-        "label": "JKF 廣告八",
-        "url": "https://www.jkforum.net/thread-8-1-1.html"
+        "label": "本期空缺中",
+        "url": "https://www.jkforum.net/p/thread-15744749-1-1.html"
     },
     {
-        "label": "JKF 廣告九",
-        "url": "https://www.jkforum.net/thread-9-1-1.html"
+        "label": "本期空缺中",
+        "url": "https://www.jkforum.net/p/thread-15744749-1-1.html"
     },
     {
-        "label": "JKF 廣告十",
-        "url": "https://www.jkforum.net/thread-10-1-1.html"
+        "label": "本期空缺中",
+        "url": "https://www.jkforum.net/p/thread-15744749-1-1.html"
     },
 ]
 
