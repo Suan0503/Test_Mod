@@ -4,19 +4,6 @@ import os
 
 db = SQLAlchemy()
 
-class DebugLineBotApi(LineBotApi):
-    def reply_message(self, *args, **kwargs):
-        import traceback
-        print("=== [DEBUG] reply_message 被呼叫 ===")
-        print("args:", args)
-        print("kwargs:", kwargs)
-        traceback.print_stack()
-        return super().reply_message(*args, **kwargs)
-    def push_message(self, *args, **kwargs):
-        print("=== [DEBUG] push_message 被呼叫 ===")
-        print("args:", args)
-        print("kwargs:", kwargs)
-        return super().push_message(*args, **kwargs)
-
-line_bot_api = DebugLineBotApi(os.environ["LINE_CHANNEL_ACCESS_TOKEN"])
+# 回復為正式環境，不再覆寫 LineBotApi，取消所有 debug log
+line_bot_api = LineBotApi(os.environ["LINE_CHANNEL_ACCESS_TOKEN"])
 handler = WebhookHandler(os.environ["LINE_CHANNEL_SECRET"])
