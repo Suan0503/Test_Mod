@@ -14,7 +14,7 @@ def choose_link():
 # === JKF 廣告連結與名稱可獨立修改 ===
 JKF_LINKS = [
     {
-        "label": "JKF 廣告一",  # 這裡可自由修改名稱
+        "label": "JKF 廣告一",
         "url": "https://www.jkforum.net/p/thread-15744749-1-1.html"
     },
     {
@@ -69,7 +69,7 @@ def get_ad_menu():
                 "uri": link["url"]
             },
             "style": "primary" if i % 2 == 0 else "secondary",
-            "color": "#FF5E5B" if i % 2 == 0 else "#FFD6E0"
+            "color": "#53CFE9" if i % 2 == 0 else "#FFFCE6"
         })
     return FlexSendMessage(
         alt_text="廣告專區",
@@ -79,8 +79,9 @@ def get_ad_menu():
                 "type": "box",
                 "layout": "vertical",
                 "spacing": "md",
+                "backgroundColor": "#E3FDFD",
                 "contents": [
-                    {"type": "text", "text": "📢 廣告專區", "weight": "bold", "size": "lg", "align": "center", "color": "#FF5E5B"},
+                    {"type": "text", "text": "🏖️ 夏日廣告專區", "weight": "bold", "size": "lg", "align": "center", "color": "#3BC9DB"},
                     {"type": "separator"},
                     {
                         "type": "box",
@@ -96,25 +97,27 @@ def get_ad_menu():
 
 def get_menu_carousel():
     """
-    主功能選單（已將規則查詢改為廣告專區）
+    主功能選單，夏日海灘風格，按鈕順序已依需求調整
     """
     bubbles = []
 
     # 第一頁
     bubbles.append({
         "type": "bubble",
+        "size": "mega",
         "body": {
             "type": "box",
             "layout": "vertical",
             "spacing": "md",
+            "backgroundColor": "#A7E9FF",  # 海灘天空藍
             "contents": [
                 {
                     "type": "text",
-                    "text": "🌴 夏日茗殿選單 1/2",
+                    "text": "🏖️ 夏日茗殿選單 1/2",
                     "weight": "bold",
                     "size": "lg",
                     "align": "center",
-                    "color": "#0099CC"
+                    "color": "#1E90FF"
                 },
                 {"type": "separator"},
                 {
@@ -127,21 +130,41 @@ def get_menu_carousel():
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "🍧 驗證資訊",
+                                "label": "🍧 開啟主選單",
                                 "text": "驗證資訊"
                             },
                             "style": "primary",
-                            "color": "#66D8C2"
+                            "color": "#FFEB99"  # 沙灘黃
                         },
                         {
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "🎁 夏日抽獎",
+                                "label": "🌴 每日抽獎",
                                 "text": "每日抽獎"
                             },
                             "style": "primary",
-                            "color": "#FFD166"
+                            "color": "#00CFC1"  # 海水綠
+                        },
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "📢 廣告專區",
+                                "text": "廣告專區"
+                            },
+                            "style": "primary",
+                            "color": "#53CFE9"  # 清涼藍
+                        },
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "uri",
+                                "label": "📅 班表查詢",
+                                "uri": "https://t.me/+LaFZixvTaMY3ODA1"
+                            },
+                            "style": "secondary",
+                            "color": "#FFFCE6"  # 沙灘白
                         },
                         {
                             "type": "button",
@@ -150,28 +173,8 @@ def get_menu_carousel():
                                 "label": "🕶️ 預約諮詢",
                                 "uri": choose_link()
                             },
-                            "style": "primary",
-                            "color": "#F4978E"
-                        },
-                        {
-                            "type": "button",
-                            "action": {
-                                "type": "uri",
-                                "label": "📅 夏季班表",
-                                "uri": "https://t.me/+LaFZixvTaMY3ODA1"
-                            },
                             "style": "secondary",
-                            "color": "#FFF2A6"
-                        },
-                        {
-                            "type": "button",
-                            "action": {
-                                "type": "uri",
-                                "label": "🌺 討論區",
-                                "uri": "https://line.me/ti/g2/mq8VqBIVupL1lsIXuAulnqZNz5vw7VKrVYjNDg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default"
-                            },
-                            "style": "primary",
-                            "color": "#B5EAD7"
+                            "color": "#FFD6B0"  # 橘沙
                         }
                     ]
                 }
@@ -179,21 +182,23 @@ def get_menu_carousel():
         }
     })
 
-    # 第二頁，規則查詢→廣告專區
+    # 第二頁
     bubbles.append({
         "type": "bubble",
+        "size": "mega",
         "body": {
             "type": "box",
             "layout": "vertical",
             "spacing": "md",
+            "backgroundColor": "#FFECCF",  # 沙灘米色
             "contents": [
                 {
                     "type": "text",
-                    "text": "🌊 夏日茗殿選單 2/2",
+                    "text": "🏝️ 夏日茗殿選單 2/2",
                     "weight": "bold",
                     "size": "lg",
                     "align": "center",
-                    "color": "#0099CC"
+                    "color": "#F6A500"
                 },
                 {"type": "separator"},
                 {
@@ -202,6 +207,16 @@ def get_menu_carousel():
                     "margin": "lg",
                     "spacing": "sm",
                     "contents": [
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "uri",
+                                "label": "🌺 茗殿討論區",
+                                "uri": "https://line.me/ti/g2/mq8VqBIVupL1lsIXuAulnqZNz5vw7VKrVYjNDg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default"
+                            },
+                            "style": "primary",
+                            "color": "#B5EAD7"
+                        },
                         {
                             "type": "button",
                             "action": {
@@ -226,17 +241,7 @@ def get_menu_carousel():
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "📢 廣告專區",
-                                "text": "廣告專區"
-                            },
-                            "style": "secondary",
-                            "color": "#E8F6EF"
-                        },
-                        {
-                            "type": "button",
-                            "action": {
-                                "type": "message",
-                                "label": "🧊 管理員幫幫我",
+                                "label": "🧊 呼叫管理員",
                                 "text": "呼叫管理員"
                             },
                             "style": "secondary",
@@ -259,7 +264,7 @@ def get_menu_carousel():
     })
 
     return FlexSendMessage(
-        alt_text="🌴 夏日主功能選單",
+        alt_text="🏖️ 夏日主功能選單",
         contents={
             "type": "carousel",
             "contents": bubbles
