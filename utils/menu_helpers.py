@@ -14,32 +14,32 @@ def choose_link():
 # === JKF 廣告連結與名稱可獨立修改 ===
 JKF_LINKS = [
     {
-        "label": "JKF 廣告一",
+        "label": "茗殿 - 主頁推薦",
         "url": "https://www.jkforum.net/p/thread-15744749-1-1.html"
     },
     {
-        "label": "JKF 廣告二",
+        "label": "泰式料理菜單 - 1",
         "url": "https://www.jkforum.net/p/thread-16422277-1-1.html"
     },
     {
-        "label": "JKF 廣告三",
+        "label": "泰式料理菜單 - 2",
         "url": "https://www.jkforum.net/p/thread-17781450-1-1.html"
     },
     {
-        "label": "JKF 廣告四",
+        "label": "越式料理小吃 - 1",
         "url": "https://www.jkforum.net/p/thread-18976516-1-1.html"
     },
     {
-        "label": "JKF 廣告五",
+        "label": "越式料理小吃 - 2",
         "url": "https://www.jkforum.net/p/thread-17742482-1-1.html"
     },
     {
-        "label": "JKF 廣告六",
-        "url": "https://www.jkforum.net/thread-6-1-1.html"
+        "label": "檔期推薦 - 奇蹟",
+        "url": "https://www.jkforum.net/p/thread-20273100-1-1.html"
     },
     {
-        "label": "JKF 廣告七",
-        "url": "https://www.jkforum.net/thread-7-1-1.html"
+        "label": "檔期推薦 - 小不點",
+        "url": "https://www.jkforum.net/p/thread-20275231-1-1.html"
     },
     {
         "label": "JKF 廣告八",
@@ -60,6 +60,9 @@ def get_ad_menu():
     廣告專區 Flex Message，10個JKF連結按鈕（名稱可獨立修改）
     """
     buttons = []
+    # 柔和海灘色系
+    btn_primary = "#50B7C1"   # 柔綠藍
+    btn_secondary = "#E3F6FC" # 柔米白
     for i, link in enumerate(JKF_LINKS):
         buttons.append({
             "type": "button",
@@ -69,7 +72,7 @@ def get_ad_menu():
                 "uri": link["url"]
             },
             "style": "primary" if i % 2 == 0 else "secondary",
-            "color": "#53CFE9" if i % 2 == 0 else "#FFFCE6"
+            "color": btn_primary if i % 2 == 0 else btn_secondary
         })
     return FlexSendMessage(
         alt_text="廣告專區",
@@ -79,9 +82,9 @@ def get_ad_menu():
                 "type": "box",
                 "layout": "vertical",
                 "spacing": "md",
-                "backgroundColor": "#E3FDFD",
+                "backgroundColor": "#F0FAFF",  # 柔和海灘藍白
                 "contents": [
-                    {"type": "text", "text": "🏖️ 夏日廣告專區", "weight": "bold", "size": "lg", "align": "center", "color": "#3BC9DB"},
+                    {"type": "text", "text": "🏖️ 夏日廣告專區", "weight": "bold", "size": "lg", "align": "center", "color": "#358597"},
                     {"type": "separator"},
                     {
                         "type": "box",
@@ -97,8 +100,21 @@ def get_ad_menu():
 
 def get_menu_carousel():
     """
-    主功能選單，夏日海灘風格，按鈕順序已依需求調整
+    主功能選單，夏日海灘柔和風格，按鈕順序已依需求調整
     """
+    # 柔和色系
+    main_bg1 = "#E7F6F2"     # 柔和藍綠
+    main_bg2 = "#FFF7E3"     # 柔和米黃
+    btn_yellow = "#FFE5A7"   # 柔沙
+    btn_green = "#A7DED9"    # 海灘綠
+    btn_blue = "#50B7C1"     # 柔綠藍
+    btn_white = "#FDF6EE"    # 柔米白
+    btn_orange = "#FFD6B0"   # 柔橘沙
+    btn_pink = "#FFD1DC"     # 柔粉
+    btn_lblue = "#C2E9FB"    # 柔天藍
+    btn_lgreen = "#D9F9D9"   # 柔綠
+    btn_gray = "#F0FAFF"     # 柔灰藍
+
     bubbles = []
 
     # 第一頁
@@ -109,7 +125,7 @@ def get_menu_carousel():
             "type": "box",
             "layout": "vertical",
             "spacing": "md",
-            "backgroundColor": "#A7E9FF",  # 海灘天空藍
+            "backgroundColor": main_bg1,
             "contents": [
                 {
                     "type": "text",
@@ -117,7 +133,7 @@ def get_menu_carousel():
                     "weight": "bold",
                     "size": "lg",
                     "align": "center",
-                    "color": "#1E90FF"
+                    "color": "#358597"
                 },
                 {"type": "separator"},
                 {
@@ -134,7 +150,7 @@ def get_menu_carousel():
                                 "text": "驗證資訊"
                             },
                             "style": "primary",
-                            "color": "#FFEB99"  # 沙灘黃
+                            "color": btn_yellow
                         },
                         {
                             "type": "button",
@@ -144,7 +160,7 @@ def get_menu_carousel():
                                 "text": "每日抽獎"
                             },
                             "style": "primary",
-                            "color": "#00CFC1"  # 海水綠
+                            "color": btn_green
                         },
                         {
                             "type": "button",
@@ -154,7 +170,7 @@ def get_menu_carousel():
                                 "text": "廣告專區"
                             },
                             "style": "primary",
-                            "color": "#53CFE9"  # 清涼藍
+                            "color": btn_blue
                         },
                         {
                             "type": "button",
@@ -164,7 +180,7 @@ def get_menu_carousel():
                                 "uri": "https://t.me/+LaFZixvTaMY3ODA1"
                             },
                             "style": "secondary",
-                            "color": "#FFFCE6"  # 沙灘白
+                            "color": btn_white
                         },
                         {
                             "type": "button",
@@ -174,7 +190,7 @@ def get_menu_carousel():
                                 "uri": choose_link()
                             },
                             "style": "secondary",
-                            "color": "#FFD6B0"  # 橘沙
+                            "color": btn_orange
                         }
                     ]
                 }
@@ -190,7 +206,7 @@ def get_menu_carousel():
             "type": "box",
             "layout": "vertical",
             "spacing": "md",
-            "backgroundColor": "#FFECCF",  # 沙灘米色
+            "backgroundColor": main_bg2,
             "contents": [
                 {
                     "type": "text",
@@ -215,7 +231,7 @@ def get_menu_carousel():
                                 "uri": "https://line.me/ti/g2/mq8VqBIVupL1lsIXuAulnqZNz5vw7VKrVYjNDg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default"
                             },
                             "style": "primary",
-                            "color": "#B5EAD7"
+                            "color": btn_lgreen
                         },
                         {
                             "type": "button",
@@ -225,7 +241,7 @@ def get_menu_carousel():
                                 "text": "回報文"
                             },
                             "style": "primary",
-                            "color": "#F7B7A3"
+                            "color": btn_pink
                         },
                         {
                             "type": "button",
@@ -235,7 +251,7 @@ def get_menu_carousel():
                                 "text": "折價券管理"
                             },
                             "style": "primary",
-                            "color": "#A3DEA6"
+                            "color": btn_lblue
                         },
                         {
                             "type": "button",
@@ -245,7 +261,7 @@ def get_menu_carousel():
                                 "text": "呼叫管理員"
                             },
                             "style": "secondary",
-                            "color": "#B1E1FF"
+                            "color": btn_gray
                         },
                         {
                             "type": "button",
@@ -255,7 +271,7 @@ def get_menu_carousel():
                                 "text": "活動快訊"
                             },
                             "style": "primary",
-                            "color": "#FFBCBC"
+                            "color": btn_blue
                         }
                     ]
                 }
