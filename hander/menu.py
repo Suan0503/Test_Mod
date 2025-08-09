@@ -72,14 +72,14 @@ def handle_menu(event):
         now = datetime.now(tz)
         today_str = now.strftime("%Y-%m-%d")
 
-        # 本月時間範圍
+        # 本月時間範圍（維持「本月」顯示；若要全部，拿掉這段篩選即可）
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         if month_start.month == 12:
             next_month_start = month_start.replace(year=month_start.year + 1, month=1)
         else:
             next_month_start = month_start.replace(month=month_start.month + 1)
 
-        # 今日抽獎券（維持原邏輯：Coupon 表）
+        # 今日抽獎券（沿用 Coupon 表，不動）
         draw_today = (Coupon.query
             .filter(Coupon.line_user_id == user_id)
             .filter(Coupon.type == "draw")
@@ -87,16 +87,17 @@ def handle_menu(event):
             .order_by(Coupon.id.desc())
             .all())
 
-        # 本月回報文抽獎券：改為直接查 public.report_article（不再讀 Coupon）
+        # ✅ 本月回報文抽獎券：直接查 public.report_article（status=approved）
+        #    顯示 report_no（抽獎卷標號），不看 Coupon
         rows = db.session.execute(text("""
-            SELECT date, ticket_code, report_no, amount, created_at
+            SELECT id, date, report_no, amount, created_at
             FROM public.report_article
             WHERE line_user_id = :uid
               AND type = 'report'
               AND status = 'approved'
               AND created_at >= :ms
               AND created_at <  :nx
-            ORDER BY NULLIF(report_no,'')::int ASC, id ASC
+            ORDER BY NULLIF(report_no,'')::int ASC, created_at ASC, id ASC
         """), {"uid": user_id, "ms": month_start, "nx": next_month_start}).fetchall()
 
         # 組訊息
@@ -111,13 +112,12 @@ def handle_menu(event):
         lines.append("\n📝【本月回報文抽獎券】")
         if rows:
             for r in rows:
-                # 以 ticket_code 為主，沒有就顯示 report_no
-                code = (getattr(r, "ticket_code", None) or "").strip() or (getattr(r, "report_no", None) or "").strip() or "-"
+                no = (getattr(r, "report_no", None) or "").strip() or "-"
                 date_str = r.date or (r.created_at.date().isoformat() if r.created_at else "")
                 if r.amount and int(r.amount) > 0:
-                    lines.append(f"　　• 日期：{date_str}｜編號：{code}｜金額：{int(r.amount)}元")
+                    lines.append(f"　　• 日期：{date_str}｜編號：{no}｜金額：{int(r.amount)}元")
                 else:
-                    lines.append(f"　　• 日期：{date_str}｜編號：{code}")
+                    lines.append(f"　　• 日期：{date_str}｜編號：{no}")
         else:
             lines.append("　　• 無")
 
