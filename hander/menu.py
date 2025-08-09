@@ -87,10 +87,9 @@ def handle_menu(event):
             .order_by(Coupon.id.desc())
             .all())
 
-        # 回報文抽獎券改抓 public.report_article（依回報網址的唯一編號 report_no 顯示）
-        # 僅顯示「審核通過」的（status='approved'）
+        # 本月回報文抽獎券：改為直接查 public.report_article（不再讀 Coupon）
         rows = db.session.execute(text("""
-            SELECT id, date, report_no, amount, created_at
+            SELECT date, ticket_code, report_no, amount, created_at
             FROM public.report_article
             WHERE line_user_id = :uid
               AND type = 'report'
@@ -112,12 +111,13 @@ def handle_menu(event):
         lines.append("\n📝【本月回報文抽獎券】")
         if rows:
             for r in rows:
-                no = (r.report_no or "").strip() or "-"
+                # 以 ticket_code 為主，沒有就顯示 report_no
+                code = (getattr(r, "ticket_code", None) or "").strip() or (getattr(r, "report_no", None) or "").strip() or "-"
                 date_str = r.date or (r.created_at.date().isoformat() if r.created_at else "")
                 if r.amount and int(r.amount) > 0:
-                    lines.append(f"　　• 日期：{date_str}｜編號：{no}｜金額：{int(r.amount)}元")
+                    lines.append(f"　　• 日期：{date_str}｜編號：{code}｜金額：{int(r.amount)}元")
                 else:
-                    lines.append(f"　　• 日期：{date_str}｜編號：{no}")
+                    lines.append(f"　　• 日期：{date_str}｜編號：{code}")
         else:
             lines.append("　　• 無")
 
