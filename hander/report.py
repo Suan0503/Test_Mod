@@ -5,66 +5,11 @@ from extensions import line_bot_api, db
 from models import Whitelist, Coupon
 from utils.temp_users import temp_users
 from storage import ADMIN_IDS
-import re, time, hashlib
+import re, time
 from datetime import datetime
 import pytz
-from sqlalchemy import text
-from sqlalchemy.exc import IntegrityError
 
 report_pending_map = {}
-
-# ===== 工具區 =====
-
-def normalize_url(u: str) -> str:
-    try:
-        from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
-        DROP = {"utm_source","utm_medium","utm_campaign","utm_term","utm_content","gclid","fbclid","utm_id"}
-        p = urlparse((u or "").strip())
-        scheme = (p.scheme or "http").lower()
-        netloc = (p.netloc or "").lower()
-        if netloc.startswith("www."): netloc = netloc[4:]
-        q = [(k,v) for k,v in parse_qsl(p.query, keep_blank_values=True) if k not in DROP]
-        q.sort()
-        path = p.path or "/"
-        if path != "/" and path.endswith("/"): path = path.rstrip("/")
-        return urlunparse((scheme, netloc, path, p.params, urlencode(q), ""))  # fragment 清空
-    except Exception:
-        return u
-
-def has_column(column_name: str) -> bool:
-    try:
-        row = db.session.execute(text("""
-            SELECT 1
-            FROM information_schema.columns
-            WHERE table_schema='public' AND table_name='report_article' AND column_name=:c
-        """), {"c": column_name}).fetchone()
-        return bool(row)
-    except Exception:
-        return False
-
-def has_url_norm_column() -> bool:
-    return has_column("url_norm")
-
-def has_ticket_code_column() -> bool:
-    return has_column("ticket_code")
-
-def next_monthly_report_no(tz):
-    now = datetime.now(tz)
-    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    next_month_start = month_start.replace(year=month_start.year + 1, month=1) if month_start.month == 12 else month_start.replace(month=month_start.month + 1)
-    max_no = db.session.execute(text("""
-        SELECT MAX(NULLIF(report_no,'')::int) AS max_no
-        FROM public.report_article
-        WHERE created_at >= :ms AND created_at < :nx AND type='report'
-    """), {"ms": month_start, "nx": next_month_start}).scalar()
-    return f"{(max_no or 0)+1:03d}"
-
-def generate_ticket_code(url_norm: str) -> str | None:
-    if not url_norm:
-        return None
-    return "R" + hashlib.sha1(url_norm.encode("utf-8")).hexdigest()[:8]
-
-# ===== 回報文主流程 =====
 
 def handle_report(event):
     user_id = event.source.user_id
@@ -85,115 +30,51 @@ def handle_report(event):
         )
         return
 
-    # 用戶取消／提交網址
+    # 用戶取消回報流程
     if user_id in temp_users and temp_users[user_id].get("report_pending"):
         if user_text == "取消":
             temp_users.pop(user_id, None)
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="已取消回報流程，回到主選單！"))
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="已取消回報流程，回到主選單！")
+            )
             return
 
-        url = user_text.strip()
+        url = user_text
         if not re.match(r"^https?://", url):
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入正確的網址格式（必須以 http:// 或 https:// 開頭）\n如需取消，請輸入「取消」"))
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="請輸入正確的網址格式（必須以 http:// 或 https:// 開頭）\n如需取消，請輸入「取消」")
+            )
             return
-
         wl = Whitelist.query.filter_by(line_user_id=user_id).first()
-        user_number = wl.id if wl else None
+        user_number = wl.id if wl else ""
         user_lineid = wl.line_id if wl else ""
-
-        url_norm = normalize_url(url)
-        USE_URL_NORM = has_url_norm_column()
-        USE_TICKET_CODE = has_ticket_code_column()
-        ticket_code = generate_ticket_code(url_norm) if USE_TICKET_CODE else None
-
-        # ===== 查重（同一帳號同一標準網址，只能一筆） =====
-        if USE_URL_NORM:
-            existed = db.session.execute(
-                text("SELECT id FROM public.report_article WHERE line_user_id=:uid AND url_norm=:u LIMIT 1"),
-                {"uid": user_id, "u": url_norm}
-            ).fetchone()
+        last_coupon = Coupon.query.filter(Coupon.report_no != None).order_by(Coupon.id.desc()).first()
+        if last_coupon and last_coupon.report_no and last_coupon.report_no.isdigit():
+            report_no = int(last_coupon.report_no) + 1
         else:
-            existed = db.session.execute(
-                text("SELECT id FROM public.report_article WHERE line_user_id=:uid AND url=:u LIMIT 1"),
-                {"uid": user_id, "u": url}
-            ).fetchone()
-        if existed:
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="您已回報過這個網址囉～請改貼其他網址唷。"))
-            temp_users.pop(user_id, None)
-            return
-
-        # 產生本月流水號 & 寫入
-        report_no_str = next_monthly_report_no(tz)
-        now = datetime.now(tz)
-        today = now.date().isoformat()
-
-        if USE_URL_NORM and USE_TICKET_CODE:
-            sql_insert = text("""
-                INSERT INTO public.report_article
-                (line_user_id, nickname, member_id, line_id, url, url_norm, ticket_code, status, created_at, date, report_no, type, amount)
-                VALUES
-                (:line_user_id, :nickname, :member_id, :line_id, :url, :url_norm, :ticket_code, 'pending', :created_at, :date, :report_no, 'report', 0)
-                RETURNING id
-            """)
-            params = {
-                "line_user_id": user_id, "nickname": display_name, "member_id": user_number, "line_id": user_lineid,
-                "url": url, "url_norm": url_norm, "ticket_code": ticket_code,
-                "created_at": now, "date": today, "report_no": report_no_str
-            }
-        elif USE_URL_NORM and not USE_TICKET_CODE:
-            sql_insert = text("""
-                INSERT INTO public.report_article
-                (line_user_id, nickname, member_id, line_id, url, url_norm, status, created_at, date, report_no, type, amount)
-                VALUES
-                (:line_user_id, :nickname, :member_id, :line_id, :url, :url_norm, 'pending', :created_at, :date, :report_no, 'report', 0)
-                RETURNING id
-            """)
-            params = {
-                "line_user_id": user_id, "nickname": display_name, "member_id": user_number, "line_id": user_lineid,
-                "url": url, "url_norm": url_norm, "created_at": now, "date": today, "report_no": report_no_str
-            }
-        else:
-            sql_insert = text("""
-                INSERT INTO public.report_article
-                (line_user_id, nickname, member_id, line_id, url, status, created_at, date, report_no, type, amount)
-                VALUES
-                (:line_user_id, :nickname, :member_id, :line_id, :url, 'pending', :created_at, :date, :report_no, 'report', 0)
-                RETURNING id
-            """)
-            params = {
-                "line_user_id": user_id, "nickname": display_name, "member_id": user_number, "line_id": user_lineid,
-                "url": url, "created_at": now, "date": today, "report_no": report_no_str
-            }
-        try:
-            new_id = db.session.execute(sql_insert, params).scalar()
-            db.session.commit()
-        except IntegrityError:
-            db.session.rollback()
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="這個網址剛剛已被回報～請改貼其他網址唷。"))
-            temp_users.pop(user_id, None)
-            return
+            report_no = 1
+        report_no_str = f"{report_no:03d}"
 
         short_text = f"網址：{url}" if len(url) < 55 else "新回報文，請點選按鈕處理"
         detail_text = (
             f"【用戶回報文】編號-{report_no_str}\n"
             f"暱稱：{display_name}\n"
-            f"用戶編號：{user_number or ''}\n"
+            f"用戶編號：{user_number}\n"
             f"LINE ID：{user_lineid}\n"
             f"網址：{url}"
         )
-
         report_id = f"{user_id}_{int(time.time()*1000)}"
         for admin_id in ADMIN_IDS:
             report_pending_map[report_id] = {
                 "user_id": user_id,
                 "admin_id": admin_id,
                 "display_name": display_name,
-                "user_number": user_number or "",
+                "user_number": user_number,
                 "user_lineid": user_lineid,
                 "url": url,
-                "url_norm": url_norm,
-                "report_no": report_no_str,
-                "record_db_id": new_id
+                "report_no": report_no_str
             }
             line_bot_api.push_message(
                 admin_id,
@@ -210,8 +91,10 @@ def handle_report(event):
                 )
             )
             line_bot_api.push_message(admin_id, TextSendMessage(text=detail_text))
-
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="✅ 已收到您的回報，管理員會盡快處理！"))
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="✅ 已收到您的回報，管理員會盡快處理！")
+        )
         temp_users.pop(user_id)
         return
 
@@ -223,22 +106,10 @@ def handle_report(event):
             reason = user_text
             to_user_id = info["user_id"]
             reply = f"❌ 您的回報文未通過審核，原因如下：\n{reason}"
-
-            rec_id = info.get("record_db_id")
-            if rec_id:
-                try:
-                    db.session.execute(text("UPDATE public.report_article SET status='rejected', reject_reason=:r WHERE id=:i AND status='pending'"),
-                                       {"r": reason, "i": rec_id})
-                    db.session.commit()
-                except Exception as e:
-                    db.session.rollback()
-                    print("更新回報狀態(rejected)失敗", e)
-
             try:
                 line_bot_api.push_message(to_user_id, TextSendMessage(text=reply))
             except Exception as e:
                 print("推播用戶回報拒絕失敗", e)
-
             temp_users.pop(user_id)
             report_pending_map.pop(report_id, None)
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="已將原因回傳給用戶。"))
@@ -250,55 +121,35 @@ def handle_report(event):
 def handle_report_postback(event):
     user_id = event.source.user_id
     data = event.postback.data
-    tz = pytz.timezone("Asia/Taipei")
-
     if data.startswith("report_ok|"):
         report_id = data.split("|")[1]
         info = report_pending_map.get(report_id)
         if info:
             to_user_id = info["user_id"]
             report_no = info.get("report_no", "未知")
-            rec_id = info.get("record_db_id")
             reply = f"🟢 您的回報文已審核通過，獲得一張月底抽獎券！（編號：{report_no}）"
-
-            # 標記 approved
             try:
-                now = datetime.now(tz)
-                db.session.execute(text("""
-                    UPDATE public.report_article
-                    SET status='approved', approved_at=:a, approved_by=:adm
-                    WHERE id=:i AND status='pending'
-                """), {"a": now, "adm": user_id, "i": rec_id})
-                db.session.commit()
-            except Exception as e:
-                db.session.rollback()
-                print("更新回報狀態(approved)失敗", e)
-
-            # 兼容舊券表（可選）
-            try:
+                tz = pytz.timezone("Asia/Taipei")
                 today = datetime.now(tz).strftime("%Y-%m-%d")
-                exist = Coupon.query.filter_by(line_user_id=to_user_id, type="report", report_no=report_no).first()
-                if not exist:
-                    db.session.add(Coupon(
-                        line_user_id=to_user_id, amount=0, date=today,
-                        created_at=datetime.now(tz), report_no=report_no, type="report"
-                    ))
-                    db.session.commit()
-            except Exception as e:
-                db.session.rollback()
-                print("建立兼容 Coupon 失敗", e)
-
-            try:
+                # 回報文寫入 coupon.amount=0, type="report"（預設0，只有中獎才會改成大於0）
+                new_coupon = Coupon(
+                    line_user_id=to_user_id,
+                    amount=0,  # ← 修改為 0
+                    date=today,
+                    created_at=datetime.now(tz),
+                    report_no=report_no,
+                    type="report"
+                )
+                db.session.add(new_coupon)
+                db.session.commit()
                 line_bot_api.push_message(to_user_id, TextSendMessage(text=reply))
             except Exception as e:
                 print("推播用戶通過回報文失敗", e)
-
             report_pending_map.pop(report_id, None)
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="已通過並回覆用戶。"))
         else:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="該回報已處理過或超時"))
         return
-
     elif data.startswith("report_ng|"):
         report_id = data.split("|")[1]
         info = report_pending_map.get(report_id)
@@ -308,62 +159,3 @@ def handle_report_postback(event):
         else:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="該回報已處理過或超時"))
         return
-
-# ===== 券紀錄查詢（本月） =====
-
-def reply_coupon_summary(event):
-    """回覆本月券紀錄訊息（建議在 menu.py 的『券紀錄』指令呼叫這個）"""
-    tz = pytz.timezone("Asia/Taipei")
-    user_id = event.source.user_id
-    now = datetime.now(tz)
-    today_str = now.strftime("%Y-%m-%d")
-
-    # 本月範圍
-    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    if month_start.month == 12:
-        next_month_start = month_start.replace(year=month_start.year + 1, month=1)
-    else:
-        next_month_start = month_start.replace(month=month_start.month + 1)
-
-    # 今日抽獎券
-    draw_today = (Coupon.query
-        .filter(Coupon.line_user_id == user_id)
-        .filter(Coupon.type == "draw")
-        .filter(Coupon.date == today_str)
-        .order_by(Coupon.id.desc())
-        .all())
-
-    # 本月回報文抽獎券
-    rows = db.session.execute(text("""
-        SELECT report_no, amount, created_at, date
-        FROM public.report_article
-        WHERE line_user_id = :uid
-          AND type = 'report'
-          AND status = 'approved'
-          AND created_at >= :ms
-          AND created_at <  :nx
-        ORDER BY NULLIF(report_no,'')::int ASC, created_at ASC, id ASC
-    """), {"uid": user_id, "ms": month_start, "nx": next_month_start}).fetchall()
-
-    lines = []
-    lines.append("🎁【今日抽獎券】")
-    if draw_today:
-        for c in draw_today:
-            lines.append(f"　　• 日期：{c.date}｜金額：{int(c.amount)}元")
-    else:
-        lines.append("　　• 無")
-
-    lines.append("\n📝【本月回報文抽獎券】")
-    if rows:
-        for r in rows:
-            no = (getattr(r, "report_no", None) or "").strip() or "-"
-            date_str = r.date or (r.created_at.date().isoformat() if r.created_at else "")
-            if hasattr(r, "amount") and r.amount and int(r.amount) > 0:
-                lines.append(f"　　• 日期：{date_str}｜編號：{no}｜金額：{int(r.amount)}元")
-            else:
-                lines.append(f"　　• 日期：{date_str}｜編號：{no}")
-    else:
-        lines.append("　　• 無")
-
-    lines.append("\n※ 回報文抽獎券中獎名單與金額，將於每月抽獎公布")
-    line_bot_api.reply_message(event.reply_token, TextSendMessage(text="\n".join(lines)))
