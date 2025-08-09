@@ -5,7 +5,7 @@ from extensions import line_bot_api, db
 from models import Whitelist, Coupon
 from utils.temp_users import temp_users
 from storage import ADMIN_IDS
-import re, time
+import re, time, hashlib
 from datetime import datetime
 import pytz
 
@@ -32,16 +32,22 @@ def normalize_url(u: str) -> str:
         return u
 
 # —— 工具：偵測欄位是否存在（避免 UndefinedColumn）——
-def has_url_norm_column() -> bool:
+def has_column(column_name: str) -> bool:
     try:
         row = db.session.execute(text("""
             SELECT 1
             FROM information_schema.columns
-            WHERE table_schema='public' AND table_name='report_article' AND column_name='url_norm'
-        """)).fetchone()
+            WHERE table_schema='public' AND table_name='report_article' AND column_name=:c
+        """), {"c": column_name}).fetchone()
         return bool(row)
     except Exception:
         return False
+
+def has_url_norm_column() -> bool:
+    return has_column("url_norm")
+
+def has_ticket_code_column() -> bool:
+    return has_column("ticket_code")
 
 # —— 工具：每月流水號（沒有 url_norm 也能用）——
 def next_monthly_report_no(tz):
@@ -54,6 +60,13 @@ def next_monthly_report_no(tz):
         WHERE created_at >= :ms AND created_at < :nx AND type='report'
     """), {"ms": month_start, "nx": next_month_start}).scalar()
     return f"{(max_no or 0)+1:03d}"
+
+# —— 工具：以 url_norm 生成網址唯一編號（ticket_code）——
+def generate_ticket_code(url_norm: str) -> str | None:
+    if not url_norm:
+        return None
+    # 固定長度、易讀：R + 前 8 碼
+    return "R" + hashlib.sha1(url_norm.encode("utf-8")).hexdigest()[:8]
 
 def handle_report(event):
     user_id = event.source.user_id
@@ -92,6 +105,8 @@ def handle_report(event):
 
         url_norm = normalize_url(url)
         USE_URL_NORM = has_url_norm_column()
+        USE_TICKET_CODE = has_ticket_code_column()
+        ticket_code = generate_ticket_code(url_norm) if USE_TICKET_CODE else None
 
         # —— 查重（有 url_norm 欄位就用它，沒有就退化用 url）——
         if USE_URL_NORM:
@@ -133,7 +148,20 @@ def handle_report(event):
         now = datetime.now(tz)
         today = now.date().isoformat()
 
-        if USE_URL_NORM:
+        if USE_URL_NORM and USE_TICKET_CODE:
+            sql_insert = text("""
+                INSERT INTO public.report_article
+                (line_user_id, nickname, member_id, line_id, url, url_norm, ticket_code, status, created_at, date, report_no, type, amount)
+                VALUES
+                (:line_user_id, :nickname, :member_id, :line_id, :url, :url_norm, :ticket_code, 'pending', :created_at, :date, :report_no, 'report', 0)
+                RETURNING id
+            """)
+            params = {
+                "line_user_id": user_id, "nickname": display_name, "member_id": user_number, "line_id": user_lineid,
+                "url": url, "url_norm": url_norm, "ticket_code": ticket_code,
+                "created_at": now, "date": today, "report_no": report_no_str
+            }
+        elif USE_URL_NORM and not USE_TICKET_CODE:
             sql_insert = text("""
                 INSERT INTO public.report_article
                 (line_user_id, nickname, member_id, line_id, url, url_norm, status, created_at, date, report_no, type, amount)
@@ -303,3 +331,65 @@ def handle_report_postback(event):
         else:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="該回報已處理過或超時"))
         return
+
+# =========================
+# 查詢功能（供「券紀錄」使用）
+# =========================
+
+def build_coupon_summary_message(line_user_id: str, tz):
+    """
+    組出「今日抽獎券 + 回報文抽獎券（全部）」的訊息字串。
+    回報文抽獎券以 public.report_article 為準，顯示 ticket_code（無則退回 report_no）。
+    """
+    now = datetime.now(tz)
+    today_str = now.strftime("%Y-%m-%d")
+
+    # 今日抽獎券（既有 Coupon 表）
+    draw_today = (Coupon.query
+        .filter(Coupon.line_user_id == line_user_id)
+        .filter(Coupon.type == "draw")
+        .filter(Coupon.date == today_str)
+        .order_by(Coupon.id.desc())
+        .all())
+
+    # 回報文抽獎券（全部月份、僅核准），以 ticket_code 顯示
+    rows = db.session.execute(text("""
+        SELECT date, ticket_code, report_no, amount, created_at
+        FROM public.report_article
+        WHERE line_user_id = :uid
+          AND type = 'report'
+          AND status = 'approved'
+        ORDER BY created_at DESC, id DESC
+    """), {"uid": line_user_id}).fetchall()
+
+    lines = []
+    lines.append("🎁【今日抽獎券】")
+    if draw_today:
+        for c in draw_today:
+            lines.append(f"　　• 日期：{c.date}｜金額：{int(c.amount)}元")
+    else:
+        lines.append("　　• 無")
+
+    lines.append("\n📝【回報文抽獎券（全部）】")
+    if rows:
+        for r in rows:
+            code = (getattr(r, "ticket_code", None) or "").strip()
+            if not code:
+                code = (getattr(r, "report_no", None) or "").strip() or "-"
+            date_str = r.date or (r.created_at.date().isoformat() if r.created_at else "")
+            if r.amount and int(r.amount) > 0:
+                lines.append(f"　　• 日期：{date_str}｜編號：{code}｜金額：{int(r.amount)}元")
+            else:
+                lines.append(f"　　• 日期：{date_str}｜編號：{code}")
+    else:
+        lines.append("　　• 無")
+
+    lines.append("\n※ 回報文抽獎券中獎名單與金額，將於每月抽獎公布")
+    return "\n".join(lines)
+
+def reply_coupon_summary(event):
+    """直接回覆券紀錄訊息（可在 menu 的『券紀錄』指令呼叫）"""
+    tz = pytz.timezone("Asia/Taipei")
+    user_id = event.source.user_id
+    msg = build_coupon_summary_message(user_id, tz)
+    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
