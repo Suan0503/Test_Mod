@@ -6,7 +6,8 @@ from utils.draw_utils import draw_coupon, get_today_coupon_flex, has_drawn_today
 from utils.verify_guard import guard_verified
 import pytz
 from datetime import datetime
-from sqlalchemy import cast, Integer  # ★ 券紀錄排序用
+from sqlalchemy import cast, Integer  # ★ 今日抽獎券排序仍保留
+from sqlalchemy import text          # ★ 新增：查 public.report_article 用
 
 def handle_menu(event):
     # ▼ 新增驗證守門，只要不是驗證資訊或輸入手機號碼就攔住未驗證者 ▼
@@ -78,7 +79,7 @@ def handle_menu(event):
         else:
             next_month_start = month_start.replace(month=month_start.month + 1)
 
-        # 今日抽獎券
+        # 今日抽獎券（維持原邏輯：Coupon 表）
         draw_today = (Coupon.query
             .filter(Coupon.line_user_id == user_id)
             .filter(Coupon.type == "draw")
@@ -86,14 +87,18 @@ def handle_menu(event):
             .order_by(Coupon.id.desc())
             .all())
 
-        # 本月回報文抽獎券
-        report_month = (Coupon.query
-            .filter(Coupon.line_user_id == user_id)
-            .filter(Coupon.type == "report")
-            .filter(Coupon.created_at >= month_start)
-            .filter(Coupon.created_at < next_month_start)
-            .order_by(cast(Coupon.report_no, Integer).asc(), Coupon.id.asc())
-            .all())
+        # 回報文抽獎券改抓 public.report_article（依回報網址的唯一編號 report_no 顯示）
+        # 僅顯示「審核通過」的（status='approved'）
+        rows = db.session.execute(text("""
+            SELECT id, date, report_no, amount, created_at
+            FROM public.report_article
+            WHERE line_user_id = :uid
+              AND type = 'report'
+              AND status = 'approved'
+              AND created_at >= :ms
+              AND created_at <  :nx
+            ORDER BY NULLIF(report_no,'')::int ASC, id ASC
+        """), {"uid": user_id, "ms": month_start, "nx": next_month_start}).fetchall()
 
         # 組訊息
         lines = []
@@ -105,12 +110,12 @@ def handle_menu(event):
             lines.append("　　• 無")
 
         lines.append("\n📝【本月回報文抽獎券】")
-        if report_month:
-            for c in report_month:
-                no = c.report_no.strip() if (c.report_no or "").strip() else "-"
-                date_str = c.date or c.created_at.astimezone(tz).strftime("%Y-%m-%d")
-                if c.amount and c.amount > 0:
-                    lines.append(f"　　• 日期：{date_str}｜編號：{no}｜金額：{int(c.amount)}元")
+        if rows:
+            for r in rows:
+                no = (r.report_no or "").strip() or "-"
+                date_str = r.date or (r.created_at.date().isoformat() if r.created_at else "")
+                if r.amount and int(r.amount) > 0:
+                    lines.append(f"　　• 日期：{date_str}｜編號：{no}｜金額：{int(r.amount)}元")
                 else:
                     lines.append(f"　　• 日期：{date_str}｜編號：{no}")
         else:
