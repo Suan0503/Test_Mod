@@ -50,12 +50,28 @@ def handle_report(event):
         wl = Whitelist.query.filter_by(line_user_id=user_id).first()
         user_number = wl.id if wl else ""
         user_lineid = wl.line_id if wl else ""
-        last_coupon = Coupon.query.filter(Coupon.report_no != None).order_by(Coupon.id.desc()).first()
-        if last_coupon and last_coupon.report_no and last_coupon.report_no.isdigit():
-            report_no = int(last_coupon.report_no) + 1
+
+        # === 新產生「月份-流水號」的邏輯 ===
+        tz = pytz.timezone("Asia/Taipei")
+        today = datetime.now(tz)
+        month_str = today.strftime("%m")  # 08
+        # 搜尋本月最大流水號
+        last_coupon = (
+            Coupon.query
+            .filter(Coupon.type == "report")
+            .filter(Coupon.report_no.startswith(f"{month_str}-"))
+            .order_by(Coupon.report_no.desc())
+            .first()
+        )
+        if last_coupon and last_coupon.report_no:
+            try:
+                last_no = int(last_coupon.report_no.split('-')[1])
+            except Exception:
+                last_no = 0
+            new_no = last_no + 1
         else:
-            report_no = 1
-        report_no_str = f"{report_no:03d}"
+            new_no = 1
+        report_no_str = f"{month_str}-{new_no:03d}"
 
         short_text = f"網址：{url}" if len(url) < 55 else "新回報文，請點選按鈕處理"
         detail_text = (
