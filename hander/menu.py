@@ -58,7 +58,7 @@ def handle_menu(event):
         line_bot_api.reply_message(event.reply_token, flex)
         return
 
-    # 券紀錄
+    # 券紀錄（已支援多指令觸發）
     if user_text in ["券紀錄", "我的券紀錄", "折價券管理"]:
         today = datetime.now(tz).date()
         month_str = today.strftime("%Y-%m")
