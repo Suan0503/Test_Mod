@@ -79,11 +79,9 @@ def handle_menu(event):
         msg += "\n📝【本月回報文抽獎券】\n"
         if report_month:
             for c in report_month:
-                # DEBUG: 印出實際抓到的 report_no
-                print(f"DEBUG: id={c.id}, report_no={c.report_no}")
-                # 這裡直接顯示 report_no，不要任何分割、切片
+                # 更完整 debug log
+                print(f"DEBUG: id={c.id}, date={c.date}, report_no={c.report_no!r}, user_id={c.line_user_id}, amount={c.amount}")
                 no = c.report_no or ""
-                # 只有中獎（amount>0）才顯示金額
                 if c.amount and c.amount > 0:
                     msg += f"　　• 日期：{c.date}｜編號：{no}｜金額：{c.amount}元\n"
                 else:
