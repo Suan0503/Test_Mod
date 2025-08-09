@@ -6,8 +6,7 @@ from utils.draw_utils import draw_coupon, get_today_coupon_flex, has_drawn_today
 from utils.verify_guard import guard_verified
 import pytz
 from datetime import datetime
-from sqlalchemy import cast, Integer  # ★ 今日抽獎券排序仍保留
-from sqlalchemy import text          # ★ 新增：查 public.report_article 用
+from sqlalchemy import text
 
 def handle_menu(event):
     # ▼ 新增驗證守門，只要不是驗證資訊或輸入手機號碼就攔住未驗證者 ▼
@@ -87,10 +86,9 @@ def handle_menu(event):
             .order_by(Coupon.id.desc())
             .all())
 
-        # ✅ 本月回報文抽獎券：直接查 public.report_article（status=approved）
-        #    顯示 report_no（抽獎卷標號），不看 Coupon
+        # 本月回報文抽獎券
         rows = db.session.execute(text("""
-            SELECT id, date, report_no, amount, created_at
+            SELECT report_no, amount, created_at, date
             FROM public.report_article
             WHERE line_user_id = :uid
               AND type = 'report'
@@ -114,7 +112,7 @@ def handle_menu(event):
             for r in rows:
                 no = (getattr(r, "report_no", None) or "").strip() or "-"
                 date_str = r.date or (r.created_at.date().isoformat() if r.created_at else "")
-                if r.amount and int(r.amount) > 0:
+                if hasattr(r, "amount") and r.amount and int(r.amount) > 0:
                     lines.append(f"　　• 日期：{date_str}｜編號：{no}｜金額：{int(r.amount)}元")
                 else:
                     lines.append(f"　　• 日期：{date_str}｜編號：{no}")
@@ -122,6 +120,5 @@ def handle_menu(event):
             lines.append("　　• 無")
 
         lines.append("\n※ 回報文抽獎券中獎名單與金額，將於每月抽獎公布")
-
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text="\n".join(lines)))
         return
