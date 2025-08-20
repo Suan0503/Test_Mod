@@ -4,12 +4,37 @@ from flask import Flask, request, redirect, url_for, render_template, flash
 
 app = Flask(__name__)
 app.secret_key = "change-me-please"
+
+# 建議 Railway 用 /tmp 路徑，local 可用原本路徑
 DB_PATH = os.path.join(os.path.dirname(__file__), "md_checker.db")
+if not os.access(os.path.dirname(DB_PATH), os.W_OK):
+    DB_PATH = "/tmp/md_checker.db"
 
 def get_conn():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+def init_db():
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            phone TEXT NOT NULL,
+            line_id TEXT,
+            type TEXT NOT NULL CHECK (type IN ('white','black')),
+            reason TEXT,
+            operator TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    c.execute("CREATE INDEX IF NOT EXISTS idx_records_phone ON records(phone)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_records_type ON records(type)")
+    conn.commit()
+    conn.close()
 
 def normalize_phone(s: str) -> str:
     if not s: return ""
@@ -114,4 +139,5 @@ def add_black():
     return render_template("add_black.html", active="addblack", now=datetime.now())
 
 if __name__ == "__main__":
+    init_db()  # <<--- 這行很重要！一定要有
     app.run(debug=True)
