@@ -1,59 +1,41 @@
 {% extends "layout.html" %}
 {% block body %}
-  <h2>查詢</h2>
-  <form method="POST">
-    <label>請輸入電話：</label>
-    <input type="text" name="phone" value="{{ phone }}">
-    <button type="submit">查詢</button>
-  </form>
-  <hr>
-  {% if searched %}
-    <h3>白名單</h3>
-    {% if whiterows %}
-      <table border="1" cellpadding="8" style="border-collapse:collapse;">
-        <thead>
+<h2>查詢</h2>
+<form method="POST">
+  <label>選擇資料表：</label>
+  <select name="table">
+    <option value="whitelist" {% if table == "whitelist" %}selected{% endif %}>白名單</option>
+    <option value="blacklist" {% if table == "blacklist" %}selected{% endif %}>黑名單</option>
+    <option value="records" {% if table == "records" %}selected{% endif %}>全部</option>
+  </select>
+  <label>電話：</label>
+  <input type="text" name="phone" value="{{ phone }}">
+  <button type="submit">查詢</button>
+</form>
+<hr>
+{% if searched %}
+  <h3>查詢結果</h3>
+  {% if rows %}
+    <table border="1" cellpadding="8" style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr>
+          {% for col in columns %}
+            <th>{{ col }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
           <tr>
-            {% for col in whitecols %}
-              <th>{{ col }}</th>
+            {% for col in columns %}
+              <td>{{ row[col] }}</td>
             {% endfor %}
           </tr>
-        </thead>
-        <tbody>
-          {% for row in whiterows %}
-            <tr>
-              {% for col in whitecols %}
-                <td>{{ row[col] }}</td>
-              {% endfor %}
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <div style="color:gray;">查無此電話於白名單。</div>
-    {% endif %}
-
-    <h3>黑名單</h3>
-    {% if blackrows %}
-      <table border="1" cellpadding="8" style="border-collapse:collapse;">
-        <thead>
-          <tr>
-            {% for col in blackcols %}
-              <th>{{ col }}</th>
-            {% endfor %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in blackrows %}
-            <tr>
-              {% for col in blackcols %}
-                <td>{{ row[col] }}</td>
-              {% endfor %}
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <div style="color:gray;">查無此電話於黑名單。</div>
-    {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div style="color:gray;">查無資料</div>
   {% endif %}
+{% endif %}
 {% endblock %}
