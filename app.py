@@ -5,7 +5,6 @@ from flask import Flask, request, redirect, url_for, render_template, flash
 app = Flask(__name__)
 app.secret_key = "change-me-please"
 
-# 建議 Railway 用 /tmp 路徑，local 可用原本路徑
 DB_PATH = os.path.join(os.path.dirname(__file__), "md_checker.db")
 if not os.access(os.path.dirname(DB_PATH), os.W_OK):
     DB_PATH = "/tmp/md_checker.db"
@@ -35,6 +34,9 @@ def init_db():
     c.execute("CREATE INDEX IF NOT EXISTS idx_records_type ON records(type)")
     conn.commit()
     conn.close()
+
+# **直接呼叫，確保無論 local 或 Railway/Gunicorn 啟動都會建表**
+init_db()
 
 def normalize_phone(s: str) -> str:
     if not s: return ""
@@ -139,5 +141,4 @@ def add_black():
     return render_template("add_black.html", active="addblack", now=datetime.now())
 
 if __name__ == "__main__":
-    init_db()  # <<--- 這行很重要！一定要有
     app.run(debug=True)
