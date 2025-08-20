@@ -9,6 +9,7 @@ load_dotenv()
 
 from extensions import db
 from routes.message import message_bp
+from routes.admin_query import admin_bp  # <--- 新增這行
 
 app = Flask(__name__)
 
@@ -23,6 +24,7 @@ db.init_app(app)
 
 # Blueprint 註冊
 app.register_blueprint(message_bp)
+app.register_blueprint(admin_bp)  # <--- 新增這行
 
 @app.route("/")
 def home():
