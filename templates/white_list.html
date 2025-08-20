@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% block body %}
-  <h2>全部資料庫總覽</h2>
+  <h2>白名單總覽</h2>
   <table border="1" cellpadding="8" style="width:100%;border-collapse:collapse;">
     <thead>
       <tr>
@@ -17,7 +17,7 @@
         {% endfor %}
       </tr>
     {% else %}
-      <tr><td colspan="{{ columns|length }}" style="color:gray;">目前資料庫沒有資料</td></tr>
+      <tr><td colspan="{{ columns|length }}" style="color:gray;">目前沒有白名單資料</td></tr>
     {% endfor %}
     </tbody>
   </table>
