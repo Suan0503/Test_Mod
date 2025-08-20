@@ -1,10 +1,7 @@
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request
 from models import Whitelist, Blacklist
-from extensions import db
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
-
-# 這裡可以根據你的權限判斷做登入檢查
 
 @admin_bp.route("/whitelist", methods=["GET"])
 def show_whitelist():
