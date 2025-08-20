@@ -4,28 +4,20 @@
   <table border="1" cellpadding="8" style="width:100%;border-collapse:collapse;">
     <thead>
       <tr>
-        <th>建立時間</th>
-        <th>日期</th>
-        <th>電話</th>
-        <th>原因</th>
-        <th>姓名</th>
-        <th>LINE ID</th>
-        <th>LINE USER ID</th>
+        {% for col in columns %}
+          <th>{{ col }}</th>
+        {% endfor %}
       </tr>
     </thead>
     <tbody>
     {% for row in rows %}
       <tr>
-        <td>{{ row.created_at }}</td>
-        <td>{{ row.date }}</td>
-        <td>{{ row.phone }}</td>
-        <td>{{ row.reason or "" }}</td>
-        <td>{{ row.name or "" }}</td>
-        <td>{{ row.line_id or "" }}</td>
-        <td>{{ row.line_user_id or "" }}</td>
+        {% for col in columns %}
+          <td>{{ row[col] }}</td>
+        {% endfor %}
       </tr>
     {% else %}
-      <tr><td colspan="7" style="color:gray;">目前沒有白名單資料</td></tr>
+      <tr><td colspan="{{ columns|length }}" style="color:gray;">目前沒有白名單資料</td></tr>
     {% endfor %}
     </tbody>
   </table>
