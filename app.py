@@ -84,5 +84,15 @@ def home():
     {% endif %}
     """, search_result=search_result, phone=phone)
 
+# 保留原本的 Flask-Admin 後台查詢功能
+@app.route("/db_status")
+def db_status():
+    try:
+        db.session.execute("SELECT 1")
+        db_status = "資料庫連線正常"
+    except Exception as e:
+        db_status = "資料庫連線異常: " + str(e)
+    return f"LINE Bot 正常運作中～🍵<br>{db_status}"
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
