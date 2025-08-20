@@ -35,7 +35,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-# **直接呼叫，確保無論 local 或 Railway/Gunicorn 啟動都會建表**
 init_db()
 
 def normalize_phone(s: str) -> str:
@@ -82,17 +81,19 @@ def search():
 def white_list():
     conn = get_conn()
     c = conn.cursor()
-    rows = c.execute("SELECT name, phone, line_id, reason FROM records WHERE type='white'").fetchall()
+    rows = c.execute("SELECT * FROM records WHERE type='white' ORDER BY created_at DESC").fetchall()
+    columns = [desc[0] for desc in c.description]
     conn.close()
-    return render_template("white_list.html", rows=rows, active="white", now=datetime.now())
+    return render_template("white_list.html", rows=rows, columns=columns, active="white", now=datetime.now())
 
 @app.route("/black_list")
 def black_list():
     conn = get_conn()
     c = conn.cursor()
-    rows = c.execute("SELECT name, phone, line_id, reason FROM records WHERE type='black'").fetchall()
+    rows = c.execute("SELECT * FROM records WHERE type='black' ORDER BY created_at DESC").fetchall()
+    columns = [desc[0] for desc in c.description]
     conn.close()
-    return render_template("black_list.html", rows=rows, active="black", now=datetime.now())
+    return render_template("black_list.html", rows=rows, columns=columns, active="black", now=datetime.now())
 
 @app.route("/add_white", methods=["GET", "POST"])
 def add_white():
