@@ -1,99 +1,533 @@
+# app.py
+# -*- coding: utf-8 -*-
+import os
+import re
+import sqlite3
+from datetime import datetime
+from flask import Flask, request, redirect, url_for, render_template_string, flash
+
+APP_TITLE = "茗殿專用查詢系統"
+DB_PATH = os.path.join(os.path.dirname(__file__), "md_checker.db")
+
+app = Flask(__name__)
+app.secret_key = "change-me-please"  # 記得換掉呦～
+
+# ---------- 資料庫初始化 ----------
+def get_conn():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            phone TEXT NOT NULL,
+            line_id TEXT,
+            type TEXT NOT NULL CHECK (type IN ('white','black')),
+            reason TEXT,
+            operator TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    c.execute("CREATE INDEX IF NOT EXISTS idx_records_phone ON records(phone)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_records_type ON records(type)")
+    conn.commit()
+    conn.close()
+
+# ---------- 小工具 ----------
+def normalize_phone(s: str) -> str:
+    """只保留數字；09…或+8869…都轉成0912…格式"""
+    if not s:
+        return ""
+    digits = re.sub(r"\D", "", s)
+    # +886 開頭處理 → 09
+    # 常見：+886912345678 / 886912345678 / 00986… 等
+    digits = re.sub(r"^(886|00886|000886)", "", digits)
+    if digits.startswith("9") and len(digits) == 9:
+        digits = "0" + digits
+    return digits
+
+def validate_type(t: str) -> bool:
+    return t in ("white", "black")
+
+# ---------- 模板 ----------
+BASE_HTML = r"""
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>茗殿專用查詢系統</title>
+    <title>{{ title or '系統' }}</title>
     <link rel="icon" href="/static/myicon.png">
     <style>
+        :root{
+            --brand:#7c4dff;
+            --brand-d:#512da8;
+            --bg1:#f6e9ff;
+            --bg2:#c2e9fb;
+        }
+        *{box-sizing:border-box}
         body {
             font-family: "微軟正黑體", Arial, sans-serif;
-            background: linear-gradient(135deg, #f6e9ff 0%, #c2e9fb 100%);
+            background: linear-gradient(135deg, var(--bg1) 0%, var(--bg2) 100%);
             color: #333;
+            margin:0;
         }
         .container {
-            max-width: 420px;
-            margin: 60px auto;
+            max-width: 920px;
+            margin: 40px auto 80px auto;
             background: #fff;
             border-radius: 12px;
             box-shadow: 0 2px 16px #c3a6e9;
-            padding: 30px 36px;
+            padding: 24px 28px;
         }
-        h2 {
-            text-align: center;
-            margin-bottom: 18px;
-            color: #7c4dff;
+        h2,h3 {
+            margin: 6px 0 10px 0;
+            color: var(--brand);
             letter-spacing: 2px;
         }
-        label {
-            font-weight: bold;
-            font-size: 1.13em;
+        .topbar{
+            display:flex;align-items:center;gap:12px;justify-content:space-between;margin-bottom:14px;
         }
-        input[type="text"] {
-            width: 220px;
+        .nav a{
+            text-decoration:none;padding:8px 12px;border-radius:8px;border:1px solid var(--brand);color:var(--brand);font-weight:700;margin-left:8px;
+        }
+        .nav a.active,.nav a:hover{background:var(--brand);color:#fff}
+        label { font-weight: bold; font-size: 1.0em; }
+        input[type="text"], select, textarea {
+            width: 100%;
             font-size: 1em;
-            padding: 7px;
-            border-radius: 5px;
-            border: 1.5px solid #7c4dff;
+            padding: 9px 10px;
+            border-radius: 8px;
+            border: 1.5px solid var(--brand);
         }
         button {
-            padding: 7px 22px;
+            padding: 9px 18px;
             font-size: 1em;
-            border-radius: 5px;
+            border-radius: 8px;
             border: none;
-            background: #7c4dff;
+            background: var(--brand);
             color: #fff;
             font-weight: bold;
             cursor: pointer;
             transition: background .2s;
         }
-        button:hover {
-            background: #512da8;
-        }
-        .result {
-            margin-top: 22px;
-        }
+        button:hover { background: var(--brand-d); }
+        .btn-danger{background:#e53935}
+        .btn-danger:hover{background:#b71c1c}
+        .btn-secondary{background:#607d8b}
+        .btn-secondary:hover{background:#455a64}
+        .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+        .row-3{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:14px}
+        .result { margin-top: 18px; }
         .white { color: green; font-weight: bold; }
         .black { color: red; font-weight: bold; }
         .none { color: #888; }
         .logo {
             display: block;
-            margin: 0 auto 18px auto;
-            width: 88px;
+            width: 72px;
         }
+        .card{border:1px solid #eee;border-radius:10px;padding:14px}
+        table{width:100%;border-collapse:collapse}
+        th,td{padding:10px;border-bottom:1px solid #eee;text-align:left}
+        .flash{margin:8px 0;padding:10px;border-radius:8px;background:#f9f7ff;border:1px solid #d6c9ff;color:#4a2fbf}
+        .muted{color:#777;font-size:0.92em}
+        .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid #ccc;font-size:12px;margin-left:4px}
+        .pill.white{border-color:green;color:green}
+        .pill.black{border-color:red;color:red}
+        .actions{display:flex;gap:8px;flex-wrap:wrap}
+        .pagination{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:8px}
+        .footer{text-align:center;color:#777;margin-top:26px;font-size:12px}
     </style>
 </head>
 <body>
   <div class="container">
-    <img src="/static/logo.png" alt="Logo" class="logo">
-    <h2>茗殿專用查詢系統</h2>
-    <form method="post">
-        <label for="phone">請輸入電話：</label>
-        <input type="text" name="phone" id="phone" value="{{ phone }}" placeholder="例如 0912345678">
-        <button type="submit">查詢</button>
-    </form>
-    <div class="result">
-    {% if search_result %}
-        <hr>
-        <h4>查詢結果</h4>
-        {% for result in search_result %}
-            {% if result.type == 'white' %}
-                <div class="white">
-                    <b>白名單</b>：{{ result.record.name }}（{{ result.record.phone }}）
-                    {% if result.record.line_id %}，LINE ID: {{ result.record.line_id }}{% endif %}
-                    {% if result.record.reason %}<br>原因：{{ result.record.reason }}{% endif %}
-                </div>
-            {% elif result.type == 'black' %}
-                <div class="black">
-                    <b>黑名單</b>：{{ result.record.name }}（{{ result.record.phone }}）
-                    {% if result.record.reason %}<br>原因：{{ result.record.reason }}{% endif %}
-                </div>
-            {% endif %}
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:10px">
+        <img src="/static/logo.png" alt="Logo" class="logo">
+        <div>
+          <div style="font-weight:800;color:#333;font-size:18px">{{ brand or '茗殿' }}</div>
+          <div class="muted">專用查詢與後台管理</div>
+        </div>
+      </div>
+      <div class="nav">
+        <a href="{{ url_for('index') }}" class="{{ 'active' if active=='index' else '' }}">查詢</a>
+        <a href="{{ url_for('admin') }}" class="{{ 'active' if active=='admin' else '' }}">後台列表</a>
+        <a href="{{ url_for('new_record') }}" class="{{ 'active' if active=='new' else '' }}">新增資料</a>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for m in messages %}
+          <div class="flash">🌸 {{ m }}</div>
         {% endfor %}
-        {% if not search_result %}
+      {% endif %}
+    {% endwith %}
+
+    {{ body|safe }}
+
+    <div class="footer">© {{ now.year }} {{ brand or '茗殿' }} | 小幫手糖糖 ฅ^•ﻌ•^ฅ</div>
+  </div>
+</body>
+</html>
+"""
+
+INDEX_BODY = r"""
+  <h2>茗殿專用查詢系統</h2>
+  <div class="card">
+    <form method="post">
+      <div class="row">
+        <div>
+          <label for="phone">請輸入電話</label>
+          <input type="text" name="phone" id="phone" value="{{ phone }}" placeholder="例如 0912345678">
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:10px">
+          <button type="submit">查詢</button>
+          <a class="btn-secondary" style="text-decoration:none;padding:9px 14px;border-radius:8px;color:#fff" href="{{ url_for('index') }}">清除</a>
+        </div>
+      </div>
+    </form>
+
+    <div class="result">
+    {% if searched %}
+        <hr>
+        <h3>查詢結果</h3>
+        {% if search_result %}
+            {% for result in search_result %}
+                {% if result.type == 'white' %}
+                    <div class="white">
+                        <b>白名單</b>：{{ result.record.name }}（{{ result.record.phone }}）
+                        {% if result.record.line_id %}，LINE ID: {{ result.record.line_id }}{% endif %}
+                        {% if result.record.reason %}<br>原因：{{ result.record.reason }}{% endif %}
+                        <div class="muted">建立於 {{ result.record.created_at }}，最後更新 {{ result.record.updated_at }}</div>
+                    </div>
+                {% elif result.type == 'black' %}
+                    <div class="black">
+                        <b>黑名單</b>：{{ result.record.name }}（{{ result.record.phone }}）
+                        {% if result.record.reason %}<br>原因：{{ result.record.reason }}{% endif %}
+                        <div class="muted">建立於 {{ result.record.created_at }}，最後更新 {{ result.record.updated_at }}</div>
+                    </div>
+                {% endif %}
+                <hr>
+            {% endfor %}
+        {% else %}
             <div class="none">查無此電話於白/黑名單。</div>
         {% endif %}
     {% endif %}
     </div>
   </div>
-</body>
-</html>
+"""
+
+ADMIN_BODY = r"""
+  <h2>後台列表</h2>
+  <div class="card">
+    <form method="get" class="row-3" style="margin-bottom:10px">
+      <div>
+        <label>關鍵字（姓名/電話/LINE/原因/經手人）</label>
+        <input type="text" name="q" value="{{ q or '' }}" placeholder="輸入關鍵字">
+      </div>
+      <div>
+        <label>類型</label>
+        <select name="type">
+          <option value="">全部</option>
+          <option value="white" {{ 'selected' if t=='white' else '' }}>白名單</option>
+          <option value="black" {{ 'selected' if t=='black' else '' }}>黑名單</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:8px">
+        <button type="submit">篩選</button>
+        <a class="btn-secondary" style="text-decoration:none;padding:9px 14px;border-radius:8px;color:#fff" href="{{ url_for('admin') }}">重置</a>
+      </div>
+    </form>
+
+    <div style="overflow:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>姓名</th>
+            <th>電話</th>
+            <th>LINE</th>
+            <th>類型</th>
+            <th>原因</th>
+            <th>經手人</th>
+            <th>建立</th>
+            <th>更新</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in items %}
+          <tr>
+            <td>{{ r.id }}</td>
+            <td>{{ r.name }}</td>
+            <td>{{ r.phone }}</td>
+            <td>{{ r.line_id or '' }}</td>
+            <td>
+              <span class="pill {{ r.type }}">{{ '白名單' if r.type=='white' else '黑名單' }}</span>
+            </td>
+            <td>{{ r.reason or '' }}</td>
+            <td>{{ r.operator or '' }}</td>
+            <td class="muted">{{ r.created_at }}</td>
+            <td class="muted">{{ r.updated_at }}</td>
+            <td class="actions">
+              <a href="{{ url_for('edit_record', rid=r.id) }}" class="nav a" style="border:0;background:var(--brand);color:#fff;padding:6px 10px;border-radius:8px;text-decoration:none">編輯</a>
+              <form method="post" action="{{ url_for('delete_record', rid=r.id) }}" onsubmit="return confirm('確定要刪除嗎？');" style="display:inline">
+                 <button class="btn-danger" type="submit">刪除</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="10" class="muted">沒有資料</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination">
+      {% if page>1 %}
+        <a href="{{ url_for('admin', q=q, type=t, page=page-1) }}" class="nav a" style="border:0;background:var(--brand);color:#fff;padding:6px 10px;border-radius:8px;text-decoration:none">上一頁</a>
+      {% endif %}
+      <span class="muted">第 {{ page }} / {{ total_pages }} 頁（共 {{ total }} 筆）</span>
+      {% if page<total_pages %}
+        <a href="{{ url_for('admin', q=q, type=t, page=page+1) }}" class="nav a" style="border:0;background:var(--brand);color:#fff;padding:6px 10px;border-radius:8px;text-decoration:none">下一頁</a>
+      {% endif %}
+    </div>
+  </div>
+"""
+
+FORM_BODY = r"""
+  <h2>{{ '新增資料' if mode=='new' else '編輯資料' }}</h2>
+  <div class="card">
+    <form method="post">
+      <div class="row">
+        <div>
+          <label>姓名</label>
+          <input type="text" name="name" value="{{ f.name or '' }}" required>
+        </div>
+        <div>
+          <label>電話（會正規化為 09xxxxxxxx）</label>
+          <input type="text" name="phone" value="{{ f.phone or '' }}" required>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>LINE ID（可空）</label>
+          <input type="text" name="line_id" value="{{ f.line_id or '' }}">
+        </div>
+        <div>
+          <label>類型</label>
+          <select name="type" required>
+            <option value="white" {{ 'selected' if f.type=='white' else '' }}>白名單</option>
+            <option value="black" {{ 'selected' if f.type=='black' else '' }}>黑名單</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label>原因（可空）</label>
+        <textarea name="reason" rows="3" placeholder="備註 / 紀錄">{{ f.reason or '' }}</textarea>
+      </div>
+      <div>
+        <label>經手人（可空）</label>
+        <input type="text" name="operator" value="{{ f.operator or '' }}" placeholder="例如：小美">
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:10px">
+        <button type="submit">{{ '新增' if mode=='new' else '儲存' }}</button>
+        <a class="btn-secondary" style="text-decoration:none;padding:9px 14px;border-radius:8px;color:#fff" href="{{ url_for('admin') }}">回列表</a>
+      </div>
+    </form>
+  </div>
+"""
+
+def render_base(body_html, active="index", **kwargs):
+    return render_template_string(
+        BASE_HTML,
+        title=APP_TITLE,
+        brand="茗殿",
+        active=active,
+        now=datetime.now(),
+        body=body_html,
+        **kwargs
+    )
+
+# ---------- 路由：前台查詢 ----------
+@app.route("/", methods=["GET", "POST"])
+def index():
+    phone = ""
+    search_result = []
+    searched = False
+
+    if request.method == "POST":
+        phone = normalize_phone(request.form.get("phone", ""))
+        searched = True
+        if phone:
+            conn = get_conn()
+            c = conn.cursor()
+            c.execute("SELECT * FROM records WHERE phone = ? ORDER BY updated_at DESC", (phone,))
+            rows = c.fetchall()
+            conn.close()
+
+            for r in rows:
+                search_result.append({
+                    "type": r["type"],
+                    "record": {
+                        "name": r["name"],
+                        "phone": r["phone"],
+                        "line_id": r["line_id"],
+                        "reason": r["reason"],
+                        "created_at": r["created_at"],
+                        "updated_at": r["updated_at"],
+                    }
+                })
+        else:
+            flash("請輸入電話～")
+
+    body = render_template_string(INDEX_BODY, phone=phone, search_result=search_result, searched=searched)
+    return render_base(body, active="index")
+
+# ---------- 路由：後台列表 ----------
+@app.route("/admin")
+def admin():
+    q = request.args.get("q", "").strip()
+    t = request.args.get("type", "").strip()
+    page = max(int(request.args.get("page", 1) or 1), 1)
+    page_size = 12
+    offset = (page - 1) * page_size
+
+    where = []
+    params = []
+    if t and validate_type(t):
+        where.append("type = ?")
+        params.append(t)
+    if q:
+        like = f"%{q}%"
+        where.append("(name LIKE ? OR phone LIKE ? OR IFNULL(line_id,'') LIKE ? OR IFNULL(reason,'') LIKE ? OR IFNULL(operator,'') LIKE ?)")
+        params += [like, like, like, like, like]
+
+    where_sql = ("WHERE " + " AND ".join(where)) if where else ""
+    count_sql = f"SELECT COUNT(*) FROM records {where_sql}"
+    list_sql = f"""
+        SELECT * FROM records
+        {where_sql}
+        ORDER BY updated_at DESC
+        LIMIT ? OFFSET ?
+    """
+
+    conn = get_conn()
+    c = conn.cursor()
+    total = c.execute(count_sql, params).fetchone()[0]
+    rows = c.execute(list_sql, params + [page_size, offset]).fetchall()
+    conn.close()
+
+    total_pages = max((total + page_size - 1) // page_size, 1)
+
+    body = render_template_string(ADMIN_BODY, items=rows, q=q, t=t, page=page, total=total, total_pages=total_pages)
+    return render_base(body, active="admin")
+
+# ---------- 路由：新增 ----------
+@app.route("/record/new", methods=["GET", "POST"])
+def new_record():
+    if request.method == "POST":
+        name = (request.form.get("name") or "").strip()
+        phone = normalize_phone(request.form.get("phone") or "")
+        line_id = (request.form.get("line_id") or "").strip()
+        type_ = (request.form.get("type") or "").strip()
+        reason = (request.form.get("reason") or "").strip()
+        operator = (request.form.get("operator") or "").strip()
+
+        if not name or not phone:
+            flash("姓名與電話為必填～")
+        elif not validate_type(type_):
+            flash("類型必須是白名單或黑名單～")
+        else:
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            conn = get_conn()
+            c = conn.cursor()
+            c.execute("""
+                INSERT INTO records (name, phone, line_id, type, reason, operator, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (name, phone, line_id, type_, reason, operator, now, now))
+            conn.commit()
+            conn.close()
+            flash("新增成功♡")
+            return redirect(url_for("admin"))
+
+    body = render_template_string(FORM_BODY, mode="new", f=request.form)
+    return render_base(body, active="new")
+
+# ---------- 路由：編輯 ----------
+@app.route("/record/<int:rid>/edit", methods=["GET", "POST"])
+def edit_record(rid):
+    conn = get_conn()
+    c = conn.cursor()
+
+    if request.method == "POST":
+        name = (request.form.get("name") or "").strip()
+        phone = normalize_phone(request.form.get("phone") or "")
+        line_id = (request.form.get("line_id") or "").strip()
+        type_ = (request.form.get("type") or "").strip()
+        reason = (request.form.get("reason") or "").strip()
+        operator = (request.form.get("operator") or "").strip()
+
+        if not name or not phone:
+            flash("姓名與電話為必填～")
+        elif not validate_type(type_):
+            flash("類型必須是白名單或黑名單～")
+        else:
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            c.execute("""
+                UPDATE records SET name=?, phone=?, line_id=?, type=?, reason=?, operator=?, updated_at=?
+                WHERE id=?
+            """, (name, phone, line_id, type_, reason, operator, now, rid))
+            conn.commit()
+            conn.close()
+            flash("已更新完畢～")
+            return redirect(url_for("admin"))
+
+    row = c.execute("SELECT * FROM records WHERE id=?", (rid,)).fetchone()
+    conn.close()
+    if not row:
+        flash("找不到這筆資料＞＜")
+        return redirect(url_for("admin"))
+
+    body = render_template_string(FORM_BODY, mode="edit", f=row)
+    return render_base(body, active="admin")
+
+# ---------- 路由：刪除 ----------
+@app.route("/record/<int:rid>/delete", methods=["POST"])
+def delete_record(rid):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("DELETE FROM records WHERE id=?", (rid,))
+    conn.commit()
+    conn.close()
+    flash("已刪除這筆資料。")
+    return redirect(url_for("admin"))
+
+# ---------- 啟動 ----------
+if __name__ == "__main__":
+    init_db()
+    # 預先塞一兩筆示範資料（若資料表為空）
+    conn = get_conn()
+    cur = conn.cursor()
+    count = cur.execute("SELECT COUNT(*) FROM records").fetchone()[0]
+    if count == 0:
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        demo = [
+            ("小白", "0912345678", "white_user", "white", "熟客", "小幫手糖糖", now, now),
+            ("小黑", "0987654321", None, "black", "曾經放鳥", "小幫手糖糖", now, now),
+        ]
+        cur.executemany("""
+            INSERT INTO records (name, phone, line_id, type, reason, operator, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, demo)
+        conn.commit()
+    conn.close()
+
+    app.run(debug=True)
