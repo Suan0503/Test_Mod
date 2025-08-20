@@ -1,35 +1,51 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-TW">
 <head>
+    <meta charset="UTF-8">
     <title>茗殿專用查詢系統</title>
+    <style>
+        body { font-family: "微軟正黑體", Arial, sans-serif; background: #f9f9f9; color: #333; }
+        .container { max-width: 500px; margin: 40px auto; background: #fff; border-radius: 6px; box-shadow: 0 2px 8px #ccc; padding: 30px; }
+        label { font-weight: bold; }
+        input[type="text"] { width: 220px; font-size: 1em; padding: 6px; }
+        button { padding: 6px 18px; font-size: 1em; }
+        .result { margin-top: 20px; }
+        .white { color: green; font-weight: bold; }
+        .black { color: red; font-weight: bold; }
+        .none { color: #888; }
+    </style>
 </head>
 <body>
+  <div class="container">
     <h2>茗殿專用查詢系統</h2>
     <form method="post">
         <label for="phone">請輸入電話：</label>
         <input type="text" name="phone" id="phone" value="{{ phone }}" placeholder="例如 0912345678">
         <button type="submit">查詢</button>
     </form>
+    <div class="result">
     {% if search_result %}
         <hr>
         <h4>查詢結果</h4>
         {% for result in search_result %}
             {% if result.type == 'white' %}
-                <div style="color:green;">
+                <div class="white">
                     <b>白名單</b>：{{ result.record.name }}（{{ result.record.phone }}）
                     {% if result.record.line_id %}，LINE ID: {{ result.record.line_id }}{% endif %}
                     {% if result.record.reason %}<br>原因：{{ result.record.reason }}{% endif %}
                 </div>
             {% elif result.type == 'black' %}
-                <div style="color:red;">
+                <div class="black">
                     <b>黑名單</b>：{{ result.record.name }}（{{ result.record.phone }}）
                     {% if result.record.reason %}<br>原因：{{ result.record.reason }}{% endif %}
                 </div>
             {% endif %}
         {% endfor %}
         {% if not search_result %}
-            <div style="color:gray;">查無此電話於白/黑名單。</div>
+            <div class="none">查無此電話於白/黑名單。</div>
         {% endif %}
     {% endif %}
+    </div>
+  </div>
 </body>
 </html>
