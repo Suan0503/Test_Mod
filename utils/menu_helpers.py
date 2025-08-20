@@ -34,16 +34,16 @@ JKF_LINKS = [
         "url": "https://www.jkforum.net/p/thread-17742482-1-1.html"
     },
     {
-        "label": "檔期推薦 - 奇蹟",
-        "url": "https://www.jkforum.net/p/thread-20273100-1-1.html"
+        "label": "檔期推薦 - 多多",
+        "url": "https://www.jkforum.net/p/thread-20296958-1-1.html"
     },
     {
-        "label": "檔期推薦 - 小不點",
-        "url": "https://www.jkforum.net/p/thread-20275231-1-1.html"
+        "label": "檔期推薦 - 莎莎",
+        "url": "https://www.jkforum.net/p/thread-20296970-1-1.html"
     },
     {
-        "label": "本期空缺中",
-        "url": "https://www.jkforum.net/p/thread-15744749-1-1.html"
+        "label": "檔期推薦 - 心心",
+        "url": "https://www.jkforum.net/p/thread-10248540-1-1.html"
     },
     {
         "label": "本期空缺中",
@@ -57,12 +57,13 @@ JKF_LINKS = [
 
 def get_ad_menu():
     """
-    廣告專區 Flex Message，10個JKF連結按鈕（名稱可獨立修改）
+    廣告專區 Flex Message，10個JKF連結按鈕（名稱可獨立修改），
+    主副色跳色，所有按鈕皆為白色字體。
     """
     buttons = []
-    # 柔和海灘色系
-    btn_primary = "#50B7C1"   # 柔綠藍
-    btn_secondary = "#E3F6FC" # 柔米白
+    btn_primary = "#2C4A6B"   # 深藍
+    btn_secondary = "#4B99C2" # 深天藍
+
     for i, link in enumerate(JKF_LINKS):
         buttons.append({
             "type": "button",
@@ -71,9 +72,20 @@ def get_ad_menu():
                 "label": link["label"],
                 "uri": link["url"]
             },
-            "style": "primary" if i % 2 == 0 else "secondary",
+            "style": "primary",  # 全部主色，確保字體白色
             "color": btn_primary if i % 2 == 0 else btn_secondary
         })
+    # 回主選單按鈕
+    buttons.append({
+        "type": "button",
+        "action": {
+            "type": "message",
+            "label": "🏠 回主選單",
+            "text": "主選單"
+        },
+        "style": "primary",
+        "color": btn_secondary
+    })
     return FlexSendMessage(
         alt_text="廣告專區",
         contents={
@@ -82,10 +94,17 @@ def get_ad_menu():
                 "type": "box",
                 "layout": "vertical",
                 "spacing": "md",
-                "backgroundColor": "#F0FAFF",  # 柔和海灘藍白
+                "backgroundColor": "#1C2636",  # 深夏夜藍
                 "contents": [
-                    {"type": "text", "text": "🏖️ 夏日廣告專區", "weight": "bold", "size": "lg", "align": "center", "color": "#358597"},
-                    {"type": "separator"},
+                    {
+                        "type": "text",
+                        "text": "🏖️ 夏日廣告專區",
+                        "weight": "bold",
+                        "size": "lg",
+                        "align": "center",
+                        "color": "#FFD700"    # 金黃
+                    },
+                    {"type": "separator", "color": "#31485C"},
                     {
                         "type": "box",
                         "layout": "vertical",
@@ -100,20 +119,19 @@ def get_ad_menu():
 
 def get_menu_carousel():
     """
-    主功能選單，夏日海灘柔和風格，按鈕順序已依需求調整
+    主功能選單，深色夏日風格
     """
-    # 柔和色系
-    main_bg1 = "#E7F6F2"     # 柔和藍綠
-    main_bg2 = "#FFF7E3"     # 柔和米黃
-    btn_yellow = "#FFE5A7"   # 柔沙
-    btn_green = "#A7DED9"    # 海灘綠
-    btn_blue = "#50B7C1"     # 柔綠藍
+    main_bg1 = "#1C2636"     # 深夏夜藍
+    main_bg2 = "#222E44"     # 次深夜藍
+    btn_yellow = "#FFD700"   # 金黃
+    btn_green = "#11806A"    # 深夏綠
+    btn_blue = "#2C4A6B"     # 深藍
     btn_white = "#FDF6EE"    # 柔米白
-    btn_orange = "#FFD6B0"   # 柔橘沙
-    btn_pink = "#FFD1DC"     # 柔粉
-    btn_lblue = "#C2E9FB"    # 柔天藍
-    btn_lgreen = "#D9F9D9"   # 柔綠
-    btn_gray = "#F0FAFF"     # 柔灰藍
+    btn_orange = "#FF9800"   # 橘色
+    btn_pink = "#D97092"     # 夏夜玫瑰粉
+    btn_lblue = "#4B99C2"    # 深天藍
+    btn_lgreen = "#2BB673"   # 夏夜綠
+    btn_gray = "#31485C"     # 深灰藍
 
     bubbles = []
 
@@ -133,9 +151,9 @@ def get_menu_carousel():
                     "weight": "bold",
                     "size": "lg",
                     "align": "center",
-                    "color": "#358597"
+                    "color": "#FFD700"
                 },
-                {"type": "separator"},
+                {"type": "separator", "color": "#31485C"},
                 {
                     "type": "box",
                     "layout": "vertical",
@@ -177,7 +195,7 @@ def get_menu_carousel():
                             "action": {
                                 "type": "uri",
                                 "label": "📅 班表查詢",
-                                "uri": "https://t.me/+LaFZixvTaMY3ODA1"
+                                "uri": "https://t.me/+svlFjBpb4hxkYjFl"
                             },
                             "style": "secondary",
                             "color": btn_white
@@ -214,9 +232,9 @@ def get_menu_carousel():
                     "weight": "bold",
                     "size": "lg",
                     "align": "center",
-                    "color": "#F6A500"
+                    "color": "#FFD700"
                 },
-                {"type": "separator"},
+                {"type": "separator", "color": "#31485C"},
                 {
                     "type": "box",
                     "layout": "vertical",
@@ -237,7 +255,7 @@ def get_menu_carousel():
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "📝 回報文登記",
+                                "label": "📝 回報文登記(暫停使用)",
                                 "text": "回報文"
                             },
                             "style": "primary",
@@ -257,7 +275,7 @@ def get_menu_carousel():
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "🧊 呼叫管理員",
+                                "label": "🧊 呼叫管理員（暫停使用）",
                                 "text": "呼叫管理員"
                             },
                             "style": "secondary",
@@ -267,11 +285,11 @@ def get_menu_carousel():
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "🌞 活動快訊",
+                                "label": "🌞 活動快訊（暫停使用）",
                                 "text": "活動快訊"
                             },
                             "style": "primary",
-                            "color": btn_blue
+                            "color": btn_orange
                         }
                     ]
                 }

@@ -3,12 +3,19 @@ from extensions import line_bot_api, db
 from models import Whitelist, Coupon
 from utils.menu import get_menu_carousel
 from utils.draw_utils import draw_coupon, get_today_coupon_flex, has_drawn_today, save_coupon_record
+from utils.verify_guard import guard_verified
 import pytz
 from datetime import datetime
 
 def handle_menu(event):
+    # ▼ 新增驗證守門，只要不是驗證資訊或輸入手機號碼就攔住未驗證者 ▼
     user_id = event.source.user_id
     user_text = event.message.text.strip()
+    if user_text not in ["驗證資訊"]:  # 你可依需求再加白名單
+        if not guard_verified(event, line_bot_api):
+            return
+    # ▲
+
     tz = pytz.timezone("Asia/Taipei")
     try:
         profile = line_bot_api.get_profile(user_id)
@@ -58,8 +65,8 @@ def handle_menu(event):
         line_bot_api.reply_message(event.reply_token, flex)
         return
 
-    # 券紀錄（已支援多指令觸發）
-    if user_text in ["券紀錄", "我的券紀錄", "折價券管理"]:
+    # 券紀錄
+    if user_text in ["券紀錄", "我的券紀錄"]:
         today = datetime.now(tz).date()
         month_str = today.strftime("%Y-%m")
         user_coupons = Coupon.query.filter_by(line_user_id=user_id).all()
@@ -79,9 +86,8 @@ def handle_menu(event):
         msg += "\n📝【本月回報文抽獎券】\n"
         if report_month:
             for c in report_month:
-                # 更完整 debug log
-                print(f"DEBUG: id={c.id}, date={c.date}, report_no={c.report_no!r}, user_id={c.line_user_id}, amount={c.amount}")
                 no = c.report_no or ""
+                # 只有中獎（amount>0）才顯示金額
                 if c.amount and c.amount > 0:
                     msg += f"　　• 日期：{c.date}｜編號：{no}｜金額：{c.amount}元\n"
                 else:
