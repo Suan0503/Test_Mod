@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>黑名單管理</h2>
+<form method="post">
+    名稱：<input type="text" name="name" required>
+    原因：<input type="text" name="reason">
+    <button type="submit">新增</button>
+</form>
+<ul>
+    {% for item in items %}
+    <li>{{ item.name }} - {{ item.reason }}</li>
+    {% endfor %}
+</ul>
+{% endblock %}
