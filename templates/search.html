@@ -1,34 +1,35 @@
 {% extends "layout.html" %}
 {% block body %}
   <h2>查詢</h2>
-  <form method="post" style="display:flex;align-items:end;gap:10px;margin-bottom:8px;">
-      <label for="phone">請輸入電話：</label>
-      <input type="text" name="phone" id="phone" value="{{ phone }}" placeholder="例如 0912345678">
-      <button type="submit">查詢</button>
+  <form method="POST">
+    <label>請輸入電話：</label>
+    <input type="text" name="phone" value="{{ phone }}">
+    <button type="submit">查詢</button>
   </form>
-  <div class="result">
+  <hr>
   {% if searched %}
-      <hr>
-      <h4>查詢結果</h4>
-      {% if search_result %}
-          {% for result in search_result %}
-              {% if result.type == 'white' %}
-                  <div style="color:green;">
-                      <b>白名單</b>：{{ result.record.name }}（{{ result.record.phone }}）
-                      {% if result.record.line_id %}，LINE ID: {{ result.record.line_id }}{% endif %}
-                      {% if result.record.reason %}<br>原因：{{ result.record.reason }}{% endif %}
-                  </div>
-              {% elif result.type == 'black' %}
-                  <div style="color:red;">
-                      <b>黑名單</b>：{{ result.record.name }}（{{ result.record.phone }}）
-                      {% if result.record.reason %}<br>原因：{{ result.record.reason }}{% endif %}
-                  </div>
-              {% endif %}
-              <hr>
+    <h3>查詢結果</h3>
+    {% if rows %}
+      <table border="1" cellpadding="8" style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr>
+            {% for col in columns %}
+              <th>{{ col }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr>
+              {% for col in columns %}
+                <td>{{ row[col] }}</td>
+              {% endfor %}
+            </tr>
           {% endfor %}
-      {% else %}
-          <div style="color:gray;">查無此電話於白/黑名單。</div>
-      {% endif %}
+        </tbody>
+      </table>
+    {% else %}
+      <div style="color:gray;">查無資料</div>
+    {% endif %}
   {% endif %}
-  </div>
 {% endblock %}
