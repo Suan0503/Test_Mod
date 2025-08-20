@@ -1,6 +1,6 @@
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))  # ✅ 確保 handler 可被 import
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 from flask import Flask
 from dotenv import load_dotenv
@@ -9,11 +9,12 @@ load_dotenv()
 
 from extensions import db
 from routes.message import message_bp
-from routes.admin_query import admin_bp  # <--- 新增這行
+from flask_admin import Admin
+from flask_admin.contrib.sqla import ModelView
+from models import Whitelist, Blacklist
 
 app = Flask(__name__)
 
-# 資料庫連線字串轉換（Heroku/Railway 相容性處理）
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
@@ -22,9 +23,12 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)
 
-# Blueprint 註冊
 app.register_blueprint(message_bp)
-app.register_blueprint(admin_bp)  # <--- 新增這行
+
+# 加入 Flask-Admin 後台
+admin = Admin(app, name='資料庫管理後台', template_mode='bootstrap4')
+admin.add_view(ModelView(Whitelist, db.session, name='白名單'))
+admin.add_view(ModelView(Blacklist, db.session, name='黑名單'))
 
 @app.route("/")
 def home():
