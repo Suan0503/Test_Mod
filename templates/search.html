@@ -8,20 +8,20 @@
   </form>
   <hr>
   {% if searched %}
-    <h3>查詢結果</h3>
-    {% if rows %}
-      <table border="1" cellpadding="8" style="width:100%;border-collapse:collapse;">
+    <h3>白名單</h3>
+    {% if whiterows %}
+      <table border="1" cellpadding="8" style="border-collapse:collapse;">
         <thead>
           <tr>
-            {% for col in columns %}
+            {% for col in whitecols %}
               <th>{{ col }}</th>
             {% endfor %}
           </tr>
         </thead>
         <tbody>
-          {% for row in rows %}
+          {% for row in whiterows %}
             <tr>
-              {% for col in columns %}
+              {% for col in whitecols %}
                 <td>{{ row[col] }}</td>
               {% endfor %}
             </tr>
@@ -29,7 +29,31 @@
         </tbody>
       </table>
     {% else %}
-      <div style="color:gray;">查無資料</div>
+      <div style="color:gray;">查無此電話於白名單。</div>
+    {% endif %}
+
+    <h3>黑名單</h3>
+    {% if blackrows %}
+      <table border="1" cellpadding="8" style="border-collapse:collapse;">
+        <thead>
+          <tr>
+            {% for col in blackcols %}
+              <th>{{ col }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in blackrows %}
+            <tr>
+              {% for col in blackcols %}
+                <td>{{ row[col] }}</td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div style="color:gray;">查無此電話於黑名單。</div>
     {% endif %}
   {% endif %}
 {% endblock %}
