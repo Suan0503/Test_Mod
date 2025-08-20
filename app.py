@@ -40,21 +40,35 @@ admin.add_view(ReadOnlyModelView(Whitelist, db.session, name='白名單'))
 admin.add_view(ReadOnlyModelView(Blacklist, db.session, name='黑名單'))
 # 不加 Coupon，所以不會出現折價券
 
-# 首頁路由：電話查詢
+# 首頁路由：電話查詢（自動補0查詢9碼和10碼）
 @app.route("/", methods=["GET", "POST"])
 def home():
-    search_result = None
+    search_result = []
     phone = ""
     if request.method == "POST":
         phone = request.form.get("phone", "").strip()
-        whitelist = db.session.query(Whitelist).filter_by(phone=phone).first()
-        blacklist = db.session.query(Blacklist).filter_by(phone=phone).first()
-        search_result = {
-            "phone": phone,
-            "whitelist": whitelist,
-            "blacklist": blacklist,
-        }
-    # 用 render_template_string 快速產生 HTML
+        query_phones = [phone]
+        # 如果是9碼且第一碼不是0，自動加0組成10碼
+        if len(phone) == 9 and not phone.startswith("0"):
+            query_phones.append("0" + phone)
+
+        # 查詢黑白名單
+        for p in query_phones:
+            whitelist = db.session.query(Whitelist).filter_by(phone=p).first()
+            blacklist = db.session.query(Blacklist).filter_by(phone=p).first()
+            if whitelist:
+                search_result.append({
+                    "type": "white",
+                    "phone": p,
+                    "record": whitelist
+                })
+            if blacklist:
+                search_result.append({
+                    "type": "black",
+                    "phone": p,
+                    "record": blacklist
+                })
+
     return render_template_string("""
     <h2>茗殿專用查詢系統</h2>
     <form method="post">
@@ -65,20 +79,21 @@ def home():
     {% if search_result %}
         <hr>
         <h4>查詢結果</h4>
-        {% if search_result.whitelist %}
-            <div style="color:green;">
-                <b>白名單</b>：{{ search_result.whitelist.name }}（{{ search_result.whitelist.phone }}）
-                {% if search_result.whitelist.line_id %}，LINE ID: {{ search_result.whitelist.line_id }}{% endif %}
-                {% if search_result.whitelist.reason %}<br>原因：{{ search_result.whitelist.reason }}{% endif %}
-            </div>
-        {% endif %}
-        {% if search_result.blacklist %}
-            <div style="color:red;">
-                <b>黑名單</b>：{{ search_result.blacklist.name }}（{{ search_result.blacklist.phone }}）
-                {% if search_result.blacklist.reason %}<br>原因：{{ search_result.blacklist.reason }}{% endif %}
-            </div>
-        {% endif %}
-        {% if not search_result.whitelist and not search_result.blacklist %}
+        {% for result in search_result %}
+            {% if result.type == 'white' %}
+                <div style="color:green;">
+                    <b>白名單</b>：{{ result.record.name }}（{{ result.record.phone }}）
+                    {% if result.record.line_id %}，LINE ID: {{ result.record.line_id }}{% endif %}
+                    {% if result.record.reason %}<br>原因：{{ result.record.reason }}{% endif %}
+                </div>
+            {% elif result.type == 'black' %}
+                <div style="color:red;">
+                    <b>黑名單</b>：{{ result.record.name }}（{{ result.record.phone }}）
+                    {% if result.record.reason %}<br>原因：{{ result.record.reason }}{% endif %}
+                </div>
+            {% endif %}
+        {% endfor %}
+        {% if not search_result %}
             <div style="color:gray;">查無此電話於白/黑名單。</div>
         {% endif %}
     {% endif %}
