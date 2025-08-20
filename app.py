@@ -66,12 +66,7 @@ def search():
             for r in rows:
                 search_result.append({
                     "type": r["type"],
-                    "record": {
-                        "name": r["name"],
-                        "phone": r["phone"],
-                        "line_id": r["line_id"],
-                        "reason": r["reason"]
-                    }
+                    "record": {col: r[col] for col in r.keys()}
                 })
         else:
             flash("請輸入電話～")
