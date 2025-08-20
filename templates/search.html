@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>茗殿專用查詢系統</title>
+</head>
+<body>
+    <h2>茗殿專用查詢系統</h2>
+    <form method="post">
+        <label for="phone">請輸入電話：</label>
+        <input type="text" name="phone" id="phone" value="{{ phone }}" placeholder="例如 0912345678">
+        <button type="submit">查詢</button>
+    </form>
+    {% if search_result %}
+        <hr>
+        <h4>查詢結果</h4>
+        {% for result in search_result %}
+            {% if result.type == 'white' %}
+                <div style="color:green;">
+                    <b>白名單</b>：{{ result.record.name }}（{{ result.record.phone }}）
+                    {% if result.record.line_id %}，LINE ID: {{ result.record.line_id }}{% endif %}
+                    {% if result.record.reason %}<br>原因：{{ result.record.reason }}{% endif %}
+                </div>
+            {% elif result.type == 'black' %}
+                <div style="color:red;">
+                    <b>黑名單</b>：{{ result.record.name }}（{{ result.record.phone }}）
+                    {% if result.record.reason %}<br>原因：{{ result.record.reason }}{% endif %}
+                </div>
+            {% endif %}
+        {% endfor %}
+        {% if not search_result %}
+            <div style="color:gray;">查無此電話於白/黑名單。</div>
+        {% endif %}
+    {% endif %}
+</body>
+</html>
