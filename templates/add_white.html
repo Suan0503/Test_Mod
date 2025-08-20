@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+{% block body %}
+  <h2>新增白名單</h2>
+  <form method="post">
+    <div>
+      <label>姓名</label><br>
+      <input type="text" name="name" required>
+    </div>
+    <div>
+      <label>電話</label><br>
+      <input type="text" name="phone" required>
+    </div>
+    <div>
+      <label>LINE ID</label><br>
+      <input type="text" name="line_id">
+    </div>
+    <div>
+      <label>原因</label><br>
+      <input type="text" name="reason">
+    </div>
+    <div style="margin-top:12px;">
+      <button type="submit">新增白名單</button>
+    </div>
+  </form>
+{% endblock %}
