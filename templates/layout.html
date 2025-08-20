@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title or "茗殿專用後台系統" }}</title>
+    <link rel="icon" href="/static/logo.png">
+    <style>
+        body { font-family: "微軟正黑體", Arial, sans-serif; background: linear-gradient(135deg,#f6e9ff 0%,#c2e9fb 100%); margin:0; color: #333;}
+        .navbar { background: #7c4dff; color: #fff; padding: 0 0 0 0; }
+        .navbar-inner { display: flex; align-items: center; max-width: 900px; margin: 0 auto; padding: 0 14px;}
+        .navbar-brand { font-weight:800; font-size: 22px; padding: 12px 18px 12px 0; letter-spacing:2px;}
+        .nav { display: flex; gap: 8px;}
+        .nav a { color: #fff; text-decoration: none; font-weight: 600; padding: 12px 20px; border-radius: 8px 8px 0 0; }
+        .nav a.active, .nav a:hover { background: #512da8;}
+        .container { max-width: 900px; margin: 40px auto 80px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 16px #c3a6e9; padding: 32px 30px;}
+        .footer { text-align: center; color: #777; margin-top: 32px; font-size: 13px;}
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <div class="navbar">
+      <div class="navbar-inner">
+        <div class="navbar-brand">茗殿專用後台系統</div>
+        <nav class="nav">
+          <a href="{{ url_for('white_list') }}" class="{% if active=='white' %}active{% endif %}">白名單總覽</a>
+          <a href="{{ url_for('black_list') }}" class="{% if active=='black' %}active{% endif %}">黑名單總覽</a>
+          <a href="{{ url_for('add_white') }}" class="{% if active=='addwhite' %}active{% endif %}">新增白名單</a>
+          <a href="{{ url_for('add_black') }}" class="{% if active=='addblack' %}active{% endif %}">新增黑名單</a>
+          <a href="{{ url_for('search') }}" class="{% if active=='search' %}active{% endif %}">查詢</a>
+        </nav>
+      </div>
+    </div>
+    <div class="container">
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          {% for m in messages %}
+            <div style="background:#f9f7ff;border:1px solid #d6c9ff;color:#4a2fbf;padding:10px;border-radius:8px;margin-bottom:12px;">
+              🌸 {{ m }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+      {% block body %}{% endblock %}
+    </div>
+    <div class="footer">© {{ now.year }} 茗殿 | Powered by Copilot & 糖糖</div>
+</body>
+</html>
