@@ -1,62 +1,33 @@
-import os
-import re
-import sqlite3
+import os, re, sqlite3
 from datetime import datetime
 from flask import Flask, request, redirect, url_for, render_template, flash
 
-APP_TITLE = "茗殿專用查詢系統"
+app = Flask(__name__)
+app.secret_key = "change-me-please"
 DB_PATH = os.path.join(os.path.dirname(__file__), "md_checker.db")
 
-app = Flask(__name__)
-app.secret_key = "change-me-please"  # 記得換掉呦～
-
-# ---------- 資料庫初始化 ----------
 def get_conn():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
-def init_db():
-    conn = get_conn()
-    c = conn.cursor()
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS records (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            phone TEXT NOT NULL,
-            line_id TEXT,
-            type TEXT NOT NULL CHECK (type IN ('white','black')),
-            reason TEXT,
-            operator TEXT,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        )
-    """)
-    c.execute("CREATE INDEX IF NOT EXISTS idx_records_phone ON records(phone)")
-    c.execute("CREATE INDEX IF NOT EXISTS idx_records_type ON records(type)")
-    conn.commit()
-    conn.close()
-
 def normalize_phone(s: str) -> str:
-    """只保留數字；09…或+8869…都轉成0912…格式"""
-    if not s:
-        return ""
+    if not s: return ""
     digits = re.sub(r"\D", "", s)
     digits = re.sub(r"^(886|00886|000886)", "", digits)
     if digits.startswith("9") and len(digits) == 9:
         digits = "0" + digits
     return digits
 
-def validate_type(t: str) -> bool:
-    return t in ("white", "black")
+@app.route("/")
+def home():
+    return redirect(url_for("search"))
 
-# ---------- 路由：前台查詢 ----------
-@app.route("/", methods=["GET", "POST"])
-def index():
+@app.route("/search", methods=["GET", "POST"])
+def search():
     phone = ""
     search_result = []
     searched = False
-
     if request.method == "POST":
         phone = normalize_phone(request.form.get("phone", ""))
         searched = True
@@ -73,33 +44,74 @@ def index():
                         "name": r["name"],
                         "phone": r["phone"],
                         "line_id": r["line_id"],
-                        "reason": r["reason"],
-                        "created_at": r["created_at"],
-                        "updated_at": r["updated_at"],
+                        "reason": r["reason"]
                     }
                 })
         else:
             flash("請輸入電話～")
-    return render_template("search.html", phone=phone, search_result=search_result, searched=searched, now=datetime.now())
+    return render_template("search.html", phone=phone, search_result=search_result, searched=searched, active="search", now=datetime.now())
 
-# ---------- 啟動 ----------
-if __name__ == "__main__":
-    init_db()
-    # 預先塞一兩筆示範資料（若資料表為空）
+@app.route("/white_list")
+def white_list():
     conn = get_conn()
-    cur = conn.cursor()
-    count = cur.execute("SELECT COUNT(*) FROM records").fetchone()[0]
-    if count == 0:
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        demo = [
-            ("小白", "0912345678", "white_user", "white", "熟客", "小幫手糖糖", now, now),
-            ("小黑", "0987654321", None, "black", "曾經放鳥", "小幫手糖糖", now, now),
-        ]
-        cur.executemany("""
-            INSERT INTO records (name, phone, line_id, type, reason, operator, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, demo)
-        conn.commit()
+    c = conn.cursor()
+    rows = c.execute("SELECT name, phone, line_id, reason FROM records WHERE type='white'").fetchall()
     conn.close()
+    return render_template("white_list.html", rows=rows, active="white", now=datetime.now())
 
+@app.route("/black_list")
+def black_list():
+    conn = get_conn()
+    c = conn.cursor()
+    rows = c.execute("SELECT name, phone, line_id, reason FROM records WHERE type='black'").fetchall()
+    conn.close()
+    return render_template("black_list.html", rows=rows, active="black", now=datetime.now())
+
+@app.route("/add_white", methods=["GET", "POST"])
+def add_white():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        phone = normalize_phone(request.form.get("phone", ""))
+        line_id = request.form.get("line_id", "").strip()
+        reason = request.form.get("reason", "").strip()
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if not name or not phone:
+            flash("姓名/電話為必填")
+        else:
+            conn = get_conn()
+            c = conn.cursor()
+            c.execute("""
+                INSERT INTO records (name, phone, line_id, type, reason, operator, created_at, updated_at)
+                VALUES (?, ?, ?, 'white', ?, '', ?, ?)
+            """, (name, phone, line_id, reason, now, now))
+            conn.commit()
+            conn.close()
+            flash("新增成功！")
+            return redirect(url_for("white_list"))
+    return render_template("add_white.html", active="addwhite", now=datetime.now())
+
+@app.route("/add_black", methods=["GET", "POST"])
+def add_black():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        phone = normalize_phone(request.form.get("phone", ""))
+        line_id = request.form.get("line_id", "").strip()
+        reason = request.form.get("reason", "").strip()
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if not name or not phone:
+            flash("姓名/電話為必填")
+        else:
+            conn = get_conn()
+            c = conn.cursor()
+            c.execute("""
+                INSERT INTO records (name, phone, line_id, type, reason, operator, created_at, updated_at)
+                VALUES (?, ?, ?, 'black', ?, '', ?, ?)
+            """, (name, phone, line_id, reason, now, now))
+            conn.commit()
+            conn.close()
+            flash("新增成功！")
+            return redirect(url_for("black_list"))
+    return render_template("add_black.html", active="addblack", now=datetime.now())
+
+if __name__ == "__main__":
     app.run(debug=True)
