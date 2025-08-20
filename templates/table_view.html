@@ -1,0 +1,30 @@
+{% extends "layout.html" %}
+{% block body %}
+<h2>{{ table }} 資料表總覽</h2>
+<a href="{{ url_for('table_view', table='records') }}">records</a> |
+<a href="{{ url_for('table_view', table='whitelist') }}">whitelist</a> |
+<a href="{{ url_for('table_view', table='blacklist') }}">blacklist</a>
+<hr>
+{% if rows %}
+  <table border="1" cellpadding="8" style="width:100%;border-collapse:collapse;">
+    <thead>
+      <tr>
+        {% for col in columns %}
+          <th>{{ col }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        <tr>
+          {% for col in columns %}
+            <td>{{ row[col] }}</td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <div style="color:gray;">目前沒有資料</div>
+{% endif %}
+{% endblock %}
