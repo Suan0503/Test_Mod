@@ -1,70 +1,16 @@
-import os, re, sqlite3
+import re
+import psycopg2
+import psycopg2.extras
 from datetime import datetime
 from flask import Flask, request, redirect, url_for, render_template, flash
 
 app = Flask(__name__)
 app.secret_key = "change-me-please"
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "md_checker.db")
-if not os.access(os.path.dirname(DB_PATH), os.W_OK):
-    DB_PATH = "/tmp/md_checker.db"
+PG_URL = "postgresql://postgres:JRmQnieaMhLmlDiJmcQCfcGpQXPahcfX@shuttle.proxy.rlwy.net:20364/railway"
 
 def get_conn():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-def init_db():
-    conn = get_conn()
-    c = conn.cursor()
-    # 主資料表
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS records (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            phone TEXT NOT NULL,
-            line_id TEXT,
-            type TEXT NOT NULL CHECK (type IN ('white','black')),
-            reason TEXT,
-            operator TEXT,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        )
-    """)
-    c.execute("CREATE INDEX IF NOT EXISTS idx_records_phone ON records(phone)")
-    c.execute("CREATE INDEX IF NOT EXISTS idx_records_type ON records(type)")
-    # 白名單表
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS whitelist (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            phone TEXT NOT NULL,
-            line_id TEXT,
-            reason TEXT,
-            operator TEXT,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        )
-    """)
-    c.execute("CREATE INDEX IF NOT EXISTS idx_whitelist_phone ON whitelist(phone)")
-    # 黑名單表
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS blacklist (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            phone TEXT NOT NULL,
-            line_id TEXT,
-            reason TEXT,
-            operator TEXT,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        )
-    """)
-    c.execute("CREATE INDEX IF NOT EXISTS idx_blacklist_phone ON blacklist(phone)")
-    conn.commit()
-    conn.close()
-
-init_db()
+    return psycopg2.connect(PG_URL)
 
 def normalize_phone(s: str) -> str:
     if not s: return ""
@@ -89,12 +35,13 @@ def search():
         phone = normalize_phone(request.form.get("phone", ""))
         searched = True
         conn = get_conn()
-        c = conn.cursor()
+        c = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         if phone:
-            rows = c.execute("SELECT * FROM records WHERE phone = ? ORDER BY updated_at DESC", (phone,)).fetchall()
+            c.execute("SELECT * FROM records WHERE phone = %s ORDER BY updated_at DESC", (phone,))
         else:
-            rows = c.execute("SELECT * FROM records ORDER BY updated_at DESC").fetchall()
-        columns = [desc[0] for desc in c.description]
+            c.execute("SELECT * FROM records ORDER BY updated_at DESC")
+        rows = c.fetchall()
+        columns = [desc.name for desc in c.description]
         conn.close()
     return render_template("search.html", phone=phone, rows=rows, columns=columns, searched=searched, active="search", now=datetime.now())
 
@@ -102,9 +49,10 @@ def search():
 @app.route("/white_list")
 def white_list():
     conn = get_conn()
-    c = conn.cursor()
-    rows = c.execute("SELECT * FROM whitelist ORDER BY created_at DESC").fetchall()
-    columns = [desc[0] for desc in c.description]
+    c = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    c.execute("SELECT * FROM whitelist ORDER BY created_at DESC")
+    rows = c.fetchall()
+    columns = [desc.name for desc in c.description]
     conn.close()
     return render_template("white_list.html", rows=rows, columns=columns, active="white", now=datetime.now())
 
@@ -112,9 +60,10 @@ def white_list():
 @app.route("/black_list")
 def black_list():
     conn = get_conn()
-    c = conn.cursor()
-    rows = c.execute("SELECT * FROM blacklist ORDER BY created_at DESC").fetchall()
-    columns = [desc[0] for desc in c.description]
+    c = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    c.execute("SELECT * FROM blacklist ORDER BY created_at DESC")
+    rows = c.fetchall()
+    columns = [desc.name for desc in c.description]
     conn.close()
     return render_template("black_list.html", rows=rows, columns=columns, active="black", now=datetime.now())
 
@@ -134,11 +83,11 @@ def add_white():
             c = conn.cursor()
             c.execute("""
                 INSERT INTO records (name, phone, line_id, type, reason, operator, created_at, updated_at)
-                VALUES (?, ?, ?, 'white', ?, '', ?, ?)
+                VALUES (%s, %s, %s, 'white', %s, '', %s, %s)
             """, (name, phone, line_id, reason, now, now))
             c.execute("""
                 INSERT INTO whitelist (name, phone, line_id, reason, operator, created_at, updated_at)
-                VALUES (?, ?, ?, ?, '', ?, ?)
+                VALUES (%s, %s, %s, %s, '', %s, %s)
             """, (name, phone, line_id, reason, now, now))
             conn.commit()
             conn.close()
@@ -162,11 +111,11 @@ def add_black():
             c = conn.cursor()
             c.execute("""
                 INSERT INTO records (name, phone, line_id, type, reason, operator, created_at, updated_at)
-                VALUES (?, ?, ?, 'black', ?, '', ?, ?)
+                VALUES (%s, %s, %s, 'black', %s, '', %s, %s)
             """, (name, phone, line_id, reason, now, now))
             c.execute("""
                 INSERT INTO blacklist (name, phone, line_id, reason, operator, created_at, updated_at)
-                VALUES (?, ?, ?, ?, '', ?, ?)
+                VALUES (%s, %s, %s, %s, '', %s, %s)
             """, (name, phone, line_id, reason, now, now))
             conn.commit()
             conn.close()
