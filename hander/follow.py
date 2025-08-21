@@ -1,3 +1,4 @@
+from app.linebot_instance import line_bot_api
 from linebot.models import TextSendMessage, QuickReply, QuickReplyButton, MessageAction
 
 def handle_follow(event):
