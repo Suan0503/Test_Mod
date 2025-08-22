@@ -288,19 +288,13 @@ def handle_verify(event):
             reply_with_reverify(event, "⚠️ 你已驗證完成，請輸入手機號碼查看驗證資訊")
         return
 
-    # 新用戶允許重新驗證
+    # 新用戶允許重新驗證（保留使用者主動輸入「重新驗證」）
     if user_text == "重新驗證":
         temp_users[user_id] = {"step": "waiting_phone", "name": display_name, "reverify": True}
         reply_with_reverify(event, "請輸入您的手機號碼（09開頭）開始重新驗證～")
         return
 
-    # 驗證流程入口（只處理「我同意規則」），新用戶才可啟動
-    if user_text == "我同意規則":
-        temp_users[user_id] = {"step": "waiting_phone", "name": display_name}
-        reply_with_reverify(event, "請輸入您的手機號碼（09開頭）開始驗證流程～")
-        return
-
-    # Step 1: 輸入手機號碼
+    # 移除「我同意規則」按鈕流程：直接將新用戶導入等待輸入手機（waiting_phone）
     if user_id in temp_users and temp_users[user_id].get("step") == "waiting_phone":
         phone = normalize_phone(user_text)
         if Blacklist.query.filter_by(phone=phone).first():
@@ -350,18 +344,12 @@ def handle_verify(event):
         temp_users.pop(user_id)
         return
 
-    # fallback 新用戶才顯示驗證選單
+    # fallback: 直接啟動驗證流程（移除顯示「我同意規則」按鈕）
     if user_id not in temp_users:
-        quick_reply = QuickReply(items=[
-            QuickReplyButton(action=MessageAction(label="我同意規則", text="我同意規則")),
-            QuickReplyButton(action=MessageAction(label="重新驗證", text="重新驗證"))
-        ])
+        temp_users[user_id] = {"step": "waiting_phone", "name": display_name}
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(
-                text=f"歡迎 {display_name}，請選擇驗證方式：",
-                quick_reply=quick_reply
-            )
+            TextSendMessage(text=f"歡迎 {display_name}，請直接輸入手機號碼（09開頭）進行驗證。")
         )
         return
 
