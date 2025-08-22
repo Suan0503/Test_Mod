@@ -37,7 +37,38 @@ def handle_verify(event):
     except Exception:
         display_name = "用戶"
 
+<<<<<<< HEAD
     # 管理員手動黑名單流程
+=======
+    # 查詢模組
+    if user_text.startswith("查詢 - "):
+        phone = normalize_phone(user_text.replace("查詢 - ", "").strip())
+        msg = f"查詢號碼：{phone}\n查詢結果："
+        wl = Whitelist.query.filter_by(phone=phone).first()
+        if wl:
+            msg += " O白名單\n"
+            msg += (
+                f"暱稱：{wl.name}\n"
+                f"LINE ID：{wl.line_id or '未登記'}\n"
+                f"驗證時間：{wl.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
+            )
+        else:
+            msg += " X白名單\n"
+        bl = Blacklist.query.filter_by(phone=phone).first()
+        if bl:
+            msg += " O黑名單\n"
+            msg += (
+                f"暱稱：{bl.name}\n"
+                f"LINE ID：{getattr(bl, 'line_id', '未登記')}\n"
+                f"加入時間：{bl.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S') if hasattr(bl, 'created_at') and bl.created_at else '未紀錄'}\n"
+            )
+        else:
+            msg += " X黑名單\n"
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
+        return
+
+    # 管理員手動黑名單流程（保留原邏輯）
+>>>>>>> d4ddc685c6a5e9088fd8a3a674c86d8d13cdf262
     if user_text.startswith("手動黑名單 - "):
         if user_id not in ADMIN_IDS:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 只有管理員可使用此功能"))
@@ -106,7 +137,7 @@ def handle_verify(event):
             ))
             return
 
-    # 管理員手動驗證白名單流程
+    # 管理員手動驗證白名單流程（保留原邏輯）
     if user_text.startswith("手動驗證 - "):
         if user_id not in ADMIN_IDS:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 只有管理員可使用此功能"))
@@ -228,7 +259,38 @@ def handle_verify(event):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
         return
 
+<<<<<<< HEAD
     # 驗證流程入口（只處理「我同意規則」）
+=======
+    # 已驗證用戶不可使用重新驗證
+    existing = Whitelist.query.filter_by(line_user_id=user_id).first()
+    if existing:
+        if user_text == "重新驗證":
+            reply_with_reverify(event, "您已通過驗證，無法重新驗證。")
+            return
+        if normalize_phone(user_text) == normalize_phone(existing.phone):
+            reply = (
+                f"📱 {existing.phone}\n"
+                f"🌸 暱稱：{existing.name or display_name}\n"
+                f"       個人編號：{existing.id}\n"
+                f"🔗 LINE ID：{existing.line_id or '未登記'}\n"
+                f"🕒 {existing.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
+                f"✅ 驗證成功，歡迎加入茗殿\n"
+                f"🌟 加入密碼：ming666"
+            )
+            reply_with_menu(event.reply_token, reply)
+        else:
+            reply_with_reverify(event, "⚠️ 你已驗證完成，請輸入手機號碼查看驗證資訊")
+        return
+
+    # 新用戶允許重新驗證
+    if user_text == "重新驗證":
+        temp_users[user_id] = {"step": "waiting_phone", "name": display_name, "reverify": True}
+        reply_with_reverify(event, "請輸入您的手機號碼（09開頭）開始重新驗證～")
+        return
+
+    # 驗證流程入口
+>>>>>>> d4ddc685c6a5e9088fd8a3a674c86d8d13cdf262
     if user_text == "我同意規則":
         temp_users[user_id] = {"step": "waiting_phone", "name": display_name}
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入您的手機號碼（09開頭）開始驗證流程～"))
@@ -237,6 +299,16 @@ def handle_verify(event):
     # Step 1: 輸入手機號碼
     if user_id in temp_users and temp_users[user_id].get("step") == "waiting_phone":
         phone = normalize_phone(user_text)
+<<<<<<< HEAD
+=======
+        # 黑名單直接拒絕
+        if Blacklist.query.filter_by(phone=phone).first():
+            reply_with_reverify(event, "❌ 資料有誤，請洽管理員")
+            temp_users.pop(user_id)
+            return
+        # 白名單進入第二步
+        wl = Whitelist.query.filter_by(phone=phone).first()
+>>>>>>> d4ddc685c6a5e9088fd8a3a674c86d8d13cdf262
         if not phone.startswith("09") or len(phone) != 10:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 請輸入正確的手機號碼（09開頭共10碼）"))
             return
@@ -262,6 +334,7 @@ def handle_verify(event):
         ))
         return
 
+<<<<<<< HEAD
     # Step 3: 圖片驗證確認後用戶輸入 1
     if user_id in temp_users and temp_users[user_id].get("step") == "waiting_confirm" and user_text == "1":
         data = temp_users[user_id]
@@ -279,6 +352,10 @@ def handle_verify(event):
         reply_with_menu(event.reply_token, reply)
         temp_users.pop(user_id)
         return
+=======
+    # Step 3: 用戶上傳截圖，等待 OCR 驗證
+    # 圖片訊息處理在 handle_image
+>>>>>>> d4ddc685c6a5e9088fd8a3a674c86d8d13cdf262
 
     # 已驗證用戶查詢
     existing = Whitelist.query.filter_by(line_user_id=user_id).first()
@@ -306,6 +383,7 @@ def handle_verify(event):
 @handler.add(MessageEvent, message=ImageMessage)
 def handle_image(event):
     user_id = event.source.user_id
+    # 只允許在"等待截圖"時處理
     if user_id not in temp_users or temp_users[user_id].get("step") != "waiting_screenshot":
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請先完成前面步驟後再上傳截圖唷～"))
         return
@@ -321,13 +399,40 @@ def handle_image(event):
     try:
         image = Image.open(temp_path)
         text = pytesseract.image_to_string(image, lang='eng')
-        if re.search(r"09\d{8}", text):
+        phone_match = re.search(r"09\d{8}", text)
+        lineid_match = re.search(r"(?:LINE\s*ID[:：]?\s*([a-zA-Z0-9_.-]+))", text)
+        # 取用戶輸入
+        input_phone = temp_users[user_id].get("phone", "")
+        input_lineid = temp_users[user_id].get("line_id", "")
+        # OCR 結果
+        ocr_phone = phone_match.group(0) if phone_match else ""
+        ocr_lineid = lineid_match.group(1) if lineid_match else ""
+        if ocr_phone == input_phone and (ocr_lineid == input_lineid or not ocr_lineid):
+            # 全部正確，快速通關
             temp_users[user_id]["step"] = "waiting_confirm"
+<<<<<<< HEAD
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="✅ 圖片已成功辨識！請回覆「1」完成驗證。"))
         else:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 無法辨識手機號碼，請確認圖片清晰度或改由人工處理。"))
+=======
+            reply_with_reverify(
+                event, 
+                "✅ 圖片已成功辨識！請回覆「1」完成驗證。"
+            )
+        else:
+            # 資料錯誤，顯示偵測結果
+            reply_with_reverify(
+                event,
+                f"❌ 截圖中的手機號碼或 LINE ID 與您輸入的不符，請重新上傳正確的 LINE 個人頁面截圖。\n"
+                f"【圖片偵測結果】\n"
+                f"手機: {ocr_phone or '未偵測'}\n"
+                f"LINE ID: {ocr_lineid or '未偵測'}"
+            )
+>>>>>>> d4ddc685c6a5e9088fd8a3a674c86d8d13cdf262
     except Exception:
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 圖片處理失敗，請重新上傳或改由客服協助。"))
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
+
+# Step 4: 用戶回覆「1」時完成驗證，這個邏輯保留原本 waiting_confirm 流程即可
