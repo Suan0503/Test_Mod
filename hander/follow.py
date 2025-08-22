@@ -1,49 +1,24 @@
-<<<<<<< HEAD
-from linebot.models import FollowEvent, TextSendMessage, QuickReply, QuickReplyButton, MessageAction
-from extensions import handler, line_bot_api
+from linebot.models import FollowEvent, TextSendMessage
+import logging
+from extensions import line_bot_api as _default_line_bot_api
 
-@handler.add(FollowEvent)
-def handle_follow(event):
-    welcome_msg = (
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+def handle_follow(event, line_bot_api=None):
+    """
+    處理 FollowEvent。
+    接受兩種使用方式：
+      - handle_follow(event)                          -> 使用 extensions.line_bot_api
+      - handle_follow(event, line_bot_api=some_api)   -> 使用傳入的 line_bot_api（兼容 routes/message.py 的呼叫）
+    """
+    api = line_bot_api or _default_line_bot_api
+    msg = (
         "歡迎加入🍵茗殿🍵\n"
-        "\n"
-        "📜 驗證流程如下：\n"
-        "1️⃣ 閱讀規則後點擊『我同意規則』\n"
-        "2️⃣ 依步驟輸入手機號與 LINE ID\n"
-        "3️⃣ 上傳 LINE 個人檔案截圖\n"
-        "4️⃣ 系統進行快速自動驗證\n"
-        "5️⃣ 如無法辨識將交由客服人工處理\n"
-        "\n"
-        "✅ 完成驗證即可解鎖專屬客服＆預約功能💖"
-=======
-from extensions import line_bot_api
-from linebot.models import TextSendMessage, QuickReply, QuickReplyButton, MessageAction
-
-def handle_follow(event):
-    user_id = event.source.user_id
+        "請正確按照步驟提供資料配合快速驗證\n\n"
+        "➡️ 請輸入手機號碼進行驗證（含09開頭）"
+    )
     try:
-        profile = line_bot_api.get_profile(user_id)
-        display_name = profile.display_name
+        api.reply_message(event.reply_token, TextSendMessage(text=msg))
     except Exception:
-        display_name = "用戶"
-    welcome_text = (
-        f"歡迎 {display_name} 加入🍵茗殿🍵\n\n"
-        "完成驗證即可使用「選單功能」查詢各項服務。\n"
-        "⚠️ 小助手不提供預約詢價，請洽專屬總機。\n"
-        "📣 選單內有「廣告/活動頁」可參考最新方案。"
->>>>>>> d4ddc685c6a5e9088fd8a3a674c86d8d13cdf262
-    )
-    quick_reply = QuickReply(items=[
-        QuickReplyButton(action=MessageAction(label="我同意，開始驗證", text="我同意規則"))
-    ])
-    line_bot_api.push_message(
-        user_id,
-        TextSendMessage(
-            text=welcome_text,
-            quick_reply=quick_reply
-        )
-    )
-# ⭐ 只 import entrypoint（這會自動帶入各功能模組）
-import hander.entrypoint
-import hander.follow
-import hander.image
+        logger.exception("回覆 FollowEvent 時發生錯誤")
