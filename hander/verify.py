@@ -51,6 +51,23 @@ def handle_verify(event):
     except Exception:
         display_name = "用戶"
 
+    # --- 新增：若使用者尚未在 temp_users，但訊息本身就是手機，直接當作 Step1 處理 ---
+    phone_candidate = normalize_phone(user_text)
+    if user_id not in temp_users and re.match(r"^09\d{8}$", phone_candidate):
+        # 若已驗證過（以 line_user_id 判斷），回覆已驗證訊息
+        if Whitelist.query.filter_by(line_user_id=user_id).first():
+            reply_with_reverify(event, "您已通過驗證，無需再次輸入手機。")
+            return
+        # 若在黑名單，拒絕
+        if Blacklist.query.filter_by(phone=phone_candidate).first():
+            reply_with_reverify(event, "❌ 請聯絡管理員，無法自動通過驗證流程。")
+            return
+        # 直接記錄並進到等待 LINE ID 的步驟
+        temp_users[user_id] = {"step": "waiting_lineid", "name": display_name, "phone": phone_candidate}
+        reply_with_reverify(event, "✅ 手機號已登記～請輸入您的 LINE ID（未設定請輸入 尚未設定）")
+        return
+    # --- End 新增 ---
+
     # 查詢模組
     if user_text.startswith("查詢 - "):
         phone = normalize_phone(user_text.replace("查詢 - ", "").strip())
@@ -294,14 +311,14 @@ def handle_verify(event):
         reply_with_reverify(event, "請輸入您的手機號碼（09開頭）開始重新驗證～")
         return
 
-    # 移除「我同意規則」按鈕流程：直接將新用戶導入等待輸入手機（waiting_phone）
+    # Step 1: 輸入手機號碼 (for users already in temp_users waiting_phone)
     if user_id in temp_users and temp_users[user_id].get("step") == "waiting_phone":
         phone = normalize_phone(user_text)
         if Blacklist.query.filter_by(phone=phone).first():
             reply_with_reverify(event, "❌ 請聯絡管理員，無法自動通過驗證流程。")
             temp_users.pop(user_id)
             return
-        if not phone.startswith("09") or len(phone) != 10:
+        if not phone or not phone.startswith("09") or len(phone) != 10:
             reply_with_reverify(event, "⚠️ 請輸入正確的手機號碼（09開頭共10碼）")
             return
         temp_users[user_id]["phone"] = phone
@@ -309,7 +326,7 @@ def handle_verify(event):
         reply_with_reverify(event, "✅ 手機號已登記～請輸入您的 LINE ID（未設定請輸入 尚未設定）")
         return
 
-    # Step 2: 輸入 LINE ID
+    # Step 2: 輸入 LINE ID (for users in temp_users waiting_lineid)
     if user_id in temp_users and temp_users[user_id].get("step") == "waiting_lineid":
         line_id = user_text
         if not line_id:
@@ -330,8 +347,10 @@ def handle_verify(event):
         data = temp_users[user_id]
         now = datetime.now(tz)
         data["date"] = now.strftime("%Y-%m-%d")
-        # 修正點：加上 reverify 參數
-        record, is_new = update_or_create_whitelist_from_data(data, user_id, reverify=temp_users[user_id].get("reverify", False))
+        # 呼叫 db_utils 進行建立或更新，帶入 reverify flag 若有
+        record, is_new = update_or_create_whitelist_from_data(
+            data, user_id, reverify=temp_users[user_id].get("reverify", False)
+        )
         reply = (
             f"📱 {record.phone}\n"
             f"🌸 暱稱：{record.name or display_name}\n"
