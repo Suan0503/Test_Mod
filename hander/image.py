@@ -1,5 +1,5 @@
 from linebot.models import MessageEvent, ImageMessage, TextSendMessage
-from extensions import line_bot_api
+from extensions import handler, line_bot_api
 from utils.image_verification import extract_lineid_phone, normalize_phone
 from utils.temp_users import temp_users
 from utils.db_utils import update_or_create_whitelist_from_data
@@ -7,11 +7,22 @@ from datetime import datetime
 import re
 from utils.menu_helpers import reply_with_menu  # 只要這個
 
+def generate_welcome_message(record, code):
+    now_str = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+    return (
+        f"📱 {record['phone']}\n"
+        f"🌸 暱稱：{record['name']}\n"
+        f"       個人編號：{code}\n"
+        f"🔗 LINE ID：{record['line_id']}\n"
+        f"🕒 {now_str}\n"
+        f"✅ 驗證成功，歡迎加入茗殿\n"
+        f"🌟 加入密碼：ming666"
+    )
+
+@handler.add(MessageEvent, message=ImageMessage)
 def handle_image(event):
     user_id = event.source.user_id
-    print(f"[ImageHandler] Received image from user_id={user_id}")
     if user_id not in temp_users or temp_users[user_id].get("step") != "waiting_screenshot":
-        print("[ImageHandler] Not in image verification flow, skip.")
         return
 
     message_content = line_bot_api.get_message_content(event.message.id)
@@ -47,15 +58,7 @@ def handle_image(event):
         db_record, _ = update_or_create_whitelist_from_data(data, user_id)
         code = str(db_record.id) if getattr(db_record, "id", None) else "待驗證後產生"
 
-        msg = (
-            f"📱 {record['phone']}\n"
-            f"🌸 暱稱：{record['name']}\n"
-            f"       個人編號：{code}\n"
-            f"🔗 LINE ID：{record['line_id']}\n"
-            f"🕒 {now_str}\n"
-            f"✅ 驗證成功，歡迎加入茗殿\n"
-            f"🌟 加入密碼：ming666"
-        )
+        msg = generate_welcome_message(record, code)
         temp_users.pop(user_id, None)
         reply_with_menu(event.reply_token, msg)
         return

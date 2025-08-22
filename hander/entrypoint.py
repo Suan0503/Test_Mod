@@ -1,4 +1,4 @@
-from linebot.models import MessageEvent, TextMessage, ImageMessage, FollowEvent, PostbackEvent, TextSendMessage
+from linebot.models import MessageEvent, TextMessage, PostbackEvent, TextSendMessage
 from extensions import handler, line_bot_api, db
 from utils.menu_helpers import reply_with_menu, notify_admins, reply_with_ad_menu
 from hander.report import handle_report, handle_report_postback
@@ -10,27 +10,10 @@ from utils.draw_utils import draw_coupon, has_drawn_today, save_coupon_record, g
 import pytz
 from datetime import datetime
 
-from hander.follow import handle_follow
-from hander.image import handle_image
-
-import logging
-logging.basicConfig(level=logging.INFO)
-
-@handler.add(FollowEvent)
-def on_follow(event):
-    logging.info(f"[FollowEvent] Source: {event.source}")
-    handle_follow(event)  # 只呼叫這個！不要有其他 reply_message
-
-@handler.add(MessageEvent, message=ImageMessage)
-def on_image(event):
-    logging.info(f"[ImageMessage] user_id={event.source.user_id}")
-    handle_image(event)
-
 @handler.add(MessageEvent, message=TextMessage)
 def entrypoint(event):
     user_text = event.message.text.strip()
     user_id = event.source.user_id
-    logging.info(f"[TextMessage] user_id={user_id} text={user_text}")
 
     # ===== 新增：廣告專區入口 =====
     if user_text == "廣告專區":
@@ -168,7 +151,6 @@ def entrypoint(event):
 def entrypoint_postback(event):
     data = event.postback.data
     user_id = event.source.user_id
-    logging.info(f"[PostbackEvent] user_id={user_id} data={data}")
 
     if data.startswith("report_ok|") or data.startswith("report_ng|"):
         handle_report_postback(event)
