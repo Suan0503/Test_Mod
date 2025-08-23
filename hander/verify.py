@@ -9,8 +9,8 @@ from utils.temp_users import temp_users
 from hander.admin import ADMIN_IDS
 from utils.menu_helpers import reply_with_menu
 from utils.db_utils import update_or_create_whitelist_from_data
-import re, time, os, shutil
-from datetime import datetime
+import re, time, os, shutil, secrets, logging
+from datetime import datetime, timedelta
 import pytz
 from PIL import Image
 import pytesseract
@@ -22,7 +22,24 @@ VERIFY_CODE_EXPIRE = 900  # 驗證碼有效時間(秒)
 OCR_DEBUG_IMAGE_BASEURL = os.getenv("OCR_DEBUG_IMAGE_BASEURL", "").rstrip("/")  # 例: https://your.cdn.com/ocr
 OCR_DEBUG_IMAGE_DIR = os.getenv("OCR_DEBUG_IMAGE_DIR", "/tmp/ocr_debug")        # 需自行以靜態伺服器對外提供
 
+# manual_verify_pending: {
+#   target_user_id: {
+#       "phone": ...,
+#       "line_id": ...,
+#       "nickname": ...,
+#       "code": ...,
+#       "initiated_by_admin": admin_id,
+#       "created_at": datetime,
+#       "code_verified": False,
+#       "code_verified_at": datetime or None,
+#       "allow_user_confirm_until": datetime or None
+#   }
+# }
 manual_verify_pending = {}
+
+# admin_manual_flow: store admin-side multi-step temp state
+# { admin_id: {"step": "awaiting_phone"/"awaiting_lineid", "nickname": ..., "phone": ...} }
+admin_manual_flow = {}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 小工具
@@ -75,7 +92,12 @@ def save_debug_image(temp_path, user_id):
         shutil.copyfile(temp_path, dest)
         return f"{OCR_DEBUG_IMAGE_BASEURL}/{fname}"
     except Exception:
+        logging.exception("save_debug_image failed")
         return None
+
+def generate_verification_code(length=8):
+    # 使用 secrets 產生數字驗證碼
+    return "".join(str(secrets.randbelow(10)) for _ in range(length))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1) 加入好友：送歡迎訊息（你指定的文案）
@@ -90,8 +112,86 @@ def handle_follow(event):
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=welcome_msg))
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 管理員：發起手動驗證（多步）相關 helper
+# ─────────────────────────────────────────────────────────────────────────────
+def start_manual_verify_by_admin(admin_id, target_user_id, nickname, phone, line_id):
+    """建立 manual pending，並發 8 位驗證碼給 target_user_id"""
+    code = generate_verification_code(8)
+    tz = pytz.timezone("Asia/Taipei")
+    manual_verify_pending[target_user_id] = {
+        "phone": phone,
+        "line_id": line_id,
+        "nickname": nickname,
+        "code": code,
+        "initiated_by_admin": admin_id,
+        "created_at": datetime.now(tz),
+        "code_verified": False,
+        "code_verified_at": None,
+        "allow_user_confirm_until": None,
+    }
+
+    # 傳驗證碼給目標使用者
+    try:
+        line_bot_api.push_message(
+            target_user_id,
+            TextSendMessage(text=f"管理員已要求手動驗證，請輸入下列 8 位數驗證碼以繼續：\n\n{code}\n\n若非你本人，請忽略此訊息。")
+        )
+    except Exception:
+        logging.exception("push verification code failed")
+
+    # 回覆管理員（可選）
+    try:
+        line_bot_api.push_message(admin_id, TextSendMessage(text=f"已發送驗證碼給 {target_user_id}（手機 {phone}）。"))
+    except Exception:
+        logging.exception("notify admin send code failed")
+
+def admin_approve_manual_verify(admin_id, target_user_id):
+    pending = manual_verify_pending.pop(target_user_id, None)
+    if not pending:
+        return False, "找不到待審核項目。"
+    tz = pytz.timezone("Asia/Taipei")
+    pending_data = {
+        "phone": pending.get("phone"),
+        "line_id": pending.get("line_id"),
+        "name": pending.get("nickname"),
+        "date": datetime.now(tz).strftime("%Y-%m-%d"),
+    }
+    record, _ = update_or_create_whitelist_from_data(pending_data, target_user_id, reverify=True)
+    # 通知使用者與管理員
+    try:
+        line_bot_api.push_message(target_user_id, TextSendMessage(text=(
+            f"📱 {record.phone}\n"
+            f"🌸 暱稱：{record.name or pending.get('nickname')}\n"
+            f"🔗 LINE ID：{record.line_id or pending.get('line_id')}\n"
+            f"🕒 {record.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
+            f"管理員已人工核准，驗證完成，歡迎加入。"
+        )))
+    except Exception:
+        logging.exception("notify user after admin approve failed")
+    try:
+        line_bot_api.push_message(admin_id, TextSendMessage(text=f"已核准 {target_user_id}，寫入白名單：{record.phone}"))
+    except Exception:
+        logging.exception("notify admin after approve failed")
+    return True, "已核准"
+
+def admin_reject_manual_verify(admin_id, target_user_id):
+    pending = manual_verify_pending.pop(target_user_id, None)
+    if not pending:
+        return False, "找不到待審核項目。"
+    try:
+        line_bot_api.push_message(target_user_id, TextSendMessage(text="管理員已拒絕您的手動驗證申請，請重新聯絡客服或重新申請。"))
+    except Exception:
+        logging.exception("notify user after admin reject failed")
+    try:
+        line_bot_api.push_message(admin_id, TextSendMessage(text=f"已拒絕 {target_user_id}"))
+    except Exception:
+        logging.exception("notify admin after reject failed")
+    return True, "已拒絕"
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 2) 文字訊息：手機 → LINE ID → 要截圖
 #    同時保留你的查詢 / 管理路徑（可依需要調整）
+#    也處理管理員的手動驗證多步流程 & 管理員命令
 # ─────────────────────────────────────────────────────────────────────────────
 @handler.add(MessageEvent, message=TextMessage)
 def handle_text(event):
@@ -99,12 +199,82 @@ def handle_text(event):
     user_text = (event.message.text or "").strip()
     tz = pytz.timezone("Asia/Taipei")
 
+    # 嘗試取得顯示名稱
     try:
         profile = line_bot_api.get_profile(user_id)
         display_name = profile.display_name
     except Exception:
         display_name = "用戶"
 
+    # 1) 管理員命令/流程優先處理
+    if user_id in ADMIN_IDS:
+        # 若管理員正在進行手動驗證多步流程
+        if user_text.startswith("手動驗證 - "):
+            nickname = user_text.replace("手動驗證 - ", "").strip()
+            admin_manual_flow[user_id] = {"step": "awaiting_phone", "nickname": nickname}
+            reply_basic(event, f"開始手動驗證（暱稱：{nickname}）。請輸入手機號碼（09開頭）。")
+            return
+
+        # 若管理員在 multi-step 並輸入手機號
+        if user_id in admin_manual_flow and admin_manual_flow[user_id].get("step") == "awaiting_phone":
+            phone = normalize_phone(user_text)
+            if not re.match(r"^09\d{8}$", phone):
+                reply_basic(event, "請輸入正確的手機號（09開頭共10碼）。")
+                return
+            admin_manual_flow[user_id]["phone"] = phone
+            admin_manual_flow[user_id]["step"] = "awaiting_lineid"
+            reply_basic(event, "請輸入該使用者的 LINE ID（或輸入：尚未設定）。")
+            return
+
+        # 若管理員在 multi-step 並輸入 LINE ID（完成流程並發驗證碼）
+        if user_id in admin_manual_flow and admin_manual_flow[user_id].get("step") == "awaiting_lineid":
+            line_id = user_text.strip()
+            phone = admin_manual_flow[user_id].get("phone")
+            nickname = admin_manual_flow[user_id].get("nickname")
+            if not phone:
+                reply_basic(event, "發生錯誤：找不到先前輸入的手機號，請重新開始手動驗證流程。")
+                admin_manual_flow.pop(user_id, None)
+                return
+            # 在 temp_users 中找尋該 phone 對應的 user_id
+            target_user_id = None
+            for uid, data in temp_users.items():
+                if data.get("phone") and normalize_phone(data.get("phone")) == normalize_phone(phone):
+                    target_user_id = uid
+                    break
+            if not target_user_id:
+                # 若找不到，可以回覆管理員並讓管理員決定是否以 phone 為 key（本版本要求 temp_users 中要有該 user）
+                reply_basic(event, "找不到正在驗證的使用者（temp_users 中無此手機）。請確定使用者已先行啟動驗證流程，或手動提供 user_id。")
+                admin_manual_flow.pop(user_id, None)
+                return
+
+            # 建立 manual pending 並發送驗證碼
+            start_manual_verify_by_admin(user_id, target_user_id, nickname, phone, line_id)
+            admin_manual_flow.pop(user_id, None)
+            reply_basic(event, "已發送驗證碼給目標使用者，等待使用者回覆驗證碼或由管理員後端核准。")
+            return
+
+        # 管理員核准 / 拒絕 指令
+        if user_text.startswith("核准 "):
+            parts = user_text.split(None, 1)
+            if len(parts) < 2:
+                reply_basic(event, "請指定要核准的 user_id，例如：核准 U1234567890")
+                return
+            target = parts[1].strip()
+            ok, msg = admin_approve_manual_verify(user_id, target)
+            reply_basic(event, msg)
+            return
+
+        if user_text.startswith("拒絕 "):
+            parts = user_text.split(None, 1)
+            if len(parts) < 2:
+                reply_basic(event, "請指定要拒絕的 user_id，例如：拒絕 U1234567890")
+                return
+            target = parts[1].strip()
+            ok, msg = admin_reject_manual_verify(user_id, target)
+            reply_basic(event, msg)
+            return
+
+    # 2) 非管理員 / 一般流程處理
     # 已驗證的用戶：阻止重驗並可回自身資訊
     existing = Whitelist.query.filter_by(line_user_id=user_id).first()
     if existing:
@@ -159,6 +329,35 @@ def handle_text(event):
         temp_users[user_id] = {"step": "waiting_phone", "name": display_name, "reverify": True}
         reply_basic(event, "請輸入您的手機號碼（09開頭）開始重新驗證～")
         return
+
+    # 若使用者輸入 8 位數（可能是管理員發送的驗證碼回覆）
+    if re.match(r"^\d{8}$", user_text):
+        pending = manual_verify_pending.get(user_id)
+        if pending and pending.get("code") == user_text:
+            # 使用者輸入正確驗證碼
+            tz = pytz.timezone("Asia/Taipei")
+            pending["code_verified"] = True
+            pending["code_verified_at"] = datetime.now(tz)
+            # 允許使用者在短時間內按 1 完成（例如 5 分鐘）
+            pending["allow_user_confirm_until"] = datetime.now(tz) + timedelta(minutes=5)
+            # 通知使用者狀態
+            reply_basic(event, "驗證碼正確，若要完成驗證，請在 5 分鐘內回覆「1」；或等待管理員用管理端核准。")
+            # 通知管理員們
+            admin_notify = (
+                f"使用者 {user_id} 已成功回傳驗證碼，等待最終核准。\n"
+                f"手機: {pending.get('phone')}\n"
+                f"LINE ID: {pending.get('line_id')}\n"
+                f"暱稱: {pending.get('nickname')}\n"
+                f"若確認無誤，管理員可回覆：核准 {user_id} 或 拒絕 {user_id}"
+            )
+            for admin in ADMIN_IDS:
+                try:
+                    line_bot_api.push_message(admin, TextSendMessage(text=admin_notify))
+                except Exception:
+                    logging.exception("notify admin code verified failed")
+            return
+        # 若非 manual pending 的驗證碼，繼續當作其他流程（或無效）
+        # 不 return，讓下面的手機格式判斷處理
 
     # Step 1：若未在流程中，且訊息就是手機號 → 啟動驗證
     phone_candidate = normalize_phone(user_text)
@@ -222,7 +421,7 @@ def handle_text(event):
 # ─────────────────────────────────────────────────────────────────────────────
 # 3) 圖片訊息：OCR → 快速通關 / 資料有誤 顯示 OCR 圖片(或文字)
 #    規則：若使用者 LINE ID ≠「尚未設定」且 OCR 文字包含該 ID → 直接通過
-#          否則顯示 OCR 結果與(可選)圖片預覽，提供「重新上傳 / 我確定正確(1)」
+#          否則顯示 OCR 結果與(可選)圖片預覽，提供「重新上傳 / 重新輸入LINE ID / 重新驗證」
 # ─────────────────────────────────────────────────────────────────────────────
 @handler.add(MessageEvent, message=ImageMessage)
 def handle_image(event):
@@ -291,14 +490,18 @@ def handle_image(event):
             "——— OCR ———\n"
             f"{ocr_text.strip()[:900] or '（無文字或辨識失敗）'}\n"
             "———————\n"
-            "若資料正確請點「我確定正確(1)」，或點「重新上傳」再傳一張更清晰的截圖。"
+            "請選擇：重新上傳 / 重新輸入LINE ID / 重新驗證（從頭）。"
             f"{preview_note}"
         )
-        # 設定：進入等待確認，讓用戶可以強制通過（維持三步驗證體感）
+        # 設定：進入等待確認（但移除一般使用者能按的「1」選項）
         temp_users[user_id]["step"] = "waiting_confirm_after_ocr"
         text_msg = TextSendMessage(
             text=warn,
-            quick_reply=make_qr(("重新上傳", "重新上傳"), ("我確定正確(1)", "1"))
+            quick_reply=make_qr(
+                ("重新上傳", "重新上傳"),
+                ("重新輸入LINE ID", "重新輸入LINE ID"),
+                ("重新驗證", "重新驗證")
+            )
         )
         if preview_msg:
             line_bot_api.reply_message(event.reply_token, [text_msg] + preview_msg)
@@ -306,6 +509,7 @@ def handle_image(event):
             line_bot_api.reply_message(event.reply_token, text_msg)
 
     except Exception:
+        logging.exception("handle_image error")
         reply_with_reverify(event, "⚠️ 圖片處理失敗，請重新上傳或改由客服協助。")
     finally:
         # 保留本地檔僅作暫存（若有對外預覽已另存）
@@ -316,7 +520,8 @@ def handle_image(event):
                 pass
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 4) OCR 不一致→使用者仍可回「1」強制確認通過；或回「重新上傳」
+# 4) OCR 不一致→使用者可選「重新上傳 / 重新輸入LINE ID / 重新驗證」
+#    使用者按「1」只有在 manual_verify_pending 且剛剛通過 8 位驗證碼的極限定情況被接受
 # ─────────────────────────────────────────────────────────────────────────────
 @handler.add(MessageEvent, message=TextMessage)
 def handle_post_ocr_confirm(event):
@@ -330,25 +535,70 @@ def handle_post_ocr_confirm(event):
         reply_basic(event, "請重新上傳您的 LINE 個人頁面截圖（個人檔案按進去後請直接截圖）。")
         return
 
-    # 使用者確認「1」：通過
-    if user_id in temp_users and temp_users[user_id].get("step") == "waiting_confirm_after_ocr" and user_text == "1":
-        data = temp_users[user_id]
-        now = datetime.now(tz)
-        data["date"] = now.strftime("%Y-%m-%d")
-        record, _ = update_or_create_whitelist_from_data(
-            data, user_id, reverify=temp_users[user_id].get("reverify", False)
-        )
-        reply = (
-            f"📱 {record.phone}\n"
-            f"🌸 暱稱：{record.name or '用戶'}\n"
-            f"🔗 LINE ID：{record.line_id or '未登記'}\n"
-            f"🕒 {record.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
-            f"✅ 驗證成功，歡迎加入茗殿\n"
-            f"🌟 加入密碼：ming666"
-        )
-        reply_with_menu(event.reply_token, reply)
-        temp_users.pop(user_id, None)
+    # 重新輸入 LINE ID（只回到輸入 ID 那一步）
+    if user_id in temp_users and temp_users[user_id].get("step") == "waiting_confirm_after_ocr" and user_text == "重新輸入LINE ID":
+        temp_users[user_id]["step"] = "waiting_lineid"
+        reply_basic(event, "請輸入新的 LINE ID（或輸入：尚未設定）。")
         return
+
+    # 重新驗證（從頭開始，回到輸入手機） - 可以在任何時候觸發
+    if user_text == "重新驗證":
+        try:
+            profile = line_bot_api.get_profile(user_id)
+            display_name = profile.display_name
+        except Exception:
+            display_name = temp_users.get(user_id, {}).get("name", "用戶")
+        temp_users[user_id] = {"step": "waiting_phone", "name": display_name, "reverify": True}
+        reply_basic(event, "請輸入您的手機號碼（09開頭）開始重新驗證～")
+        return
+
+    # 僅在 manual_verify_pending 且使用者剛驗證過 8 位碼，並在 allow_user_confirm_until 時限內，才接受「1」
+    if user_text == "1":
+        pending = manual_verify_pending.get(user_id)
+        if pending and pending.get("code_verified"):
+            until = pending.get("allow_user_confirm_until")
+            now = datetime.now(tz)
+            if until and now <= until:
+                # 允許使用者按 1 完成驗證
+                data = {
+                    "phone": pending.get("phone"),
+                    "line_id": pending.get("line_id"),
+                    "name": pending.get("nickname"),
+                    "date": now.strftime("%Y-%m-%d"),
+                }
+                record, _ = update_or_create_whitelist_from_data(
+                    data, user_id, reverify=True
+                )
+                reply = (
+                    f"📱 {record.phone}\n"
+                    f"🌸 暱稱：{record.name or '用戶'}\n"
+                    f"🔗 LINE ID：{record.line_id or '未登記'}\n"
+                    f"🕒 {record.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
+                    f"✅ 驗證成功，歡迎加入茗殿\n"
+                    f"🌟 加入密碼：ming666"
+                )
+                reply_with_menu(event.reply_token, reply)
+                # 通知管理員該項已由使用者端完成
+                for admin in ADMIN_IDS:
+                    try:
+                        line_bot_api.push_message(admin, TextSendMessage(text=f"使用者 {user_id} 已在時限內回覆 1 並完成手動驗證（ initiated_by_admin: {pending.get('initiated_by_admin')} ）。"))
+                    except Exception:
+                        logging.exception("notify admin after user confirm")
+                # 刪除 pending 與 temp_users
+                manual_verify_pending.pop(user_id, None)
+                temp_users.pop(user_id, None)
+                return
+            else:
+                # 時限已過
+                manual_verify_pending.pop(user_id, None)
+                reply_basic(event, "按 1 時限已過，請重新向管理員申請手動驗證或等待管理員核准。")
+                return
+        # 若沒有符合的 pending，視為無效
+        reply_basic(event, "無效指令或無待處理的人工驗證。若要重新驗證請點「重新驗證」。")
+        return
+
+    # 若非上面情況，讓其他 handler／流程繼續處理（例如 handle_text 中的 step 流程）
+    return
 
 # ---- 新增：供 hander.entrypoint import 使用的 wrapper ----
 def handle_verify(event):
@@ -373,8 +623,6 @@ def handle_verify(event):
         # 其他情況：嘗試由文字處理接管
         return handle_text(event)
     except Exception:
-        # 紀錄 exception（避免 silent fail）
-        import logging
         logging.exception("handle_verify dispatch failed")
         # 若需要也可以回覆使用者一條友善的錯誤訊息
         try:
