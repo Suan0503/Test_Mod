@@ -31,8 +31,8 @@ OCR_DEBUG_IMAGE_DIR = os.getenv("OCR_DEBUG_IMAGE_DIR", "/tmp/ocr_debug")        
 #       "initiated_by_admin": admin_id,
 #       "created_at": datetime,
 #       "code_verified": False,
-#       "code_verified_at": datetime or None,
-#       "allow_user_confirm_until": datetime or None
+#       "code_verified_at": None,
+#       "allow_user_confirm_until": None,
 #   }
 # }
 manual_verify_pending = {}
@@ -340,9 +340,26 @@ def handle_text(event):
             pending["code_verified_at"] = datetime.now(tz)
             # 允許使用者在短時間內按 1 完成（例如 5 分鐘）
             pending["allow_user_confirm_until"] = datetime.now(tz) + timedelta(minutes=5)
-            # 通知使用者狀態
-            reply_basic(event, "驗證碼正確，若要完成驗證，請在 5 分鐘內回覆「1」；或等待管理員用管理端核准。")
-            # 通知管理員們
+
+            # 顯示詳細確認畫面（管理員手動驗證專用）
+            confirm_msg = (
+                f"📱 {pending.get('phone')}\n"
+                f"🌸 暱稱： {pending.get('nickname')}\n"
+                f"       個人編號： (驗證後產生)\n"
+                f"🔗 LINE ID：{pending.get('line_id')}\n"
+                f"🕒 {datetime.now(tz).strftime('%Y/%m/%d %H:%M:%S')}\n\n"
+                "此為管理員手動驗證，如無誤請輸入 1 完成驗證（或等待管理員直接核准）。"
+            )
+            # 給使用者一個 quick-reply 可以直接按 1
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(
+                    text=confirm_msg,
+                    quick_reply=make_qr(("完成驗證", "1"), ("重新驗證", "重新驗證"))
+                )
+            )
+
+            # 通知管理員們（保留）
             admin_notify = (
                 f"使用者 {user_id} 已成功回傳驗證碼，等待最終核准。\n"
                 f"手機: {pending.get('phone')}\n"
