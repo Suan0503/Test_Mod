@@ -1,8 +1,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
+import logging
 from extensions import db
 from models.whitelist import Whitelist
 from models.blacklist import Blacklist
 from sqlalchemy import or_
+
+logger = logging.getLogger(__name__)
 
 list_admin_bp = Blueprint("list_admin", __name__, template_folder="../templates", url_prefix="/admin/list")
 
@@ -44,35 +47,41 @@ def new_whitelist_form():
 # 新增白名單 - 提交
 @list_admin_bp.route("/whitelist/new", methods=["POST"])
 def new_whitelist():
-    identifier = request.form.get("identifier", "").strip()
-    if not identifier:
-        flash("Identifier 為必填欄位", "danger")
-        return redirect(url_for(".new_whitelist_form"))
+    try:
+        identifier = request.form.get("identifier", "").strip()
+        if not identifier:
+            flash("Identifier 為必填欄位", "danger")
+            return redirect(url_for(".new_whitelist_form"))
 
-    # 若在 blacklist 裡已存在 => 不允許加入白名單（或可選擇先移除黑名單）
-    existing_black = Blacklist.query.filter_by(identifier=identifier).first() if hasattr(Blacklist, "identifier") else None
-    if existing_black:
-        flash("此 identifier 已在黑名單中，請先從黑名單移除再加入白名單", "warning")
+        # 若在 blacklist 裡已存在 => 不允許加入白名單（或可選擇先移除黑名單）
+        existing_black = Blacklist.query.filter_by(identifier=identifier).first() if hasattr(Blacklist, "identifier") else None
+        if existing_black:
+            flash("此 identifier 已在黑名單中，請先從黑名單移除再加入白名單", "warning")
+            return redirect(url_for(".index"))
+
+        existing = Whitelist.query.filter_by(identifier=identifier).first() if hasattr(Whitelist, "identifier") else None
+        if existing:
+            flash("此 identifier 已在白名單中", "info")
+            return redirect(url_for(".edit_whitelist", id=existing.id))
+
+        item = Whitelist(
+            **({
+                "identifier": identifier
+            } if hasattr(Whitelist, "identifier") else {}),
+            name=request.form.get("name"),
+            phone=request.form.get("phone"),
+            **({\"email\": request.form.get("email")} if hasattr(Whitelist, "email") else {}),
+            **({"note": request.form.get("note")} if hasattr(Whitelist, "note") else {}),
+        )
+        db.session.add(item)
+        db.session.commit()
+        flash("新增白名單成功", "success")
         return redirect(url_for(".index"))
-
-    existing = Whitelist.query.filter_by(identifier=identifier).first() if hasattr(Whitelist, "identifier") else None
-    if existing:
-        flash("此 identifier 已在白名單中", "info")
-        return redirect(url_for(".edit_whitelist", id=existing.id))
-
-    item = Whitelist(
-        **({
-            "identifier": identifier
-        } if hasattr(Whitelist, "identifier") else {}),
-        name=request.form.get("name"),
-        phone=request.form.get("phone"),
-        **({"email": request.form.get("email")} if hasattr(Whitelist, "email") else {}),
-        **({"note": request.form.get("note")} if hasattr(Whitelist, "note") else {}),
-    )
-    db.session.add(item)
-    db.session.commit()
-    flash("新增白名單成功", "success")
-    return redirect(url_for(".index"))
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Error creating whitelist item")
+        flash(f"新增白名單時發生錯誤: {str(e)}", "danger")
+        return redirect(url_for(".new_whitelist_form"))
 
 # 編輯白名單 - 表單
 @list_admin_bp.route("/whitelist/<int:id>/edit", methods=["GET"])
@@ -83,34 +92,40 @@ def edit_whitelist(id):
 # 編輯白名單 - 提交
 @list_admin_bp.route("/whitelist/<int:id>/edit", methods=["POST"])
 def update_whitelist(id):
-    item = Whitelist.query.get_or_404(id)
-    identifier = request.form.get("identifier", "").strip()
-    if not identifier:
-        flash("Identifier 為必填欄位", "danger")
-        return redirect(url_for(".edit_whitelist", id=id))
-
-    # 若 identifier 被改成已存在於 blacklist -> 拒絕
-    if hasattr(Blacklist, "identifier") and Blacklist.query.filter_by(identifier=identifier).first():
-        flash("欲修改的 identifier 已存在於黑名單中，請先處理黑名單", "danger")
-        return redirect(url_for(".edit_whitelist", id=id))
-
-    # 若 identifier 重複於別的白名單 item -> 拒絕
-    if hasattr(Whitelist, "identifier"):
-        other = Whitelist.query.filter(Whitelist.identifier == identifier, Whitelist.id != id).first()
-        if other:
-            flash("Identifier 與其他白名單重複", "danger")
+    try:
+        item = Whitelist.query.get_or_404(id)
+        identifier = request.form.get("identifier", "").strip()
+        if not identifier:
+            flash("Identifier 為必填欄位", "danger")
             return redirect(url_for(".edit_whitelist", id=id))
-        item.identifier = identifier
 
-    item.name = request.form.get("name")
-    item.phone = request.form.get("phone")
-    if hasattr(Whitelist, "email"):
-        item.email = request.form.get("email")
-    if hasattr(Whitelist, "note"):
-        item.note = request.form.get("note")
-    db.session.commit()
-    flash("修改白名單成功", "success")
-    return redirect(url_for(".index"))
+        # 若 identifier 被改成已存在於 blacklist -> 拒絕
+        if hasattr(Blacklist, "identifier") and Blacklist.query.filter_by(identifier=identifier).first():
+            flash("欲修改的 identifier 已存在於黑名單中，請先處理黑名單", "danger")
+            return redirect(url_for(".edit_whitelist", id=id))
+
+        # 若 identifier 重複於別的白名單 item -> 拒絕
+        if hasattr(Whitelist, "identifier"):
+            other = Whitelist.query.filter(Whitelist.identifier == identifier, Whitelist.id != id).first()
+            if other:
+                flash("Identifier 與其他白名單重複", "danger")
+                return redirect(url_for(".edit_whitelist", id=id))
+            item.identifier = identifier
+
+        item.name = request.form.get("name")
+        item.phone = request.form.get("phone")
+        if hasattr(Whitelist, "email"):
+            item.email = request.form.get("email")
+        if hasattr(Whitelist, "note"):
+            item.note = request.form.get("note")
+        db.session.commit()
+        flash("修改白名單成功", "success")
+        return redirect(url_for(".index"))
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Error updating whitelist item")
+        flash(f"修改白名單時發生錯誤: {str(e)}", "danger")
+        return redirect(url_for(".edit_whitelist", id=id))
 
 # 新增黑名單 - 表單
 @list_admin_bp.route("/blacklist/new", methods=["GET"])
@@ -181,48 +196,66 @@ def edit_blacklist(id):
 # 編輯黑名單 - 提交
 @list_admin_bp.route("/blacklist/<int:id>/edit", methods=["POST"])
 def update_blacklist(id):
-    item = Blacklist.query.get_or_404(id)
-    identifier = request.form.get("identifier", "").strip()
-    if not identifier:
-        flash("Identifier 為必填欄位", "danger")
-        return redirect(url_for(".edit_blacklist", id=id))
-
-    # 若 identifier 被改成已存在於白名單 -> 拒絕
-    if hasattr(Whitelist, "identifier") and Whitelist.query.filter_by(identifier=identifier).first():
-        flash("欲修改的 identifier 已在白名單中，請先處理白名單。", "danger")
-        return redirect(url_for(".edit_blacklist", id=id))
-
-    if hasattr(Blacklist, "identifier"):
-        other = Blacklist.query.filter(Blacklist.identifier == identifier, Blacklist.id != id).first()
-        if other:
-            flash("Identifier 與其他黑名單重複", "danger")
+    try:
+        item = Blacklist.query.get_or_404(id)
+        identifier = request.form.get("identifier", "").strip()
+        if not identifier:
+            flash("Identifier 為必填欄位", "danger")
             return redirect(url_for(".edit_blacklist", id=id))
-        item.identifier = identifier
 
-    item.name = request.form.get("name")
-    item.phone = request.form.get("phone")
-    if hasattr(Blacklist, "email"):
-        item.email = request.form.get("email")
-    item.reason = request.form.get("reason")
-    if hasattr(Blacklist, "note"):
-        item.note = request.form.get("note")
-    db.session.commit()
-    flash("修改黑名單成功", "success")
-    return redirect(url_for(".index"))
+        # 若 identifier 被改成已存在於白名單 -> 拒絕
+        if hasattr(Whitelist, "identifier") and Whitelist.query.filter_by(identifier=identifier).first():
+            flash("欲修改的 identifier 已在白名單中，請先處理白名單。", "danger")
+            return redirect(url_for(".edit_blacklist", id=id))
+
+        if hasattr(Blacklist, "identifier"):
+            other = Blacklist.query.filter(Blacklist.identifier == identifier, Blacklist.id != id).first()
+            if other:
+                flash("Identifier 與其他黑名單重複", "danger")
+                return redirect(url_for(".edit_blacklist", id=id))
+            item.identifier = identifier
+
+        item.name = request.form.get("name")
+        item.phone = request.form.get("phone")
+        if hasattr(Blacklist, "email"):
+            item.email = request.form.get("email")
+        item.reason = request.form.get("reason")
+        if hasattr(Blacklist, "note"):
+            item.note = request.form.get("note")
+        db.session.commit()
+        flash("修改黑名單成功", "success")
+        return redirect(url_for(".index"))
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Error updating blacklist item")
+        flash(f"修改黑名單時發生錯誤: {str(e)}", "danger")
+        return redirect(url_for(".edit_blacklist", id=id))
 
 # 可擴充：刪除白/黑名單 API（這裡提供簡單刪除）
 @list_admin_bp.route("/whitelist/<int:id>/delete", methods=["POST"])
 def delete_whitelist(id):
-    item = Whitelist.query.get_or_404(id)
-    db.session.delete(item)
-    db.session.commit()
-    flash("刪除白名單成功", "success")
-    return redirect(url_for(".index"))
+    try:
+        item = Whitelist.query.get_or_404(id)
+        db.session.delete(item)
+        db.session.commit()
+        flash("刪除白名單成功", "success")
+        return redirect(url_for(".index"))
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Error deleting whitelist item")
+        flash(f"刪除白名單時發生錯誤: {str(e)}", "danger")
+        return redirect(url_for(".index"))
 
 @list_admin_bp.route("/blacklist/<int:id>/delete", methods=["POST"])
 def delete_blacklist(id):
-    item = Blacklist.query.get_or_404(id)
-    db.session.delete(item)
-    db.session.commit()
-    flash("刪除黑名單成功", "success")
-    return redirect(url_for(".index"))
+    try:
+        item = Blacklist.query.get_or_404(id)
+        db.session.delete(item)
+        db.session.commit()
+        flash("刪除黑名單成功", "success")
+        return redirect(url_for(".index"))
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Error deleting blacklist item")
+        flash(f"刪除黑名單時發生錯誤: {str(e)}", "danger")
+        return redirect(url_for(".index"))

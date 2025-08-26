@@ -11,6 +11,7 @@ import logging
 from dotenv import load_dotenv
 
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 from linebot import LineBotApi, WebhookHandler
 
 # 載入 .env（如有）
@@ -23,6 +24,9 @@ logging.getLogger().setLevel(logging.WARNING)
 
 # SQLAlchemy 實例（在 app.py 中呼叫 db.init_app(app)）
 db = SQLAlchemy()
+
+# Flask-Migrate 實例 (在 app.py 中呼叫 migrate.init_app(app, db))
+migrate = Migrate()
 
 # 初始化 LINE Bot 客戶端（正式環境行為：必要環境變數缺少時直接失敗）
 try:

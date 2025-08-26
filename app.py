@@ -4,11 +4,9 @@ import logging
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))  # ✅ 確保 handler 可被 import
 
 from flask import Flask
-from dotenv import load_dotenv
+from config import config
 
-load_dotenv()
-
-from extensions import db
+from extensions import db, migrate
 from routes.message import message_bp
 
 # 匯入新增的 list_admin blueprint
@@ -17,21 +15,43 @@ from routes.list_admin import list_admin_bp
 # 匯入 sqlalchemy.text 用於安全執行文字 SQL
 from sqlalchemy import text
 
-# 設定 logging
-logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
+def create_app(config_name=None):
+    """Application factory function."""
+    if config_name is None:
+        config_name = os.environ.get('FLASK_CONFIG', 'default')
+    
+    app = Flask(__name__)
+    app.config.from_object(config[config_name])
+    
+    # 設定 logging
+    logging.basicConfig(level=app.config['LOG_LEVEL'])
+    logger = logging.getLogger(__name__)
+    
+    # Initialize extensions
+    db.init_app(app)
+    migrate.init_app(app, db)
+    
+    # Register blueprints
+    app.register_blueprint(message_bp)
+    app.register_blueprint(list_admin_bp)  # 名單管理
+    
+    @app.route("/")
+    def home():
+        try:
+            # SQLAlchemy 要求文字 SQL 明確使用 text()
+            db.session.execute(text("SELECT 1"))
+            db_status = "資料庫連線正常"
+        except Exception as e:
+            # 記錄完整錯誤到 log，以便在部署平台查看
+            logger.exception("資料庫連線檢查發生錯誤")
+            db_status = "資料庫連線異常: " + str(e)
+        return f"LINE Bot 正常運作中～🍵\n{db_status}"
+    
+    return app
+
+# Create app instance
+app = create_app()
 logger = logging.getLogger(__name__)
-
-app = Flask(__name__)
-
-# 基本設定
-app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "change-me-to-secure-key")
-DATABASE_URL = os.environ.get("DATABASE_URL")
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL or "sqlite:///test_mod.db"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-db.init_app(app)
 
 # 如果需要在啟動時建立表（僅在你明確設定 INIT_DB=1 時執行）
 if os.environ.get("INIT_DB", "0") == "1":
@@ -42,22 +62,6 @@ if os.environ.get("INIT_DB", "0") == "1":
             logger.info("db.create_all() 執行完成")
     except Exception:
         logger.exception("執行 db.create_all() 時發生錯誤")
-
-# Blueprint 註冊
-app.register_blueprint(message_bp)
-app.register_blueprint(list_admin_bp)  # 名單管理
-
-@app.route("/")
-def home():
-    try:
-        # SQLAlchemy 要求文字 SQL 明確使用 text()
-        db.session.execute(text("SELECT 1"))
-        db_status = "資料庫連線正常"
-    except Exception as e:
-        # 記錄完整錯誤到 log，以便在部署平台查看
-        logger.exception("資料庫連線檢查發生錯誤")
-        db_status = "資料庫連線異常: " + str(e)
-    return f"LINE Bot 正常運作中～🍵\n{db_status}"
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
