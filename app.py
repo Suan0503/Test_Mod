@@ -9,22 +9,25 @@ load_dotenv()
 
 from extensions import db
 from routes.message import message_bp
-from routes.list_admin import list_admin_bp  # 新增名單管理模組
+
+# 匯入新增的 list_admin blueprint
+from routes.list_admin import list_admin_bp
 
 app = Flask(__name__)
 
-# 資料庫連線字串轉換（Heroku/Railway 相容性處理）
+# 基本設定
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "change-me-to-secure-key")
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL or "sqlite:///test_mod.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)
 
 # Blueprint 註冊
 app.register_blueprint(message_bp)
-app.register_blueprint(list_admin_bp)  # 註冊名單管理藍圖
+app.register_blueprint(list_admin_bp)  # 名單管理
 
 @app.route("/")
 def home():
