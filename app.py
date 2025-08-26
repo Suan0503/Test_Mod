@@ -9,6 +9,7 @@ load_dotenv()
 
 from extensions import db
 from routes.message import message_bp
+from routes.list_admin import list_admin_bp  # 新增名單管理模組
 
 app = Flask(__name__)
 
@@ -23,6 +24,7 @@ db.init_app(app)
 
 # Blueprint 註冊
 app.register_blueprint(message_bp)
+app.register_blueprint(list_admin_bp)  # 註冊名單管理藍圖
 
 @app.route("/")
 def home():
