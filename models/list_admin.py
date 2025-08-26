@@ -1,11 +1,3 @@
-<<<<<<< HEAD
-"""
-ListAdmin 資料模型（如有需要可擴充）
-"""
-# 可依需求擴充管理員清單相關資料模型
-
-=======
->>>>>>> 9b7284caba898d7d7f82b6ee7341173a8d5d6cde
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from models.whitelist import Whitelist
 from models.blacklist import Blacklist
