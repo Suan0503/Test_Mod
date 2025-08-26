@@ -1,0 +1,7 @@
+Flask
+Flask-SQLAlchemy
+python-dotenv
+line-bot-sdk
+pytz
+Pillow
+pytesseract
