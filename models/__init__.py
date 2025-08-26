@@ -1,16 +1,20 @@
 """
-models package initializer（安全匯出常用 model）
+models package initializer（安全匯出常用 model 與 db）
 
-- 使用延遲/受控匯入（try/except）可避免單一缺失造成整個 app 無法啟動。
-- 若你偏好更嚴格的行為（缺檔就崩潰），可以改為直接 from .whitelist import Whitelist 等。
+- 將 extensions.db 匯出成 models.db，修正舊程式碼使用 `from models import ..., db` 的行為。
+- 同時嘗試匯入常用的 model，如果缺檔不會立刻 crash（開發時可考慮改為直接匯入來揭露錯誤）。
 """
-__all__ = []
+from extensions import db  # 將 extensions.db 暴露為 models.db
 
+__all__ = ["db"]
+
+# 嘗試匯入各 model，並將名稱加入 __all__
+# 如果有需要你可以移除 try/except 以利開發時暴露問題
 try:
     from .whitelist import Whitelist
     __all__.append("Whitelist")
 except Exception:
-    # 開發時建議把錯誤印出或 logging.warning，這裡暫時 silence
+    # 開發時可改為 logging.exception(...) 以觀察錯誤
     pass
 
 try:
