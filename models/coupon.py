@@ -1,6 +1,9 @@
+<<<<<<< HEAD
 """
 Coupon 資料模型
 """
+=======
+>>>>>>> 9b7284caba898d7d7f82b6ee7341173a8d5d6cde
 from extensions import db
 from datetime import datetime
 

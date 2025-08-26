@@ -1,6 +1,9 @@
+<<<<<<< HEAD
 """
 Blacklist 資料模型
 """
+=======
+>>>>>>> 9b7284caba898d7d7f82b6ee7341173a8d5d6cde
 from extensions import db
 from datetime import datetime
 
@@ -8,6 +11,11 @@ class Blacklist(db.Model):
     __tablename__ = "blacklist"
     id = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+<<<<<<< HEAD
+=======
+
+    # 新增 identifier, email, note 與現有欄位
+>>>>>>> 9b7284caba898d7d7f82b6ee7341173a8d5d6cde
     identifier = db.Column(db.String(255), unique=True, nullable=True)
     date = db.Column(db.String(20))
     phone = db.Column(db.String(20), unique=True)

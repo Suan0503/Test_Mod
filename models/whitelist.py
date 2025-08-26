@@ -1,6 +1,9 @@
+<<<<<<< HEAD
 """
 Whitelist 資料模型
 """
+=======
+>>>>>>> 9b7284caba898d7d7f82b6ee7341173a8d5d6cde
 from extensions import db
 from datetime import datetime
 
@@ -8,6 +11,11 @@ class Whitelist(db.Model):
     __tablename__ = "whitelist"
     id = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+<<<<<<< HEAD
+=======
+
+    # 新增 / 調整欄位以配合 routes/templates 的使用
+>>>>>>> 9b7284caba898d7d7f82b6ee7341173a8d5d6cde
     identifier = db.Column(db.String(255), unique=True, nullable=True)  # e.g. LINE userId / phone / email
     date = db.Column(db.String(20))
     phone = db.Column(db.String(20), unique=True)
