@@ -43,10 +43,13 @@
             <tbody>
               {% for w in whitelists %}
               <tr>
-                <td>{{ w.identifier }}</td>
+                <!-- 使用 phone 取代原本不存在的 identifier -->
+                <td>{{ w.phone }}</td>
                 <td>{{ w.name }}</td>
-                <td>{{ w.phone }}<br/>{{ w.email }}</td>
-                <td>{{ w.note }}</td>
+                <!-- 顯示 phone 與 line_user_id（若沒有 line_user_id 則顯示空白） -->
+                <td>{{ w.phone }}{% if w.line_user_id %}<br/>{{ w.line_user_id }}{% endif %}</td>
+                <!-- model 有 reason 欄位，改用 reason 顯示備註/說明 -->
+                <td>{{ w.reason }}</td>
                 <td>
                   <a class="btn btn-sm btn-outline-primary" href="{{ url_for('list_admin.edit_whitelist', id=w.id) }}">編輯</a>
                   <form method="post" action="{{ url_for('list_admin.delete_whitelist', id=w.id) }}" style="display:inline" onsubmit="return confirm('確定刪除？');">
@@ -70,10 +73,12 @@
             <tbody>
               {% for b in blacklists %}
               <tr>
-                <td>{{ b.identifier }}</td>
+                <!-- 同樣使用 phone 取代 identifier -->
+                <td>{{ b.phone }}</td>
                 <td>{{ b.name }}</td>
-                <td>{{ b.phone }}<br/>{{ b.email }}</td>
-                <td>{{ b.reason or b.note }}</td>
+                <!-- 顯示 phone 與（若有）line_user_id -->
+                <td>{{ b.phone }}{% if b.line_user_id %}<br/>{{ b.line_user_id }}{% endif %}</td>
+                <td>{{ b.reason }}</td>
                 <td>
                   <a class="btn btn-sm btn-outline-primary" href="{{ url_for('list_admin.edit_blacklist', id=b.id) }}">編輯</a>
                   <form method="post" action="{{ url_for('list_admin.delete_blacklist', id=b.id) }}" style="display:inline" onsubmit="return confirm('確定刪除？');">
