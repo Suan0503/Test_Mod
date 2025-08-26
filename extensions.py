@@ -16,10 +16,7 @@ from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
 from linebot import LineBotApi, WebhookHandler
 
-<<<<<<< HEAD
-=======
-# 載入 .env（如有）
->>>>>>> 9b7284caba898d7d7f82b6ee7341173a8d5d6cde
+ # ...existing code...
 load_dotenv()
 
 # 將全域 logging 等級提高到 WARNING，避免 debug/info 訊息被輸出
