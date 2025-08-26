@@ -1,17 +1,16 @@
 """
-models package initializer (安全匯出)
+models package initializer（安全匯出常用 model）
 
-- 這個檔案會盡量以延遲匯入（try/except）方式匯出常用 model，
-  避免在某些情況下造成整個應用因某個 model 缺失而啟動失敗。
-- 若你偏好主動且明確的匯入，之後可以把 try/except 改為直接 from .whitelist import Whitelist 等。
+- 使用延遲/受控匯入（try/except）可避免單一缺失造成整個 app 無法啟動。
+- 若你偏好更嚴格的行為（缺檔就崩潰），可以改為直接 from .whitelist import Whitelist 等。
 """
 __all__ = []
 
-# 這邊採用 try/except，不會在無對應檔案時直接崩潰
 try:
     from .whitelist import Whitelist
     __all__.append("Whitelist")
 except Exception:
+    # 開發時建議把錯誤印出或 logging.warning，這裡暫時 silence
     pass
 
 try:
