@@ -1,30 +1,10 @@
 """
 utils/db_utils.py
-<<<<<<< HEAD
-- 提供 update_or_create_whitelist_from_data 函式：根據傳入的 data 與 user_id 建立或更新 Whitelist 紀錄
-=======
-
-- 提供 update_or_create_whitelist_from_data 函式：
-  根據傳入的 data 與 user_id 建立或更新 Whitelist 紀錄，
-  會盡量處理 race condition（IntegrityError）並在必要時做回滾與重試。
-- 匯入方式採用明確子模組與 extensions.db（避免依賴 models.__init__ 的副作用）。
-- 使用 logging 取代 print，並在 DB 操作異常時確保 rollback。
->>>>>>> 9b7284caba898d7d7f82b6ee7341173a8d5d6cde
 """
 from datetime import datetime
 from typing import Tuple, Optional
 import logging
 import pytz
-<<<<<<< HEAD
-=======
-
->>>>>>> 9b7284caba898d7d7f82b6ee7341173a8d5d6cde
-from sqlalchemy.exc import IntegrityError
-from extensions import db
-from models.whitelist import Whitelist
-
-<<<<<<< HEAD
-=======
 from extensions import db
 from models.whitelist import Whitelist
 
@@ -34,20 +14,10 @@ TZ = pytz.timezone("Asia/Taipei")
 
 
 def _now():
-<<<<<<< HEAD
-=======
-    # 統一使用具時區的現在時間
->>>>>>> 9b7284caba898d7d7f82b6ee7341173a8d5d6cde
     return datetime.now(TZ)
 
 
 def _safe_commit():
-<<<<<<< HEAD
-=======
-    """
-    嘗試 commit，若失敗則 rollback 並重新拋出例外。
-    """
->>>>>>> 9b7284caba898d7d7f82b6ee7341173a8d5d6cde
     try:
         db.session.commit()
     except Exception:
@@ -118,16 +88,6 @@ def update_or_create_whitelist_from_data(data: dict, user_id: str, reverify: boo
         except Exception:
             logger.exception("Update existing record by line_user_id failed")
             raise
-<<<<<<< HEAD
-=======
-
-    # 2) 若沒有以 line_user_id 找到，嘗試以 phone 找（可避免 unique constraint 衝突）
->>>>>>> 9b7284caba898d7d7f82b6ee7341173a8d5d6cde
-    existing_by_phone = None
-    if phone:
-        try:
-            existing_by_phone = Whitelist.query.filter_by(phone=phone).first()
-        except Exception:
             logger.exception("Query by phone failed")
             existing_by_phone = None
 
@@ -217,9 +177,8 @@ def update_or_create_whitelist_from_data(data: dict, user_id: str, reverify: boo
                     fallback.name = data.get("name", fallback.name)
                     fallback.line_id = data.get("line_id", fallback.line_id)
                     fallback.line_user_id = user_id
-                    fallback.created_at = _now()
+                    """
                     _safe_commit()
-                else:
                     updated = False
                     if (not fallback.name) and data.get("name"):
                         fallback.name = data["name"]
