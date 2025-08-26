@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>黑名單 - {{ '編輯' if item else '新增' }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  </head>
+  <body class="bg-light">
+    <div class="container py-4">
+      <h1>{{ '編輯黑名單' if item else '新增黑名單' }}</h1>
+      <form method="post" action="{{ url_for('list_admin.update_blacklist', id=item.id) if item else url_for('list_admin.new_blacklist') }}">
+        <div class="mb-3">
+          <label class="form-label">Identifier (必填)</label>
+          <input class="form-control" name="identifier" value="{{ item.identifier if item else '' }}" required>
+          <div class="form-text">例如 LINE userId / phone / email（請依你後端比對欄位使用）</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">姓名</label>
+          <input class="form-control" name="name" value="{{ item.name if item else '' }}">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">電話</label>
+          <input class="form-control" name="phone" value="{{ item.phone if item else '' }}">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input class="form-control" name="email" value="{{ item.email if item else '' }}">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">事由 (reason)</label>
+          <input class="form-control" name="reason" value="{{ item.reason if item else '' }}">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">備註</label>
+          <textarea class="form-control" name="note">{{ item.note if item else '' }}</textarea>
+        </div>
+        <button class="btn btn-danger">{{ '更新' if item else '新增 (若 identifier 在白名單，會轉移)' }}</button>
+        <a class="btn btn-secondary" href="{{ url_for('list_admin.index') }}">返回</a>
+      </form>
+    </div>
+  </body>
+</html>
