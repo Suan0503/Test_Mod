@@ -1,12 +1,9 @@
 """
 extensions.py
-- 提供全域的 SQLAlchemy 實例 (db)
-- 初始化 LINE Bot SDK 的 LineBotApi 與 WebhookHandler
-<<<<<<< HEAD
-=======
-- 以正式環境為準：若環境變數缺少會直接 raise 錯誤（不做覆寫或 fallback）
-- 關閉或降低預設的 debug/log 等級，避免大量除錯訊息出現
->>>>>>> 9b7284caba898d7d7f82b6ee7341173a8d5d6cde
+ 提供全域的 SQLAlchemy 實例 (db)
+ 初始化 LINE Bot SDK 的 LineBotApi 與 WebhookHandler
+ 以正式環境為準：若環境變數缺少會直接 raise 錯誤（不做覆寫或 fallback）
+ 關閉或降低預設的 debug/log 等級，避免大量除錯訊息出現
 """
 
 import os
