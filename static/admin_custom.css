@@ -1,0 +1,44 @@
+/* Modern admin panel style */
+body {
+    background: #f7f8fa;
+    font-family: 'Segoe UI', 'Noto Sans TC', 'Arial', sans-serif;
+}
+
+.navbar {
+    background: linear-gradient(90deg, #4f8cff 0%, #38c6ff 100%);
+    color: #fff;
+}
+
+.admin-panel .table {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.btn-primary, .btn-success, .btn-danger {
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+h1, h2, h3, h4 {
+    font-weight: 700;
+    color: #2d3a4b;
+}
+
+.admin-panel .form-control {
+    border-radius: 6px;
+    border: 1px solid #dbeafe;
+}
+
+.admin-panel .pagination > li > a {
+    border-radius: 4px;
+    color: #4f8cff;
+}
+
+/* 讓 admin panel 主要區塊更有現代感 */
+.admin-panel .content {
+    padding: 32px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+}
