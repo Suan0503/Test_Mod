@@ -5,10 +5,13 @@
     color: #232a34; /* 黑字 */
     transition: color 0.2s, background-color 0.2s;
 }
+
 .table tbody tr:hover {
-    color: #d32f2f; /* 滑鼠移入時字體紅色 */
-    background-color: #fff;
+    color: #d32f2f;
     cursor: pointer;
+}
+.table tbody tr:hover td, .table tbody tr:hover th {
+    color: #d32f2f !important;
 }
 /* 觀看、編輯、刪除按鈕排列 */
 .btn-view, .btn-edit {
