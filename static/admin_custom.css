@@ -1,3 +1,60 @@
+.navbar-nav > li > a {
+    position: relative;
+    padding-left: 32px;
+}
+
+/* Home icon */
+.navbar-nav > li:first-child > a::before {
+    content: "\f015";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #38c6ff;
+    font-size: 1.1em;
+    filter: drop-shadow(0 2px 4px #38c6ff88);
+}
+/* 白名單 icon */
+.navbar-nav > li:nth-child(2) > a::before {
+    content: "\f0ca";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #38c6ff;
+    font-size: 1.1em;
+    filter: drop-shadow(0 2px 4px #38c6ff88);
+}
+/* 黑名單 icon */
+.navbar-nav > li:nth-child(3) > a::before {
+    content: "\f05e";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #38c6ff;
+    font-size: 1.1em;
+    filter: drop-shadow(0 2px 4px #38c6ff88);
+}
+/* 抽獎券 icon */
+.navbar-nav > li:nth-child(4) > a::before {
+    content: "\f145";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #38c6ff;
+    font-size: 1.1em;
+    filter: drop-shadow(0 2px 4px #38c6ff88);
+}
 /* Modern admin panel style */
 
 
