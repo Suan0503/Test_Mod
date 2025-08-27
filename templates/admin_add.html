@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>新增{{ '白' if entry_type == 'whitelist' else '黑' }}名單</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="container py-4">
+    <h2>新增{{ '白' if entry_type == 'whitelist' else '黑' }}名單</h2>
+    <form method="post" class="row g-3">
+        <div class="col-12"><input type="text" name="phone" class="form-control" placeholder="手機號碼" required></div>
+        <div class="col-12"><input type="text" name="line_id" class="form-control" placeholder="LINE ID"></div>
+        <div class="col-12"><input type="text" name="name" class="form-control" placeholder="暱稱"></div>
+        <div class="col-12"><button type="submit" class="btn btn-success">新增</button>
+            <a href="{{ url_for('admin') }}" class="btn btn-secondary">返回</a></div>
+    </form>
+</body>
+</html>

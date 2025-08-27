@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>名單管理後台</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="container py-4">
+    <h2>名單查詢</h2>
+    <form method="post" class="row g-3 mb-4">
+        <div class="col-auto">
+            <select name="type" class="form-select">
+                <option value="whitelist" {% if query_type == 'whitelist' %}selected{% endif %}>白名單</option>
+                <option value="blacklist" {% if query_type == 'blacklist' %}selected{% endif %}>黑名單</option>
+            </select>
+        </div>
+        <div class="col-auto"><input type="text" name="phone" class="form-control" placeholder="手機號碼"></div>
+        <div class="col-auto"><input type="text" name="line_id" class="form-control" placeholder="LINE ID"></div>
+        <div class="col-auto"><input type="text" name="name" class="form-control" placeholder="暱稱"></div>
+        <div class="col-auto"><button type="submit" class="btn btn-primary">查詢</button></div>
+        <div class="col-auto"><a href="{{ url_for('add') }}?type={{ query_type }}" class="btn btn-success">新增{{ '白' if query_type == 'whitelist' else '黑' }}名單</a></div>
+        <div class="col-auto">
+            <form method="post" action="{{ url_for('export') }}">
+                <input type="hidden" name="type" value="{{ query_type }}">
+                <button type="submit" class="btn btn-info">匯出 CSV</button>
+            </form>
+        </div>
+        <div class="col-auto">
+            <form method="post" action="{{ url_for('import_csv') }}" enctype="multipart/form-data">
+                <input type="hidden" name="type" value="{{ query_type }}">
+                <input type="file" name="csvfile" accept=".csv" required>
+                <button type="submit" class="btn btn-secondary">匯入 CSV</button>
+            </form>
+        </div>
+    </form>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="alert alert-info">{{ messages[0] }}</div>
+      {% endif %}
+    {% endwith %}
+        <table class="table table-bordered">
+                <thead>
+                        <tr>
+                                <th>編輯</th>
+                                <th>刪除</th>
+                                <th>ID</th>
+                                <th>手機</th>
+                                <th>LINE ID</th>
+                                <th>暱稱</th>
+                                <th>建立時間</th>
+                        </tr>
+                </thead>
+                <tbody>
+                {% for entry in results %}
+                        <tr>
+                                <td><a href="{{ url_for('edit', entry_id=entry.id) }}?type={{ query_type }}" class="btn btn-sm btn-warning">編輯</a></td>
+                                <td>
+                                    <form method="post" action="{{ url_for('delete', entry_id=entry.id) }}" style="display:inline;">
+                                        <input type="hidden" name="type" value="{{ query_type }}">
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('確定要刪除嗎？')">刪除</button>
+                                    </form>
+                                </td>
+                                <td>{{ entry.id }}</td>
+                                <td>{{ entry.phone }}</td>
+                                <td>{{ entry.line_id }}</td>
+                                <td>{{ entry.name }}</td>
+                                <td>{{ entry.created_at }}</td>
+                        </tr>
+                {% endfor %}
+                </tbody>
+        </table>
+        <!-- 分頁按鈕 -->
+        <nav>
+            <ul class="pagination">
+                {% set total_pages = (total // per_page) + (1 if total % per_page else 0) %}
+                {% for p in range(1, total_pages+1) %}
+                    <li class="page-item {% if p == page %}active{% endif %}">
+                        <a class="page-link" href="?page={{p}}">{{p}}</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </nav>
+</body>
+</html>
