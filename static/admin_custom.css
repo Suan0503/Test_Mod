@@ -1,3 +1,206 @@
+/* ================================
+     基本色系（無漸層版）
+     ================================ */
+:root{
+    --bg-light: #e8f4ff;      /* 全站淺藍底 */
+    --ink: #232a34;           /* 文字深色 */
+    --ink-soft: #eaf1fb;      /* 淺字色 */
+    --brand: #4f8cff;         /* 主要色 */
+    --brand-2: #38c6ff;       /* 輔助亮藍 */
+    --panel: #232a34;         /* 深色面板 */
+    --panel-soft: #f7f9fe;    /* 內容區淡底 */
+    --danger: #d32f2f;        /* 滑過警示紅 */
+}
+
+/* 全站背景 → 淺藍色（不跳色） */
+html, body {
+    background: var(--bg-light);
+    font-family: 'Segoe UI','Noto Sans TC','Arial',sans-serif;
+    color: var(--ink);
+}
+
+/* 內容容器（去漸層） */
+.content, .admin-panel .content{
+    padding: 40px;
+    background: var(--panel-soft);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(79,140,255,0.10);
+}
+
+/* -------------------
+     導覽列（去漸層）
+     ------------------- */
+.navbar, .navbar-default{
+    background: var(--panel);
+    color: #fff;
+    box-shadow: 0 4px 24px rgba(79,140,255,0.25), 0 0 32px #38c6ff44 inset;
+    border: none;
+    border-radius: 0 0 18px 18px;
+    padding: 0 32px;
+    min-height: 56px;
+    position: relative;
+}
+.navbar-brand{
+    font-weight: 800;
+    font-size: 1.4em;
+    letter-spacing: 2px;
+    color: #fff !important;
+    text-shadow: 0 2px 12px #38c6ff88;
+}
+.navbar-nav > li > a{
+    color: var(--ink-soft) !important;
+    font-weight: 600;
+    font-size: 1.08em;
+    letter-spacing: 1px;
+    border-radius: 8px;
+    margin: 0 4px;
+    padding: 8px 18px;
+    transition: background .25s, color .25s, box-shadow .25s, transform .15s;
+    display: flex; align-items: center;
+}
+.navbar-nav > li > a:hover,
+.navbar-nav > li.active > a{
+    background: rgba(79,140,255,0.18);
+    color: #fff !important;
+    box-shadow: 0 2px 12px #38c6ff44;
+    transform: scale(1.04);
+}
+
+/* 左側 icon（Font Awesome 6） */
+.navbar-nav > li > a{ position: relative; padding-left: 32px; }
+.navbar-nav > li:first-child > a::before,
+.navbar-nav > li:nth-child(2) > a::before,
+.navbar-nav > li:nth-child(3) > a::before,
+.navbar-nav > li:nth-child(4) > a::before{
+    font-family: "Font Awesome 6 Free"; font-weight: 900;
+    position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+    color: var(--brand-2); font-size: 1.1em; filter: drop-shadow(0 2px 4px #38c6ff88);
+}
+/* Home */
+.navbar-nav > li:first-child > a::before { content: "\f015"; }
+/* 白名單 */
+.navbar-nav > li:nth-child(2) > a::before { content: "\f0ca"; }
+/* 黑名單 */
+.navbar-nav > li:nth-child(3) > a::before { content: "\f05e"; }
+/* 抽獎券 */
+.navbar-nav > li:nth-child(4) > a::before { content: "\f145"; }
+
+/* -------------------
+     側邊欄 / 表格面板
+     ------------------- */
+.sidebar, .admin-panel .sidebar{
+    background: var(--panel);
+    border-radius: 16px;
+    box-shadow: 0 2px 16px rgba(79,140,255,0.10);
+    color: var(--ink-soft);
+    border: none;
+}
+
+/* 表格框體（深色容器、去邊線） */
+.table, .admin-panel .table, .table-bordered{
+    background: var(--panel);
+    border-radius: 12px;
+    box-shadow: 0 2px 16px rgba(79,140,255,0.10);
+    color: var(--ink-soft);
+    border: none;
+}
+.table th, .table td{ border: none !important; }
+
+/* 行內白底（您提供的視覺），滑過紅字 */
+.table tbody tr{
+    background-color: #fff;
+    color: var(--ink);
+    transition: color .2s, background-color .2s, box-shadow .2s;
+}
+.table tbody tr:hover{
+    color: var(--danger);
+    cursor: pointer;
+    box-shadow: inset 0 0 0 9999px rgba(211,47,47,0.03);
+}
+.table tbody tr:hover td,
+.table tbody tr:hover th{
+    color: var(--danger) !important;
+}
+
+/* -------------------
+     動作區：左放觀看/編輯、右放刪除
+     ※ 建議在該欄位加上 <td class="actions"> … </td>
+     ------------------- */
+.table td.actions{
+    display: flex; align-items: center;
+    justify-content: space-between; /* 左右兩側貼齊 */
+    gap: 8px;
+}
+
+/* 左側群組（觀看＋編輯）與右側（刪除） */
+.actions .action-left{ display: inline-flex; gap: 8px; }
+.actions .action-right{ margin-left: auto; } /* 把刪除推到最右 */
+
+/* 若沿用原本 class 也 OK（雙保險） */
+.btn-view, .btn-edit{ float: left; margin-right: 8px; }
+.btn-delete{ float: right; margin-left: 8px; }
+
+/* -------------------
+     按鈕（去漸層、同色系）
+     ------------------- */
+.btn, .btn-primary, .btn-success, .btn-danger, .btn-default{
+    border-radius: 10px;
+    font-weight: 600;
+    background: var(--brand);
+    color: #fff !important;
+    box-shadow: 0 2px 8px rgba(79,140,255,0.15);
+    transition: background .25s, box-shadow .25s, transform .15s;
+    border: none; letter-spacing: .5px;
+}
+.btn:hover, .btn-primary:hover, .btn-success:hover, .btn-danger:hover, .btn-default:hover{
+    background: #3f73d6;
+    box-shadow: 0 4px 16px rgba(56,198,255,0.25);
+    transform: translateY(-1px);
+}
+.btn.btn-danger{ background: #f04747; }
+.btn.btn-danger:hover{ background: #d93131; }
+
+/* -------------------
+     表單 / 分頁（去漸層）
+     ------------------- */
+.form-control, .admin-panel .form-control{
+    border-radius: 8px;
+    border: 1px solid var(--brand);
+    background: #fff;
+    color: var(--ink);
+    box-shadow: 0 1px 4px rgba(79,140,255,0.08);
+}
+.form-control:focus, .admin-panel .form-control:focus{
+    border-color: var(--brand-2);
+    box-shadow: 0 0 0 2px rgba(56,198,255,0.15);
+}
+
+.pagination > li > a, .admin-panel .pagination > li > a{
+    border-radius: 6px;
+    color: var(--brand);
+    background: #fff;
+    border: 1px solid rgba(79,140,255,0.25);
+    transition: background .2s, color .2s, border-color .2s;
+}
+.pagination > li > a:hover, .admin-panel .pagination > li > a:focus{
+    background: var(--brand);
+    color: #fff;
+    border-color: var(--brand);
+}
+
+/* -------------------
+     標題
+     ------------------- */
+h1, h2, h3, h4{
+    font-weight: 700;
+    color: var(--brand-2);
+    text-shadow: 0 2px 8px rgba(56,198,255,0.10);
+    letter-spacing: 1px;
+}
+
+/* FontAwesome Icon 支援（如需） */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+/* 範例：<button class="btn btn-primary"><i class="fa fa-plus"></i> 新增</button> */
 /* 表格文字區背景與滑鼠特效 */
 
 .table tbody tr {
