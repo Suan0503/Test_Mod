@@ -34,4 +34,9 @@ def home():
     return f"LINE Bot 正常運作中～🍵\n{db_status}"
 
 if __name__ == "__main__":
+    # 初始化 admin panel
+    from hander.admin_panel import init_admin
+    with app.app_context():
+        db.create_all()
+        init_admin(app)
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
