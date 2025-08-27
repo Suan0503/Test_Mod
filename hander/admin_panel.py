@@ -24,7 +24,7 @@ class ModernModelView(ModelView):
         return super().render(template, **kwargs)
 
 def init_admin(app):
-    admin = Admin(app, name='<i class="fa fa-server"></i> 後台管理', template_mode='bootstrap4')
+    admin = Admin(app, name='後台管理', template_mode='bootstrap4', base_template='admin_custom_master.html')
     admin.add_view(ModernModelView(Whitelist, db.session, name='<i class="fa fa-list"></i> 白名單', endpoint='whitelist'))
     admin.add_view(ModernModelView(Blacklist, db.session, name='<i class="fa fa-ban"></i> 黑名單', endpoint='blacklist'))
     admin.add_view(ModernModelView(Coupon, db.session, name='<i class="fa fa-ticket"></i> 抽獎券', endpoint='coupon'))

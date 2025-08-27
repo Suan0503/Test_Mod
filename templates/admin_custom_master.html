@@ -1,0 +1,15 @@
+{% extends 'admin/master.html' %}
+{% block brand %}
+  <span style="font-weight:800;font-size:1.3em;letter-spacing:2px;color:#38c6ff;">
+    <i class="fa fa-server"></i> 後台管理
+  </span>
+{% endblock %}
+
+{% block navlinks %}
+  <ul class="nav navbar-nav">
+    <li><a href="/admin/"><i class="fa fa-home"></i> Home</a></li>
+    <li><a href="/admin/whitelist/"><i class="fa fa-list"></i> 白名單</a></li>
+    <li><a href="/admin/blacklist/"><i class="fa fa-ban"></i> 黑名單</a></li>
+    <li><a href="/admin/coupon/"><i class="fa fa-ticket"></i> 抽獎券</a></li>
+  </ul>
+{% endblock %}
