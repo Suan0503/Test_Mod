@@ -1,3 +1,12 @@
+/* 觀看、編輯、刪除按鈕排列 */
+.btn-view, .btn-edit {
+    float: left;
+    margin-right: 8px;
+}
+.btn-delete {
+    float: right;
+    margin-left: 8px;
+}
 .navbar-nav > li > a {
     position: relative;
     padding-left: 32px;
@@ -59,9 +68,9 @@
 
 
 body {
-    background: linear-gradient(120deg, #232a34 0%, #4f8cff 100%);
+    background: linear-gradient(120deg, #eaf1fb 0%, #bcdcff 100%);
     font-family: 'Segoe UI', 'Noto Sans TC', 'Arial', sans-serif;
-    color: #eaf1fb;
+    color: #232a34;
 }
 
 
@@ -97,7 +106,7 @@ body {
 }
 .navbar-nav > li > a:hover, .navbar-nav > li.active > a {
     background: linear-gradient(90deg, #38c6ff 0%, #4f8cff 100%);
-    color: #fff !important;
+    color: #232a34 !important;
     box-shadow: 0 2px 12px #38c6ff44;
     text-shadow: 0 2px 8px #4f8cff88;
     transform: scale(1.06);
@@ -184,9 +193,9 @@ h1, h2, h3, h4 {
 
 .content, .admin-panel .content {
     padding: 40px;
-    background: linear-gradient(120deg, #232a34 0%, #2d3a4b 100%);
+    background: linear-gradient(120deg, #f7f8fa 0%, #eaf1fb 100%);
     border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(79,140,255,0.18);
+    box-shadow: 0 8px 32px rgba(79,140,255,0.10);
 }
 
 /* FontAwesome Icon 支援 */
