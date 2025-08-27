@@ -20,7 +20,6 @@ class Blacklist(db.Model):
     phone = db.Column(db.String(20), unique=True)
     reason = db.Column(db.Text)
     name = db.Column(db.String(255))
-    line_id = db.Column(db.String(100))
 
 class Coupon(db.Model):
     __tablename__ = "coupon"
