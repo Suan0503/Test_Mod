@@ -1,6 +1,6 @@
 
 
-from models.whitelist import Whitelist
+from models import Whitelist
 from extensions import db
 from datetime import datetime, timezone
 try:
