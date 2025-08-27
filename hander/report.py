@@ -2,7 +2,9 @@ from linebot.models import (
     MessageEvent, TextMessage, TemplateSendMessage, ButtonsTemplate, PostbackAction, PostbackEvent, TextSendMessage
 )
 from extensions import line_bot_api, db
-from models import Whitelist, Coupon
+from models import db
+from models import Whitelist as WhitelistClass
+from models import Coupon as CouponClass
 from utils.temp_users import temp_users
 from storage import ADMIN_IDS
 import re, time
@@ -47,10 +49,10 @@ def handle_report(event):
                 TextSendMessage(text="請輸入正確的網址格式（必須以 http:// 或 https:// 開頭）\n如需取消，請輸入「取消」")
             )
             return
-        wl = Whitelist.query.filter_by(line_user_id=user_id).first()
+    wl = WhitelistClass.query.filter_by(line_user_id=user_id).first()
         user_number = wl.id if wl else ""
         user_lineid = wl.line_id if wl else ""
-        last_coupon = Coupon.query.filter(Coupon.report_no != None).order_by(Coupon.id.desc()).first()
+    last_coupon = CouponClass.query.filter(CouponClass.report_no != None).order_by(CouponClass.id.desc()).first()
         if last_coupon and last_coupon.report_no and last_coupon.report_no.isdigit():
             report_no = int(last_coupon.report_no) + 1
         else:
@@ -132,7 +134,7 @@ def handle_report_postback(event):
                 tz = pytz.timezone("Asia/Taipei")
                 today = datetime.now(tz).strftime("%Y-%m-%d")
                 # 回報文寫入 coupon.amount=0, type="report"（預設0，只有中獎才會改成大於0）
-                new_coupon = Coupon(
+                new_coupon = CouponClass(
                     line_user_id=to_user_id,
                     amount=0,  # ← 修改為 0
                     date=today,
