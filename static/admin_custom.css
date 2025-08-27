@@ -1,3 +1,13 @@
+.table tbody tr:hover {
+    background-color: #fff !important;
+    color: var(--danger) !important;
+    box-shadow: none !important;
+}
+.table tbody tr:hover td,
+.table tbody tr:hover th {
+    background-color: #fff !important;
+    color: var(--danger) !important;
+}
 /* ================================
      基本色系（無漸層版）
      ================================ */
@@ -60,9 +70,9 @@ html, body {
 }
 .navbar-nav > li > a:hover,
 .navbar-nav > li.active > a{
-    background: rgba(79,140,255,0.18);
-    color: #fff !important;
-    box-shadow: 0 2px 12px #38c6ff44;
+    background: transparent;
+    color: var(--danger) !important;
+    box-shadow: none;
     transform: scale(1.04);
 }
 
