@@ -1,10 +1,8 @@
-"""
-LINE Bot Webhook 路由
-"""
 from flask import Blueprint, request, abort
 from extensions import handler
 from linebot.exceptions import InvalidSignatureError
 import traceback
+
 message_bp = Blueprint('message', __name__)
 
 @message_bp.route("/callback", methods=["POST"])
@@ -21,5 +19,5 @@ def callback():
         abort(500)
     return "OK"
 
-# 只 import entrypoint（自動帶入各功能模組）
-import handlers.entrypoint
+# ⭐ 只 import entrypoint（這會自動帶入各功能模組）
+import hander.entrypoint
