@@ -14,6 +14,12 @@
   <div class="collapse navbar-collapse">
     <ul class="navbar-nav mr-auto">
       <li class="nav-item"><a class="nav-link" href="/admin/"><i class="fa fa-home"></i> Home</a></li>
+      <li class="nav-item">
+        <form class="form-inline" action="/search" method="get" style="display:inline-block;">
+          <input class="form-control mr-sm-2" type="search" name="q" placeholder="搜尋..." aria-label="Search">
+          <button class="btn btn-outline-primary my-2 my-sm-0" type="submit"><i class="fa fa-search"></i></button>
+        </form>
+      </li>
       <li class="nav-item"><a class="nav-link" href="/admin/whitelist/"><i class="fa fa-list"></i> 白名單</a></li>
       <li class="nav-item"><a class="nav-link" href="/admin/blacklist/"><i class="fa fa-ban"></i> 黑名單</a></li>
       <li class="nav-item"><a class="nav-link" href="/admin/coupon/"><i class="fa fa-ticket"></i> 抽獎券</a></li>
