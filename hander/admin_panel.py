@@ -7,13 +7,29 @@ from flask_admin.contrib.sqla import ModelView
 from models import Whitelist, Blacklist, Coupon
 from extensions import db
 
+
+from flask_admin import helpers as admin_helpers
+
+class ModernModelView(ModelView):
+    # 自訂按鈕 icon
+    create_modal = True
+    edit_modal = True
+    can_view_details = True
+    column_display_pk = True
+    page_size = 20
+    def render(self, template, **kwargs):
+        # 注入 FontAwesome 與自訂 CSS
+        if 'admin_custom_css' not in kwargs:
+            kwargs['admin_custom_css'] = '/static/admin_custom.css'
+        return super().render(template, **kwargs)
+
 def init_admin(app):
     admin = Admin(app, name='後台管理', template_mode='bootstrap4')
-    admin.add_view(ModelView(Whitelist, db.session))
-    admin.add_view(ModelView(Blacklist, db.session))
-    admin.add_view(ModelView(Coupon, db.session))
-    # 註冊自訂 CSS
+    admin.add_view(ModernModelView(Whitelist, db.session, name='白名單', endpoint='whitelist'))
+    admin.add_view(ModernModelView(Blacklist, db.session, name='黑名單', endpoint='blacklist'))
+    admin.add_view(ModernModelView(Coupon, db.session, name='抽獎券', endpoint='coupon'))
+    # 確保自訂 CSS 被載入
     @app.context_processor
     def override_admin_css():
-        return dict(admin_css_url='/static/admin_custom.css')
+        return dict(admin_custom_css='/static/admin_custom.css')
     return admin

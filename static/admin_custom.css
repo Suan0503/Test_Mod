@@ -1,36 +1,51 @@
 /* Modern admin panel style */
 
+
 body {
     background: linear-gradient(120deg, #232a34 0%, #4f8cff 100%);
     font-family: 'Segoe UI', 'Noto Sans TC', 'Arial', sans-serif;
     color: #eaf1fb;
 }
 
-.navbar {
+.navbar, .navbar-default {
     background: linear-gradient(90deg, #232a34 0%, #4f8cff 100%);
     color: #fff;
     box-shadow: 0 2px 12px rgba(79,140,255,0.15);
+    border: none;
 }
 
-.admin-panel .table {
+.sidebar, .admin-panel .sidebar {
+    background: #232a34;
+    border-radius: 16px;
+    box-shadow: 0 2px 16px rgba(79,140,255,0.10);
+    color: #eaf1fb;
+    border: none;
+}
+
+.table, .admin-panel .table, .table-bordered {
     background: #232a34;
     border-radius: 12px;
     box-shadow: 0 2px 16px rgba(79,140,255,0.10);
     color: #eaf1fb;
     border: none;
 }
+.table th, .table td {
+    border: none !important;
+}
 
-.btn-primary, .btn-success, .btn-danger {
-    border-radius: 8px;
+.btn, .btn-primary, .btn-success, .btn-danger, .btn-default {
+    border-radius: 10px;
     font-weight: 600;
     background: linear-gradient(90deg, #4f8cff 0%, #38c6ff 100%);
-    color: #fff;
+    color: #fff !important;
     box-shadow: 0 2px 8px rgba(79,140,255,0.15);
     transition: background 0.3s, box-shadow 0.3s, transform 0.2s;
     position: relative;
     overflow: hidden;
+    border: none;
+    letter-spacing: 0.5px;
 }
-.btn-primary:hover, .btn-success:hover, .btn-danger:hover {
+.btn:hover, .btn-primary:hover, .btn-success:hover, .btn-danger:hover, .btn-default:hover {
     background: linear-gradient(90deg, #38c6ff 0%, #4f8cff 100%);
     box-shadow: 0 4px 16px rgba(56,198,255,0.25);
     transform: translateY(-2px) scale(1.04);
@@ -45,34 +60,34 @@ h1, h2, h3, h4 {
     font-weight: 700;
     color: #38c6ff;
     text-shadow: 0 2px 8px rgba(56,198,255,0.10);
+    letter-spacing: 1px;
 }
 
-.admin-panel .form-control {
+.form-control, .admin-panel .form-control {
     border-radius: 8px;
     border: 1px solid #4f8cff;
     background: #232a34;
     color: #eaf1fb;
     box-shadow: 0 1px 4px rgba(79,140,255,0.08);
 }
-.admin-panel .form-control:focus {
+.form-control:focus, .admin-panel .form-control:focus {
     border-color: #38c6ff;
     box-shadow: 0 0 0 2px rgba(56,198,255,0.15);
 }
 
-.admin-panel .pagination > li > a {
+.pagination > li > a, .admin-panel .pagination > li > a {
     border-radius: 6px;
     color: #4f8cff;
     background: #232a34;
     border: none;
     transition: background 0.2s, color 0.2s;
 }
-.admin-panel .pagination > li > a:hover {
+.pagination > li > a:hover, .admin-panel .pagination > li > a:hover {
     background: #4f8cff;
     color: #fff;
 }
 
-/* 讓 admin panel 主要區塊更有現代感 */
-.admin-panel .content {
+.content, .admin-panel .content {
     padding: 40px;
     background: linear-gradient(120deg, #232a34 0%, #2d3a4b 100%);
     border-radius: 16px;
