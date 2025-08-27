@@ -22,7 +22,14 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 
 # Blueprint 註冊
+
 app.register_blueprint(message_bp)
+
+# 初始化 admin panel，確保 /admin 路徑可用
+from hander.admin_panel import init_admin
+with app.app_context():
+    db.create_all()
+    init_admin(app)
 
 @app.route("/")
 def home():
