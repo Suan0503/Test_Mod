@@ -1,3 +1,7 @@
+# 即時班表更新頁面
+@app.route("/admin/schedule/")
+def admin_schedule():
+    return render_template("schedule.html")
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))  # ✅ 確保 handler 可被 import
