@@ -1,31 +1,95 @@
 {% extends 'admin_custom_master.html' %}
 {% block body %}
+<style>
+.schedule-table { border-collapse: collapse; width:100%; }
+.schedule-table th, .schedule-table td { border:1px solid #b6d6ff; padding:6px 8px; text-align:center; }
+.schedule-table th { background:#e3f2fd; }
+.add-girl-btn { margin-top:12px; }
+</style>
 <div class="schedule-main" style="display:flex;gap:32px;padding:32px 0;">
   <div style="flex:1;min-width:320px;">
-    <h3>排班/時間輸入</h3>
-    <textarea id="input-area" style="width:100%;height:400px;font-size:16px;padding:12px;border-radius:8px;border:1px solid #b6d6ff;resize:vertical;"></textarea>
+    <h3>排班表</h3>
+    <table class="schedule-table" id="schedule-table">
+      <thead>
+        <tr>
+          <th>妹妹</th>
+          {% for hour in range(13, 19) %}
+            <th>{{ hour }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody id="girl-rows">
+        <tr>
+          <td><input type="text" value="多多" class="girl-name" style="width:80px;"></td>
+          {% for hour in range(13, 19) %}
+          <td>
+            <input type="checkbox" class="hour-check">
+            <select class="duration" style="width:50px;">
+              <option value="">--</option>
+              <option value="60">60</option>
+              <option value="90">90</option>
+            </select>
+          </td>
+          {% endfor %}
+        </tr>
+        <tr>
+          <td><input type="text" value="莎莎" class="girl-name" style="width:80px;"></td>
+          {% for hour in range(13, 19) %}
+          <td>
+            <input type="checkbox" class="hour-check">
+            <select class="duration" style="width:50px;">
+              <option value="">--</option>
+              <option value="60">60</option>
+              <option value="90">90</option>
+            </select>
+          </td>
+          {% endfor %}
+        </tr>
+      </tbody>
+    </table>
+    <button class="add-girl-btn" onclick="addGirlRow()">新增妹妹</button>
   </div>
   <div style="flex:1;min-width:320px;">
-    <h3>即時格式化結果</h3>
+    <h3>即時排班結果</h3>
     <div id="output-area" style="background:#f7f9fe;border-radius:8px;min-height:400px;padding:16px;font-size:16px;white-space:pre-line;"></div>
   </div>
 </div>
 <script>
-const input = document.getElementById('input-area');
-const output = document.getElementById('output-area');
-input.addEventListener('input', function() {
-  const lines = input.value.split('\n').filter(l=>l.trim());
-  let guest = [];
-  let schedule = [];
-  lines.forEach(line => {
-    // 範例：1600 莎莎 2200 60 茗
-    const m = line.match(/(\d{3,4})\s+(\S+)\s+(\d+)\s+(\d+)\s+(\S+)/);
-    if(m) {
-      guest.push(`客：8/28 ${m[1].replace(/(\d{2})(\d{2})/,'$1:$2')} ${m[2]} ${m[3]}/${m[4]}/1`);
-      schedule.push(`排班：8/28${m[5]} ${m[1].replace(/(\d{2})(\d{2})/,'$1:$2')} ${m[2]} ${m[3]}/${m[4]}/1`);
+function addGirlRow() {
+  const tbody = document.getElementById('girl-rows');
+  const tr = document.createElement('tr');
+  let html = '<td><input type="text" value="" class="girl-name" style="width:80px;"></td>';
+  for(let i=0;i<6;i++) {
+    html += `<td><input type="checkbox" class="hour-check"><select class="duration" style="width:50px;"><option value="">--</option><option value="60">60</option><option value="90">90</option></select></td>`;
+  }
+  tr.innerHTML = html;
+  tbody.appendChild(tr);
+}
+function getScheduleResult() {
+  const tbody = document.getElementById('girl-rows');
+  const hours = [13,14,15,16,17,18];
+  let result = '';
+  for(const tr of tbody.children) {
+    const name = tr.querySelector('.girl-name').value.trim();
+    if(!name) continue;
+    let line = `💗${name} 11:00-01:00➡️中越文溝通🇻🇳(ID)`;
+    let slots = [];
+    const tds = tr.querySelectorAll('td');
+    for(let i=1;i<tds.length;i++) {
+      const checked = tds[i].querySelector('.hour-check').checked;
+      const duration = tds[i].querySelector('.duration').value;
+      if(checked && duration) {
+        slots.push(`${hours[i-1]}:00/${duration}`);
+      }
     }
-  });
-  output.innerText = guest.concat(schedule).join('\n');
-});
+    if(slots.length) {
+      line += '\n' + slots.join('\n');
+      result += line + '\n\n';
+    }
+  }
+  document.getElementById('output-area').innerText = result.trim();
+}
+document.getElementById('schedule-table').addEventListener('input', getScheduleResult);
+document.getElementById('schedule-table').addEventListener('change', getScheduleResult);
 </script>
 {% endblock %}
