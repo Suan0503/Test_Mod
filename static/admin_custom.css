@@ -1,12 +1,27 @@
 /* 強制表格標準佈局，移除異常縮排/排列 */
-table, thead, tbody, tr, th, td {
-    display: revert !important;
-    float: none !important;
-    width: auto !important;
-    vertical-align: middle !important;
-    font-size: 15px !important;
-    padding: 10px 14px !important;
-    box-sizing: border-box !important;
+/* 表格美化與正常顯示 */
+table {
+    border-radius: 18px;
+    box-shadow: 0 2px 16px rgba(79,140,255,0.10);
+    border-collapse: collapse;
+    background: #e3f2fd;
+    margin-bottom: 32px;
+    width: 100%;
+    table-layout: fixed;
+}
+th, td {
+    font-size: 15px;
+    padding: 10px 14px;
+    color: #232a34;
+    background: transparent;
+    border-bottom: 1px solid #d0e6ff;
+    box-sizing: border-box;
+    vertical-align: middle;
+}
+th {
+    font-weight: 700;
+    color: #1976d2;
+    border-bottom: 2px solid #b6d6ff;
 }
 /* 表格美化 */
 table {
