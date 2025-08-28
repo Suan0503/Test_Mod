@@ -5,6 +5,8 @@
 .schedule-table th, .schedule-table td { border:1px solid #b6d6ff; padding:6px 8px; text-align:center; }
 .schedule-table th { background:#e3f2fd; }
 .add-girl-btn { margin-top:12px; }
+.nation-select { width:90px; }
+.room-input { width:60px; }
 </style>
 <div class="schedule-main" style="display:flex;gap:32px;padding:32px 0;">
   <div style="flex:1;min-width:320px;">
@@ -13,6 +15,8 @@
       <thead>
         <tr>
           <th>妹妹</th>
+          <th>國籍</th>
+          <th>房間號碼</th>
           {% for hour in range(13, 19) %}
             <th>{{ hour }}</th>
           {% endfor %}
@@ -21,6 +25,16 @@
       <tbody id="girl-rows">
         <tr>
           <td><input type="text" value="多多" class="girl-name" style="width:80px;"></td>
+          <td>
+            <select class="nation-select" multiple>
+              <option value="tw">🇹🇼台灣</option>
+              <option value="vn">🇻🇳越南</option>
+              <option value="th">🇹🇭泰國</option>
+              <option value="en">🇬🇧英文</option>
+              <option value="id">🇮🇩印尼</option>
+            </select>
+          </td>
+          <td><input type="text" class="room-input" value="501007"></td>
           {% for hour in range(13, 19) %}
           <td>
             <input type="checkbox" class="hour-check">
@@ -34,6 +48,16 @@
         </tr>
         <tr>
           <td><input type="text" value="莎莎" class="girl-name" style="width:80px;"></td>
+          <td>
+            <select class="nation-select" multiple>
+              <option value="tw">🇹🇼台灣</option>
+              <option value="vn">🇻🇳越南</option>
+              <option value="th">🇹🇭泰國</option>
+              <option value="en">🇬🇧英文</option>
+              <option value="id">🇮🇩印尼</option>
+            </select>
+          </td>
+          <td><input type="text" class="room-input" value=""></td>
           {% for hour in range(13, 19) %}
           <td>
             <input type="checkbox" class="hour-check">
@@ -59,11 +83,27 @@ function addGirlRow() {
   const tbody = document.getElementById('girl-rows');
   const tr = document.createElement('tr');
   let html = '<td><input type="text" value="" class="girl-name" style="width:80px;"></td>';
+  html += `<td><select class='nation-select' multiple><option value='tw'>🇹🇼台灣</option><option value='vn'>🇻🇳越南</option><option value='th'>🇹🇭泰國</option><option value='en'>🇬🇧英文</option><option value='id'>🇮🇩印尼</option></select></td>`;
+  html += `<td><input type='text' class='room-input'></td>`;
   for(let i=0;i<6;i++) {
     html += `<td><input type="checkbox" class="hour-check"><select class="duration" style="width:50px;"><option value="">--</option><option value="60">60</option><option value="90">90</option></select></td>`;
   }
   tr.innerHTML = html;
   tbody.appendChild(tr);
+}
+function getNationInfo(select) {
+  const selected = Array.from(select.selectedOptions).map(o=>o.value);
+  let emoji = '';
+  let lang = '';
+  if(selected.includes('tw') && selected.includes('vn')) { emoji = '🇹🇼🇻🇳'; lang = '中越文溝通'; }
+  else if(selected.includes('tw')) { emoji = '🇹🇼'; lang = '中文溝通'; }
+  else if(selected.includes('vn')) { emoji = '🇻🇳'; lang = '越文溝通'; }
+  else if(selected.includes('th') && selected.includes('en')) { emoji = '🇹🇭🇬🇧'; lang = '英文溝通'; }
+  else if(selected.includes('th')) { emoji = '🇹🇭'; lang = '泰文溝通'; }
+  else if(selected.includes('en')) { emoji = '🇬🇧'; lang = '英文溝通'; }
+  else if(selected.includes('id')) { emoji = '🇮🇩'; lang = '印尼文溝通'; }
+  else { emoji = ''; lang = ''; }
+  return {emoji, lang};
 }
 function getScheduleResult() {
   const tbody = document.getElementById('girl-rows');
@@ -71,15 +111,18 @@ function getScheduleResult() {
   let result = '';
   for(const tr of tbody.children) {
     const name = tr.querySelector('.girl-name').value.trim();
+    const nationSelect = tr.querySelector('.nation-select');
+    const room = tr.querySelector('.room-input').value.trim();
     if(!name) continue;
-    let line = `💗${name} 11:00-01:00➡️中越文溝通🇻🇳(ID)`;
+    const nation = getNationInfo(nationSelect);
+    let line = `💗${name} 11:00-01:00${nation.emoji ? ' ' + nation.emoji : ''}➡️${nation.lang ? nation.lang : ''}${room ? ' ('+room+')' : ''}`;
     let slots = [];
     const tds = tr.querySelectorAll('td');
-    for(let i=1;i<tds.length;i++) {
+    for(let i=3;i<tds.length;i++) {
       const checked = tds[i].querySelector('.hour-check').checked;
       const duration = tds[i].querySelector('.duration').value;
       if(checked && duration) {
-        slots.push(`${hours[i-1]}:00/${duration}`);
+        slots.push(`${hours[i-3]}:00/${duration}`);
       }
     }
     if(slots.length) {
