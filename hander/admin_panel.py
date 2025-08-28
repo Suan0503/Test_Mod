@@ -22,14 +22,21 @@ class ModernModelView(ModelView):
             kwargs['admin_custom_css'] = '/static/admin_custom.css'
         return super().render(template, **kwargs)
 
+
 class WhitelistModelView(ModernModelView):
     column_searchable_list = ['phone', 'line_id', 'name']
+
+class BlacklistModelView(ModernModelView):
+    column_searchable_list = ['phone', 'name']  # 根據 Blacklist 欄位
+
+class CouponModelView(ModernModelView):
+    column_searchable_list = ['code', 'name', 'phone']  # 根據 Coupon 欄位
 
 def init_admin(app):
     admin = Admin(app, name='後台管理', template_mode='bootstrap4', base_template='admin_custom_master.html')
     admin.add_view(WhitelistModelView(Whitelist, db.session, name='<i class="fa fa-list"></i> 白名單', endpoint='whitelist'))
-    admin.add_view(ModernModelView(Blacklist, db.session, name='<i class="fa fa-ban"></i> 黑名單', endpoint='blacklist'))
-    admin.add_view(ModernModelView(Coupon, db.session, name='<i class="fa fa-ticket"></i> 抽獎券', endpoint='coupon'))
+    admin.add_view(BlacklistModelView(Blacklist, db.session, name='<i class="fa fa-ban"></i> 黑名單', endpoint='blacklist'))
+    admin.add_view(CouponModelView(Coupon, db.session, name='<i class="fa fa-ticket"></i> 抽獎券', endpoint='coupon'))
     # 確保自訂 CSS 被載入
     @app.context_processor
     def override_admin_css():
