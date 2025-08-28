@@ -224,7 +224,7 @@ def handle_text(event):
                 admin_manual_flow.pop(user_id, None)
                 return
             target_user_id = None
-            for uid, data in temp_users.items():
+            for uid, data in get_all_temp_users():
                 if data.get("phone") and normalize_phone(data.get("phone")) == normalize_phone(phone):
                     target_user_id = uid
                     break
