@@ -17,6 +17,8 @@ class ModernModelView(ModelView):
     can_view_details = True
     column_display_pk = True
     page_size = 20
+    # 支援搜尋（手機、LINE ID、暱稱）
+    column_searchable_list = ['phone', 'line_id', 'name']
     def render(self, template, **kwargs):
         # 注入 FontAwesome 與自訂 CSS
         if 'admin_custom_css' not in kwargs:
