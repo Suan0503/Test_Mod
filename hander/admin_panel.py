@@ -30,7 +30,7 @@ class BlacklistModelView(ModernModelView):
     column_searchable_list = ['phone', 'name']  # 根據 Blacklist 欄位
 
 class CouponModelView(ModernModelView):
-    column_searchable_list = ['code', 'name', 'phone']  # 根據 Coupon 欄位
+    column_searchable_list = ['line_user_id', 'report_no', 'type', 'date']  # 依 models.py 實際欄位
 
 def init_admin(app):
     admin = Admin(app, name='後台管理', template_mode='bootstrap4', base_template='admin_custom_master.html')
