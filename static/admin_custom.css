@@ -267,14 +267,6 @@ html, body {
 }
 
 /* 表格框體（深色容器、去邊線） */
-.table, .admin-panel .table, .table-bordered{
-    background: var(--panel);
-    border-radius: 12px;
-    box-shadow: 0 2px 16px rgba(79,140,255,0.10);
-    color: var(--ink-soft);
-    border: none;
-}
-.table th, .table td{ border: none !important; }
 
 /* 行內白底（您提供的視覺），滑過紅字 */
 .table tbody tr{
@@ -514,16 +506,6 @@ body {
     border: none;
 }
 
-.table, .admin-panel .table, .table-bordered {
-    background: #232a34;
-    border-radius: 12px;
-    box-shadow: 0 2px 16px rgba(79,140,255,0.10);
-    color: #eaf1fb;
-    border: none;
-}
-.table th, .table td {
-    border: none !important;
-}
 
 .btn, .btn-primary, .btn-success, .btn-danger, .btn-default {
     border-radius: 10px;
