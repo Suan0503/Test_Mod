@@ -1,3 +1,41 @@
+/* 主體內容區域 */
+.admin-main-content {
+    background: #f7f9fe;
+    min-height: 100vh;
+    padding: 32px 0 32px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* 表格卡片感 */
+.admin-main-content .table {
+    background: #e3f2fd;
+    border-radius: 18px;
+    box-shadow: 0 2px 16px rgba(79,140,255,0.10);
+    padding: 12px 0;
+    margin-bottom: 32px;
+}
+
+/* 表格欄位優化 */
+.admin-main-content th, .admin-main-content td {
+    padding: 10px 18px;
+    font-size: 16px;
+    color: #232a34;
+    background: transparent;
+}
+.admin-main-content th {
+    font-weight: 600;
+    color: #1976d2;
+    background: transparent;
+}
+
+/* 行動按鈕區域美化 */
+.admin-main-content .btn, .admin-main-content .fa {
+    font-size: 18px;
+    margin: 0 2px;
+    vertical-align: middle;
+}
 .table,
 .table thead tr,
 .table thead th,
