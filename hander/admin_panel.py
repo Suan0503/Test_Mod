@@ -40,7 +40,16 @@ class BlacklistModelView(ModernModelView):
         return super()._search(query, term)
 
 class CouponModelView(ModernModelView):
-    column_searchable_list = ['line_user_id', 'report_no', 'type', 'date']  # 依 models.py 實際欄位
+    column_searchable_list = ['line_user_id', 'report_no', 'type', 'date']
+
+    def render(self, template, **kwargs):
+        # 注入自訂按鈕
+        if 'extra_actions' not in kwargs:
+            kwargs['extra_actions'] = [
+                {'label': '新增白名單', 'url': '/admin/whitelist/new', 'icon': 'fa fa-user-plus'},
+                {'label': '新增黑名單', 'url': '/admin/blacklist/new', 'icon': 'fa fa-user-times'},
+            ]
+        return super().render(template, **kwargs)
 
 def init_admin(app):
     admin = Admin(app, name='後台管理', template_mode='bootstrap4', base_template='admin_custom_master.html')
