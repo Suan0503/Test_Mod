@@ -1,3 +1,7 @@
+/* 覆蓋 Flask-Admin 主體背景色 */
+.content, .admin-content, .container-fluid {
+    background: #f7f9fe !important;
+}
 /* 主體內容區域 */
 .admin-main-content {
     background: #f7f9fe;
@@ -93,6 +97,8 @@
     font-weight: 500;
     letter-spacing: 1px;
 }
+/* 全域 CSS 變數 */
+:root {
     --ink: #232a34;           /* 文字深色 */
     --ink-soft: #eaf1fb;      /* 淺字色 */
     --brand: #4f8cff;         /* 主要色 */
@@ -100,6 +106,7 @@
     --panel: #232a34;         /* 深色面板 */
     --panel-soft: #f7f9fe;    /* 內容區淡底 */
     --danger: #d32f2f;        /* 滑過警示紅 */
+}
 }
 
 /* 全站背景 → 淺藍色（不跳色） */
