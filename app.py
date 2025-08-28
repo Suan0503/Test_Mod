@@ -45,6 +45,11 @@ db.init_app(app)
 
 app.register_blueprint(message_bp)
 
+# 即時班表更新頁面
+@app.route("/admin/schedule/")
+def admin_schedule():
+    return render_template("schedule.html")
+
 # 初始化 admin panel，確保 /admin 路徑可用
 from hander.admin_panel import init_admin
 with app.app_context():
