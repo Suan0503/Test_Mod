@@ -27,7 +27,17 @@ class WhitelistModelView(ModernModelView):
     column_searchable_list = ['phone', 'line_id', 'name']
 
 class BlacklistModelView(ModernModelView):
-    column_searchable_list = ['phone', 'name']  # 根據 Blacklist 欄位
+    column_searchable_list = ['phone', 'name']
+
+    def _search(self, query, search_term):
+        # 手機欄位自動補齊 10 碼
+        term = search_term.strip()
+        if term.isdigit() and (len(term) == 8 or len(term) == 9):
+            if len(term) == 8:
+                term = '09' + term
+            elif len(term) == 9:
+                term = '0' + term
+        return super()._search(query, term)
 
 class CouponModelView(ModernModelView):
     column_searchable_list = ['line_user_id', 'report_no', 'type', 'date']  # 依 models.py 實際欄位
