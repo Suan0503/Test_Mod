@@ -91,9 +91,9 @@ td .btn:hover, td .fa:hover {
     background: #f7f9fe;
     min-height: 100vh;
     padding: 32px 0 32px 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* 表格卡片感 */
@@ -124,15 +124,15 @@ td .btn:hover, td .fa:hover {
     margin: 0 2px;
     vertical-align: middle;
 }
-.table,
-.table thead tr,
-.table thead th,
-.table tbody tr,
-.table tbody td,
-.table th,
-/* 頂部導航容器 */
-.top-nav-bar {
-    display: flex;
+table {
+    border-radius: 18px;
+    box-shadow: 0 2px 16px rgba(79,140,255,0.10);
+    border-collapse: collapse;
+    background: #e3f2fd;
+    margin-bottom: 32px;
+    width: 100%;
+    table-layout: fixed;
+}
     align-items: center;
     gap: 16px;
     background: linear-gradient(90deg, #e3f2fd 0%, #f8fcff 100%);
