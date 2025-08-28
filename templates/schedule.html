@@ -1,0 +1,31 @@
+{% extends 'admin_custom_master.html' %}
+{% block body %}
+<div class="schedule-main" style="display:flex;gap:32px;padding:32px 0;">
+  <div style="flex:1;min-width:320px;">
+    <h3>排班/時間輸入</h3>
+    <textarea id="input-area" style="width:100%;height:400px;font-size:16px;padding:12px;border-radius:8px;border:1px solid #b6d6ff;resize:vertical;"></textarea>
+  </div>
+  <div style="flex:1;min-width:320px;">
+    <h3>即時格式化結果</h3>
+    <div id="output-area" style="background:#f7f9fe;border-radius:8px;min-height:400px;padding:16px;font-size:16px;white-space:pre-line;"></div>
+  </div>
+</div>
+<script>
+const input = document.getElementById('input-area');
+const output = document.getElementById('output-area');
+input.addEventListener('input', function() {
+  const lines = input.value.split('\n').filter(l=>l.trim());
+  let guest = [];
+  let schedule = [];
+  lines.forEach(line => {
+    // 範例：1600 莎莎 2200 60 茗
+    const m = line.match(/(\d{3,4})\s+(\S+)\s+(\d+)\s+(\d+)\s+(\S+)/);
+    if(m) {
+      guest.push(`客：8/28 ${m[1].replace(/(\d{2})(\d{2})/,'$1:$2')} ${m[2]} ${m[3]}/${m[4]}/1`);
+      schedule.push(`排班：8/28${m[5]} ${m[1].replace(/(\d{2})(\d{2})/,'$1:$2')} ${m[2]} ${m[3]}/${m[4]}/1`);
+    }
+  });
+  output.innerText = guest.concat(schedule).join('\n');
+});
+</script>
+{% endblock %}
