@@ -616,6 +616,36 @@ def handle_post_ocr_confirm(event):
             return True
 
     return False
+                try:
+                    line_id = user_text.strip()
+                    phone = admin_manual_flow[user_id].get("phone")
+                    nickname = admin_manual_flow[user_id].get("nickname")
+                    if not phone:
+                        reply_basic(event, "發生錯誤：找不到先前輸入的手機號，請重新開始手動驗證流程。")
+                        admin_manual_flow.pop(user_id, None)
+                        return
+                    target_user_id = None
+                    for uid, data in get_all_temp_users():
+                        if data.get("phone") and normalize_phone(data.get("phone")) == normalize_phone(phone):
+                            target_user_id = uid
+                            break
+                    if not target_user_id:
+                        code = start_manual_verify_by_admin(user_id, phone, nickname, phone, line_id)
+                        admin_manual_flow.pop(user_id, None)
+                        reply_basic(event, f"找不到 temp_users 中的對應 user，但已建立手動驗證（暫存 key 為手機號）。\n已產生驗證碼：{code}\n請將驗證碼貼給使用者，以完成驗證。")
+                        return
+
+                    code = start_manual_verify_by_admin(user_id, target_user_id, nickname, phone, line_id)
+                    admin_manual_flow.pop(user_id, None)
+                    reply_basic(event, f"已產生驗證碼：{code}\n請將驗證碼貼給使用者 {target_user_id} 以完成驗證。")
+                    return
+                except Exception as e:
+                    import traceback
+                    err_msg = f"系統發生錯誤（手動驗證流程）：{e}\n{traceback.format_exc()}"
+                    reply_basic(event, "系統發生錯誤，請重新開始手動驗證流程或聯絡管理員。")
+                    admin_manual_flow.pop(user_id, None)
+                    print(err_msg)
+                    return
 
 def handle_verify(event):
     try:
