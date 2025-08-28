@@ -10,12 +10,29 @@
 </head>
 <body>
 <nav class="admin-gradient-bar">
-  <a class="admin-btn" href="/admin/whitelist/"><i class="fa fa-list"></i> 白名單</a>
-  <a class="admin-btn" href="/admin/blacklist/"><i class="fa fa-ban"></i> 黑名單</a>
-  <a class="admin-btn" href="/admin/coupon/"><i class="fa fa-ticket"></i> 抽獎券</a>
-  <a class="admin-btn" href="/admin/whitelist/new"><i class="fa fa-user-plus"></i> 新增白名單</a>
-  <a class="admin-btn" href="/admin/blacklist/new"><i class="fa fa-user-times"></i> 新增黑名單</a>
 </nav>
+  <div class="top-nav-bar">
+    <a href="/admin/whitelist/" class="nav-btn">
+      <span class="nav-icon"><i class="fa fa-list"></i></span>
+      <span class="nav-text">白名單</span>
+    </a>
+    <a href="/admin/blacklist/" class="nav-btn">
+      <span class="nav-icon"><i class="fa fa-ban"></i></span>
+      <span class="nav-text">黑名單</span>
+    </a>
+    <a href="/admin/coupon/" class="nav-btn">
+      <span class="nav-icon"><i class="fa fa-ticket"></i></span>
+      <span class="nav-text">抽獎券</span>
+    </a>
+    <a href="/admin/whitelist/new/" class="nav-btn">
+      <span class="nav-icon"><i class="fa fa-user-plus"></i></span>
+      <span class="nav-text">新增白名單</span>
+    </a>
+    <a href="/admin/blacklist/new/" class="nav-btn">
+      <span class="nav-icon"><i class="fa fa-user"></i></span>
+      <span class="nav-text">新增黑名單</span>
+    </a>
+  </div>
 <div class="container-fluid admin-panel content mt-4">
     {% block body %}{% endblock %}
 </div>
