@@ -59,6 +59,7 @@ with app.app_context():
     init_admin(app)
 
 @app.route("/")
+@login_required
 def home():
     try:
         db.session.execute("SELECT 1")
