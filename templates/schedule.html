@@ -73,17 +73,19 @@ function getTodayStr() {
 }
 
 // 多人同步：載入時自動 fetch 最新班表
+let isEditing = false;
 function fetchAndUpdateSchedule() {
+  if (isEditing) return; // 若正在編輯，不自動覆蓋
   fetch('/api/schedule').then(r=>r.json()).then(data=>{
     if(data && Object.keys(data).length) {
       loadScheduleFromServer(data);
-  } // 沒有資料時不載入 localStorage
+    }
   });
 }
 window.addEventListener('DOMContentLoaded',()=>{
   fetchAndUpdateSchedule();
-  autoSaveSchedule(); // 只監聽並 POST，不再儲存 localStorage
-  setInterval(fetchAndUpdateSchedule, 10000); // 每 10 秒自動更新
+  autoSaveSchedule();
+  setInterval(fetchAndUpdateSchedule, 10000);
 });
 
 function loadScheduleFromServer(data) {
@@ -139,6 +141,7 @@ function loadScheduleFromServer(data) {
 // 管理員/超級管理員操作時自動 POST 更新
 function saveScheduleToServer() {
   if(!canEdit) return;
+  isEditing = true;
   const tbody = document.getElementById('girl-rows');
   const data = { girls: [] };
   for (const tr of tbody.children) {
@@ -162,6 +165,8 @@ function saveScheduleToServer() {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({data})
+  }).finally(()=>{
+    setTimeout(()=>{ isEditing = false; }, 1000); // 1秒後允許自動同步
   });
 }
 // 監聽所有操作自動同步
