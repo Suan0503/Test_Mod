@@ -69,7 +69,9 @@ def get_user_info():
 @login_required
 def admin_schedule():
     info = get_user_info()
-    return render_template("schedule.html", **info)
+    user = db.session.query(User).get(session.get('user_id'))
+    can_edit = bool(user and user.user_group in ['admin','superadmin'])
+    return render_template("schedule.html", can_edit=can_edit, **info)
 
 # 初始化 admin panel，確保 /admin 路徑可用
 from hander.admin_panel import init_admin
