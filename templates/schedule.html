@@ -70,10 +70,17 @@
 </div>
 
 <script>
-const timeOptions = [
-  '11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00','23:00','00:00','01:00'
-];
+// 半小時一格
+const timeOptions = [];
+for(let h=11;h<=23;h++){
+  timeOptions.push(`${String(h).padStart(2,'0')}:00`);
+  timeOptions.push(`${String(h).padStart(2,'0')}:30`);
+}
+timeOptions.push('00:00');
+timeOptions.push('00:30');
+timeOptions.push('01:00');
 const durationOptions = ['40','60','90'];
+
 function getTodayStr() {
   const d = new Date();
   const y = d.getFullYear();
@@ -89,9 +96,35 @@ function addTimeRow(btn) {
   div.className = 'time-row';
   let nextTime = '11:00';
   if(timesList.children.length > 0) {
-    const lastSelect = timesList.lastElementChild.querySelector('.time-select');
-    const lastIdx = timeOptions.indexOf(lastSelect.value);
-    nextTime = timeOptions[(lastIdx+1)%timeOptions.length] || '11:00';
+    const lastRow = timesList.lastElementChild;
+    const lastSelect = lastRow.querySelector('.time-select');
+    const lastDur = lastRow.querySelector('.duration-select').value;
+    // 取得上一時段的開始時間
+    let [h,m] = lastSelect.value.split(':').map(Number);
+    let dur = parseInt(lastDur);
+    if(dur === 90) {
+      m += 90;
+    } else if(dur === 60) {
+      m += 60;
+    } else if(dur === 40) {
+      // 40分鐘直接跳到下一個整點或半點
+      if(m === 0) m = 30;
+      else { h++; m = 0; }
+    }
+    // 處理分鐘溢位
+    if(m >= 60) { h += Math.floor(m/60); m = m%60; }
+    // 找最近的可選時間
+    let candidate = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    let idx = timeOptions.indexOf(candidate);
+    if(idx === -1) {
+      // 若不是整點或半點，找下一個可選
+      let allTimes = timeOptions.concat();
+      allTimes.push(candidate);
+      allTimes.sort();
+      idx = allTimes.indexOf(candidate)+1;
+      candidate = timeOptions[idx] || timeOptions[0];
+    }
+    nextTime = candidate;
   }
   div.innerHTML = `
     <select class="time-select">
