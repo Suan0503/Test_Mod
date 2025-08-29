@@ -79,9 +79,16 @@ function addTimeRow(btn) {
   const timesList = btn.parentNode.querySelector('.times-list');
   const div = document.createElement('div');
   div.className = 'time-row';
+  // 找到上一個時段，預設下一小時
+  let nextTime = '11:00';
+  if(timesList.children.length > 0) {
+    const lastSelect = timesList.lastElementChild.querySelector('.time-select');
+    const lastIdx = timeOptions.indexOf(lastSelect.value);
+    nextTime = timeOptions[(lastIdx+1)%timeOptions.length] || '11:00';
+  }
   div.innerHTML = `
     <select class="time-select">
-      ${timeOptions.map(t=>`<option value="${t}">${t}</option>`).join('')}
+      ${timeOptions.map(t=>`<option value="${t}"${t===nextTime?' selected':''}>${t}</option>`).join('')}
     </select>
     <select class="duration-select">
       <option value="40">40</option>
