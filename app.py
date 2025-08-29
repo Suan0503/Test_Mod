@@ -16,23 +16,6 @@ app = Flask(__name__)
 # 設定 secret_key，支援 session/flash
 import secrets
 app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))  # ✅ 確保 handler 可被 import
-
-from flask import Flask
-from dotenv import load_dotenv
-
-load_dotenv()
-
-from extensions import db
-from routes.message import message_bp
-
-
-app = Flask(__name__)
-# 設定 secret_key，支援 session/flash
-import secrets
-app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
 
 # 資料庫連線字串轉換（Heroku/Railway 相容性處理）
 DATABASE_URL = os.environ.get("DATABASE_URL")
