@@ -147,27 +147,22 @@
         <input type='text' class='room-input'>
       </td>
       <td colspan='15'>
-        <div class='time-row'>`;
-
-    const timeslots = [11,12,1,2,3,4,5,6,7,8,9,10,11,12,1];
-    for (let t of timeslots) {
-      html += `
-        <span class='time-cell'>
-          <input type='checkbox' class='hour-check' data-hour='${t}' data-half='0'>
-          <label style='margin-right:2px;'>${t}</label>
-          <input type='checkbox' class='half-check' data-hour='${t}' data-half='1'>
-          <label style='margin-left:2px;'>30</label>
-        </span>`;
-    }
-
-    html += `</div><div class='time-select-row'>`;
-    for (let t of timeslots) {
-      html += `
-        <span style='display:flex;align-items:center;justify-content:center;'>
-          <select class='duration' style='width:50px;'>
-            <option value=''>--</option>
-            <option value='60'>60</option>
-            <option value='90'>90</option>
+              <div class="time-grid" style="grid-template-columns:repeat(auto-fill, minmax(120px, 1fr));gap:10px;">
+                {% set times = [11,12,1,2,3,4,5,6,7,8,9,10,11,12,1] %}
+                {% for t in times %}
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <input type="checkbox" class="main-time-ck" data-time="{{ '%02d00' % t if t > 0 else '0100' }}">
+                    <label style="margin-right:2px;">{{ '%02d00' % t if t > 0 else '0100' }}</label>
+                    <input type="checkbox" class="half-time-ck" data-time="{{ '%02d30' % t if t > 0 else '0130' }}">
+                    <label style="margin-right:2px;">30</label>
+                    <select class="dur" style="width:48px;">
+                      <option value="40">40</option>
+                      <option value="60" selected>60</option>
+                      <option value="90">90</option>
+                    </select>
+                  </div>
+                {% endfor %}
+              </div>
           </select>
         </span>`;
     }
