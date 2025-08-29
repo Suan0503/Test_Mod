@@ -6,33 +6,52 @@
   .schedule-table{ border-collapse:separate; border-spacing:0; width:100%; min-width:980px; table-layout:fixed; }
   .schedule-table th, .schedule-table td{ border:1px solid #b6d6ff; background:#fff; padding:10px; vertical-align:top; }
   .schedule-table thead th{ background:#eaf3ff; text-align:center; font-weight:600; }
-  .col-girl{ width:280px; }
+
+  .col-girl{ width:300px; }
   .col-lang{ width:160px; }
   .col-nation{ width:160px; }
-  .col-time{ min-width:480px; }
+  .col-time{ min-width:560px; }
 
-  /* 妹妹欄位 */
-  .girl-box{ display:grid; grid-template-columns: 1fr 120px; gap:8px; align-items:center; }
-  .girl-box input[type="text"]{ width:100%; }
-  .room-input{ width:100%; }
-
-  /* 語言 */
+  .girl-box{ display:grid; grid-template-columns: 1fr 120px; gap:8px; }
   .lang-group{ display:flex; gap:12px; align-items:center; }
-  .lang-group label{ display:inline-flex; align-items:center; gap:6px; }
+  .lang-group label{ display:inline-flex; gap:6px; align-items:center; }
 
-  /* 時段編輯 */
-  .slots{ display:flex; flex-direction:column; gap:8px; }
-  .slot{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-  .slot select{ width:110px; }
-  .slot .remove{ border:none; background:#ffe5e5; color:#c0392b; padding:6px 10px; border-radius:6px; cursor:pointer; }
-  .add-slot{ border:none; background:#e7f3ff; color:#1a73e8; padding:6px 10px; border-radius:6px; cursor:pointer; }
+  /* === 時間 chip 版 === */
+  .time-grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+    gap:8px;
+  }
+  .slot-chip{ display:inline-flex; align-items:center; gap:6px; }
+  .slot-chip input[type="checkbox"]{ display:none; } /* 用 label 當按鈕 */
+  .chip{
+    padding:6px 10px;
+    border:1px solid #cfe1ff;
+    border-radius:999px;
+    background:#fff;
+    cursor:pointer;
+    font-variant-numeric: tabular-nums;
+    user-select:none;
+  }
+  .chip small{ opacity:.65; margin-left:2px; } /* 顯示 30 的小字 */
+  .slot-chip .dur{
+    display:none;
+    width:64px;
+    padding:4px 6px;
+  }
+  /* 勾選後變色，並顯示方案 */
+  .slot-chip input:checked + label.chip{
+    background:#e8f1ff;
+    border-color:#6aa1ff;
+    box-shadow: 0 0 0 2px rgba(51,122,255,.08) inset;
+  }
+  .slot-chip input:checked + label.chip + select.dur{ display:inline-block; }
+
   .add-girl-btn{ margin-top:12px; }
-
-  /* 右側輸出 */
   #output-area{ background:#f7f9fe; border-radius:8px; min-height:420px; padding:16px; font-size:15px; white-space:pre-line; }
 </style>
 
-<div class="schedule-main" style="display:flex; gap:32px;" >
+<div class="schedule-main" style="display:flex; gap:32px;">
   <div style="flex:1; min-width:420px;">
     <h3>排班表</h3>
 
@@ -70,28 +89,8 @@
               </select>
             </td>
             <td class="col-time">
-              <div class="slots">
-                <!-- 初始給一個時段 -->
-                <div class="slot">
-                  <select class="start">
-                    <!-- 11:00 ～ 01:30（半小時一格） -->
-                    {% set starts = [
-                      '11:00','11:30','12:00','12:30',
-                      '01:00','01:30','02:00','02:30','03:00','03:30','04:00','04:30','05:00','05:30',
-                      '06:00','06:30','07:00','07:30','08:00','08:30','09:00','09:30','10:00','10:30',
-                      '11:00','11:30','12:00','12:30','01:00'
-                    ] %}
-                    {% for s in starts %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
-                  </select>
-                  <select class="duration">
-                    <option value="">方案</option>
-                    <option value="40">40</option>
-                    <option value="60" selected>60</option>
-                    <option value="90">90</option>
-                  </select>
-                  <button type="button" class="remove" onclick="removeSlot(this)">刪除</button>
-                </div>
-                <button type="button" class="add-slot" onclick="addSlot(this)">＋ 新增時段</button>
+              <div class="time-grid">
+                {{ render_time_chips() }}
               </div>
             </td>
           </tr>
@@ -119,8 +118,8 @@
               </select>
             </td>
             <td class="col-time">
-              <div class="slots">
-                <button type="button" class="add-slot" onclick="addSlot(this)">＋ 新增時段</button>
+              <div class="time-grid">
+                {{ render_time_chips() }}
               </div>
             </td>
           </tr>
@@ -137,41 +136,53 @@
   </div>
 </div>
 
+{# ---- Jinja 小巨集：產出 chips ---- #}
+{% macro render_time_chips() -%}
+  {# 11:00→12:30→01:00（半小時一格） #}
+  {% set times = [
+    '11:00','11:30','12:00','12:30',
+    '01:00','01:30','02:00','02:30','03:00','03:30','04:00','04:30','05:00','05:30',
+    '06:00','06:30','07:00','07:30','08:00','08:30','09:00','09:30','10:00','10:30',
+    '11:00','11:30','12:00','12:30','01:00'
+  ] %}
+  {% for t in times %}
+    {% set id = 't_' ~ loop.index ~ '_' ~ range(1000,9999)|random %}
+    <span class="slot-chip">
+      <input id="{{ id }}" type="checkbox" class="time-ck" data-time="{{ t }}">
+      <label class="chip" for="{{ id }}">{{ t[:2] ~ t[3:] }}{% if t.endswith('30') %}<small>+30</small>{% endif %}</label>
+      <select class="dur" aria-label="方案">
+        <option value="40">40</option>
+        <option value="60" selected>60</option>
+        <option value="90">90</option>
+      </select>
+    </span>
+  {% endfor %}
+{%- endmacro %}
+
 <script>
-  // 可選開始時間（半小時一格）
-  const STARTS = [
+  // 產出 time chips 的 HTML（for 新增妹妹）
+  const TIMES = [
     '11:00','11:30','12:00','12:30',
     '01:00','01:30','02:00','02:30','03:00','03:30','04:00','04:30','05:00','05:30',
     '06:00','06:30','07:00','07:30','08:00','08:30','09:00','09:30','10:00','10:30',
     '11:00','11:30','12:00','12:30','01:00'
   ];
-
-  function slotTemplate(){
-    const startOptions = STARTS.map(s => `<option value="${s}">${s}</option>`).join('');
-    return `
-      <div class="slot">
-        <select class="start">${startOptions}</select>
-        <select class="duration">
-          <option value="">方案</option>
-          <option value="40">40</option>
-          <option value="60">60</option>
-          <option value="90">90</option>
-        </select>
-        <button type="button" class="remove" onclick="removeSlot(this)">刪除</button>
-      </div>`;
-  }
-
-  function addSlot(btn){
-    const slotsBox = btn.closest('.slots');
-    // 按鈕永遠放在最後，插在按鈕前面
-    btn.insertAdjacentHTML('beforebegin', slotTemplate());
-    updateOutput();
-  }
-
-  function removeSlot(el){
-    const slot = el.closest('.slot');
-    slot.remove();
-    updateOutput();
+  function chipHTML(){
+    return TIMES.map((t,i)=>{
+      const id = `t_${i}_${Math.floor(1000+Math.random()*9000)}`;
+      const text = t.replace(':','');
+      const plus30 = t.endsWith('30') ? '<small>+30</small>' : '';
+      return `
+        <span class="slot-chip">
+          <input id="${id}" type="checkbox" class="time-ck" data-time="${t}">
+          <label class="chip" for="${id}">${text}${plus30}</label>
+          <select class="dur">
+            <option value="40">40</option>
+            <option value="60" selected>60</option>
+            <option value="90">90</option>
+          </select>
+        </span>`;
+    }).join('');
   }
 
   function addGirlRow(){
@@ -180,8 +191,8 @@
     tr.innerHTML = `
       <td class="col-girl">
         <div class="girl-box">
-          <input type="text" class="girl-name" value="" placeholder="名稱">
-          <input type="text" class="room-input" value="" placeholder="房號">
+          <input type="text" class="girl-name" placeholder="名稱">
+          <input type="text" class="room-input" placeholder="房號">
         </div>
       </td>
       <td class="col-lang">
@@ -199,9 +210,7 @@
         </select>
       </td>
       <td class="col-time">
-        <div class="slots">
-          <button type="button" class="add-slot" onclick="addSlot(this)">＋ 新增時段</button>
-        </div>
+        <div class="time-grid">${chipHTML()}</div>
       </td>`;
     tbody.appendChild(tr);
   }
@@ -212,7 +221,6 @@
     if(nation==='vn') emoji='🇻🇳';
     if(nation==='th') emoji='🇹🇭';
     if(nation==='id') emoji='🇮🇩';
-
     if(langs.includes('zh') && nation==='vn') lang='中越文溝通';
     else if(langs.includes('zh') && nation==='th') lang='中泰文溝通';
     else if(langs.includes('zh') && nation==='tw') lang='中文溝通';
@@ -228,24 +236,19 @@
     const tbody = document.getElementById('girl-rows');
     let result = '';
 
-    [...tbody.children].forEach(tr => {
-      const name = tr.querySelector('.girl-name')?.value.trim() || '';
+    [...tbody.children].forEach(tr=>{
+      const name = tr.querySelector('.girl-name')?.value.trim();
       if(!name) return;
-
       const room = tr.querySelector('.room-input')?.value.trim() || '';
       const langs = [...tr.querySelectorAll('.lang-check')].filter(x=>x.checked).map(x=>x.value);
       const nation = tr.querySelector('.nation-select')?.value || 'tw';
       const {emoji, lang} = getNationInfo(nation, langs);
 
-      const slotsBox = tr.querySelector('.slots');
-      const slotEls = slotsBox ? [...slotsBox.querySelectorAll('.slot')] : [];
       const lines = [];
-
-      slotEls.forEach(s=>{
-        const start = s.querySelector('.start')?.value || '';
-        const dur = s.querySelector('.duration')?.value || '';
-        if(start && dur){
-          lines.push(`${start}/${dur}`);
+      tr.querySelectorAll('.time-ck').forEach(ck=>{
+        if(ck.checked){
+          const dur = ck.parentElement.querySelector('.dur')?.value || '60';
+          lines.push(`${ck.dataset.time}/${dur}`);
         }
       });
 
@@ -258,7 +261,7 @@
     document.getElementById('output-area').innerText = result.trim();
   }
 
-  // 事件綁定：所有變更都刷新右側
+  // 任何變動就更新輸出
   document.getElementById('schedule-table').addEventListener('input', updateOutput);
   document.getElementById('schedule-table').addEventListener('change', updateOutput);
 </script>
