@@ -25,15 +25,26 @@
   .slot-chip{ display:inline-flex; align-items:center; gap:6px; }
   .slot-chip input[type="checkbox"]{ display:none; } /* 用 label 當按鈕 */
   .chip{
-    padding:6px 10px;
+    padding:6px 10px 6px 10px;
     border:1px solid #cfe1ff;
     border-radius:999px;
     background:#fff;
     cursor:pointer;
     font-variant-numeric: tabular-nums;
     user-select:none;
+    position:relative;
+    font-size:15px;
+    letter-spacing:1px;
   }
-  .chip small{ opacity:.65; margin-left:2px; } /* 顯示 30 的小字 */
+  .chip .half-label{
+    position:absolute;
+    top:2px;
+    right:8px;
+    font-size:11px;
+    color:#888;
+    opacity:.7;
+    pointer-events:none;
+  }
   .slot-chip .dur{
     display:none;
     width:64px;
@@ -147,9 +158,10 @@
   ] %}
   {% for t in times %}
     {% set id = 't_' ~ loop.index ~ '_' ~ range(1000,9999)|random %}
+    {% set chip_txt = t.replace(':','') %}
     <span class="slot-chip">
-      <input id="{{ id }}" type="checkbox" class="time-ck" data-time="{{ t }}">
-      <label class="chip" for="{{ id }}">{{ t[:2] ~ t[3:] }}{% if t.endswith('30') %}<small>+30</small>{% endif %}</label>
+      <input id="{{ id }}" type="checkbox" class="time-ck" data-time="{{ chip_txt }}">
+      <label class="chip" for="{{ id }}">{{ chip_txt }}{% if t.endswith('30') %}<span class="half-label">+30</span>{% endif %}</label>
       <select class="dur" aria-label="方案">
         <option value="40">40</option>
         <option value="60" selected>60</option>
@@ -170,12 +182,12 @@
   function chipHTML(){
     return TIMES.map((t,i)=>{
       const id = `t_${i}_${Math.floor(1000+Math.random()*9000)}`;
-      const text = t.replace(':','');
-      const plus30 = t.endsWith('30') ? '<small>+30</small>' : '';
+      const chip_txt = t.replace(':','');
+      const plus30 = t.endsWith('30') ? '<span class="half-label">+30</span>' : '';
       return `
         <span class="slot-chip">
-          <input id="${id}" type="checkbox" class="time-ck" data-time="${t}">
-          <label class="chip" for="${id}">${text}${plus30}</label>
+          <input id="${id}" type="checkbox" class="time-ck" data-time="${chip_txt}">
+          <label class="chip" for="${id}">${chip_txt}${plus30}</label>
           <select class="dur">
             <option value="40">40</option>
             <option value="60" selected>60</option>
