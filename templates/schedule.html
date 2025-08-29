@@ -102,6 +102,9 @@
 </div>
 
 <script>
+const canEdit = {{ can_edit|tojson }};
+const SCHEDULE_KEY = 'schedule_temp_v1';
+
 // 半小時一格
 const timeOptions = [];
 for(let h=11;h<=23;h++){
@@ -122,7 +125,6 @@ function getTodayStr() {
   const week = weekMap[d.getDay()];
   return `${y}-${m}-${day} 星期${week} 預約表`;
 }
-const canEdit = {{ can_edit|tojson }};
 
 // 多人同步：載入時自動 fetch 最新班表
 function fetchAndUpdateSchedule() {
