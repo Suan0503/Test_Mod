@@ -40,4 +40,5 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String(50), unique=True, nullable=False)
     password_hash = Column(String(128), nullable=False)
+    role = Column(String(20), default='user')  # 權限分級：user/admin
     created_at = Column(TIMESTAMP)

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>用戶管理</title>
+  <link rel="stylesheet" href="/static/admin_custom.css">
+  <style>
+    .user-table { border-collapse: collapse; width:100%; margin-top:32px; }
+    .user-table th, .user-table td { border:1px solid #b6d6ff; padding:8px; text-align:center; }
+    .user-table th { background:#e3f2fd; }
+    .admin-badge { color:#fff; background:#4caf50; border-radius:6px; padding:2px 8px; font-size:12px; }
+    .del-btn { background:#f04747; color:#fff; border:none; border-radius:6px; padding:4px 12px; cursor:pointer; }
+    .role-select { width:80px; }
+  </style>
+</head>
+<body>
+  <h2>用戶管理</h2>
+  <table class="user-table">
+    <thead>
+      <tr><th>ID</th><th>帳號</th><th>權限</th><th>建立時間</th><th>操作</th></tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+      <tr>
+        <td>{{ user.id }}</td>
+        <td>{{ user.username }}</td>
+        <td>
+          {% if user.role == 'admin' %}<span class="admin-badge">管理員</span>{% else %}一般用戶{% endif %}
+          <form method="POST" action="/admin/user/role" style="display:inline;">
+            <input type="hidden" name="user_id" value="{{ user.id }}">
+            <select name="role" class="role-select" onchange="this.form.submit()">
+              <option value="user" {% if user.role=='user' %}selected{% endif %}>user</option>
+              <option value="admin" {% if user.role=='admin' %}selected{% endif %}>admin</option>
+            </select>
+          </form>
+        </td>
+        <td>{{ user.created_at }}</td>
+        <td>
+          <form method="POST" action="/admin/user/delete" style="display:inline;">
+            <input type="hidden" name="user_id" value="{{ user.id }}">
+            <button class="del-btn" type="submit" onclick="return confirm('確定要刪除？')">刪除</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <a href="/schedule">回排班表</a>
+</body>
+</html>

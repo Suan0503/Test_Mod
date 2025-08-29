@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))  # ✅ 確保 handler 可被 import
 
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -91,6 +91,56 @@ def search():
             results.append({"type": "抽獎券", "line_user_id": c.line_user_id, "report_no": c.report_no, "amount": c.amount})
     return render_template("search_result.html", q=q, results=results)
 
+# 權限檢查裝飾器
+from functools import wraps
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
+
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        user = db.session.query(User).get(session['user_id'])
+        if not user or user.role != 'admin':
+            flash('只有管理員可操作！')
+            return redirect(url_for('schedule'))
+        return f(*args, **kwargs)
+    return decorated
+
+@app.route('/admin/user', methods=['GET'])
+@admin_required
+def admin_user():
+    users = db.session.query(User).all()
+    return render_template('admin_user.html', users=users)
+
+@app.route('/admin/user/delete', methods=['POST'])
+@admin_required
+def admin_user_delete():
+    user_id = request.form['user_id']
+    user = db.session.query(User).get(user_id)
+    if user:
+        db.session.delete(user)
+        db.session.commit()
+    return redirect(url_for('admin_user'))
+
+@app.route('/admin/user/role', methods=['POST'])
+@admin_required
+def admin_user_role():
+    user_id = request.form['user_id']
+    role = request.form['role']
+    user = db.session.query(User).get(user_id)
+    if user:
+        user.role = role
+        db.session.commit()
+    return redirect(url_for('admin_user'))
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     error = None
@@ -104,7 +154,9 @@ def register():
             error = '帳號已存在'
         else:
             pw_hash = generate_password_hash(password)
-            user = User(username=username, password_hash=pw_hash)
+            # 第一個註冊者自動 admin
+            role = 'admin' if db.session.query(User).count() == 0 else 'user'
+            user = User(username=username, password_hash=pw_hash, role=role)
             db.session.add(user)
             db.session.commit()
             success = '註冊成功，請登入！'
@@ -114,14 +166,15 @@ def register():
 def login():
     error = None
     if request.method == 'POST':
-        username = request.form['username'].strip()
-        password = request.form['password']
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
         user = db.session.query(User).filter_by(username=username).first()
-        if not user or not check_password_hash(user.password_hash, password):
+        if not user or not check_password_hash(str(user.password_hash), password):
             error = '帳號或密碼錯誤'
         else:
             session['user_id'] = user.id
             session['username'] = user.username
+            session['role'] = user.role
             return redirect(url_for('schedule'))
     return render_template('login.html', error=error)
 
@@ -131,10 +184,9 @@ def logout():
     return redirect(url_for('login'))
 
 @app.route('/schedule')
+@login_required
 def schedule():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    return render_template('schedule.html')
+    return render_template('schedule.html', username=session.get('username'), role=session.get('role'))
 
 if __name__ == "__main__":
     # 初始化 admin panel
