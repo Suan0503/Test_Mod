@@ -33,15 +33,15 @@
         {% for girl in ['多多', '莎莎'] %}
         <tr>
           <td>
-            <input type="text" class="girl-name" value="{{ girl }}" placeholder="名稱" {% if group in ['operator','switchboard'] %}readonly{% endif %}>
-            <input type="text" class="room-input" placeholder="房號" {% if group in ['operator','switchboard'] %}readonly{% endif %}>
+            <input type="text" class="girl-name" value="{{ girl }}" placeholder="名稱" {% if not can_edit %}readonly{% endif %}>
+            <input type="text" class="room-input" placeholder="房號" {% if not can_edit %}readonly{% endif %}>
           </td>
           <td>
-            <label><input type="checkbox" class="lang-check" value="zh" {% if group in ['operator','switchboard'] %}disabled{% endif %}>中</label>
-            <label><input type="checkbox" class="lang-check" value="en" {% if group in ['operator','switchboard'] %}disabled{% endif %}>英</label>
+            <label><input type="checkbox" class="lang-check" value="zh" {% if not can_edit %}disabled{% endif %}>中</label>
+            <label><input type="checkbox" class="lang-check" value="en" {% if not can_edit %}disabled{% endif %}>英</label>
           </td>
           <td>
-            <select class="nation-select" style="width:90px;" {% if group in ['operator','switchboard'] %}disabled{% endif %}>
+            <select class="nation-select" style="width:90px;" {% if not can_edit %}disabled{% endif %}>
               <option value="tw">🇹🇼 台灣</option>
               <option value="vn">🇻🇳 越南</option>
               <option value="th">🇹🇭 泰國</option>
@@ -50,7 +50,7 @@
           </td>
           <td>
             <div class="times-list"></div>
-            {% if group not in ['operator','switchboard'] %}
+            {% if can_edit %}
             <button class="add-time-btn" onclick="addTimeRow(this)">新增時段</button>
             {% endif %}
           </td>
@@ -58,7 +58,7 @@
         {% endfor %}
       </tbody>
     </table>
-    {% if group not in ['operator','switchboard'] %}
+    {% if can_edit %}
     <button class="add-girl-btn" onclick="addGirlRow()" style="margin-top:12px;">新增妹妹</button>
     {% endif %}
   </div>

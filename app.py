@@ -242,7 +242,10 @@ def logout():
 @login_required
 def schedule():
     info = get_user_info()
-    return render_template('schedule.html', **info)
+    # 檢查權限，操作人員/總機只能檢視
+    user = db.session.query(User).get(session.get('user_id'))
+    can_edit = user and user.user_group in ['admin','superadmin']
+    return render_template('schedule.html', can_edit=can_edit, **info)
 
 if __name__ == "__main__":
     # 初始化 admin panel
