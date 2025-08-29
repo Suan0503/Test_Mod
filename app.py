@@ -11,6 +11,7 @@ from extensions import db
 from routes.message import message_bp
 from models import User
 from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
 
 app = Flask(__name__)
 # 設定 secret_key，支援 session/flash
@@ -25,6 +26,26 @@ app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
+
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        user = db.session.query(User).get(session['user_id'])
+        if not user or user.role != 'admin':
+            flash('只有管理員可操作！')
+            return redirect(url_for('schedule'))
+        return f(*args, **kwargs)
+    return decorated
 
 # Blueprint 註冊
 
@@ -75,29 +96,6 @@ def search():
         for c in cp:
             results.append({"type": "抽獎券", "line_user_id": c.line_user_id, "report_no": c.report_no, "amount": c.amount})
     return render_template("search_result.html", q=q, results=results)
-
-# 權限檢查裝飾器
-from functools import wraps
-
-def login_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if 'user_id' not in session:
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated
-
-def admin_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if 'user_id' not in session:
-            return redirect(url_for('login'))
-        user = db.session.query(User).get(session['user_id'])
-        if not user or user.role != 'admin':
-            flash('只有管理員可操作！')
-            return redirect(url_for('schedule'))
-        return f(*args, **kwargs)
-    return decorated
 
 @app.route('/admin/user', methods=['GET'])
 @admin_required
