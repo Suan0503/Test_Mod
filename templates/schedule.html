@@ -6,9 +6,20 @@
   .schedule-table th { background:#e3f2fd; }
   .girl-name, .room-input { width:80px; display:block; margin:2px auto; }
   .lang-check { margin:0 4px; }
-  .time-cell { display:flex; align-items:center; gap:4px; margin-right:8px; }
-  .time-row { display:flex; flex-wrap:wrap; padding:4px; }
-  .duration-row { display:flex; flex-wrap:wrap; padding:4px; gap:10px; }
+  .time-container, .duration-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    max-width: 460px;
+    margin: auto;
+    justify-content: center;
+  }
+  .time-block, .duration-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100px;
+  }
 </style>
 
 <div class="schedule-main" style="display:flex;gap:32px;padding:32px 0;">
@@ -36,30 +47,32 @@
           </td>
           <td>
             <select class="nation-select" style="width:90px;">
-              <option value="tw">🇹🇼台灣</option>
-              <option value="vn">🇻🇳越南</option>
-              <option value="th">🇹🇭泰國</option>
-              <option value="id">🇮🇩印尼</option>
+              <option value="tw">🇹🇼 台灣</option>
+              <option value="vn">🇻🇳 越南</option>
+              <option value="th">🇹🇭 泰國</option>
+              <option value="id">🇮🇩 印尼</option>
             </select>
           </td>
           <td>
-            <div class="time-row">
+            <div class="time-container">
               {% set timeslots = [11,12,1,2,3,4,5,6,7,8,9,10,11,12,1] %}
               {% for t in timeslots %}
-              <div class="time-cell">
+              <div class="time-block">
                 <label><input type="checkbox" class="hour-check" data-hour="{{ t }}" data-half="0">✅{{ "%02d00"|format(t) }}</label>
                 <label><input type="checkbox" class="half-check" data-hour="{{ t }}" data-half="1">✅30</label>
               </div>
               {% endfor %}
             </div>
-            <div class="duration-row">
+            <div class="duration-container">
               {% for t in timeslots %}
-              <select class="duration" style="width:50px;">
-                <option value="">--</option>
-                <option value="40">40</option>
-                <option value="60">60</option>
-                <option value="90">90</option>
-              </select>
+              <div class="duration-block">
+                <select class="duration">
+                  <option value="">--</option>
+                  <option value="40">40</option>
+                  <option value="60">60</option>
+                  <option value="90">90</option>
+                </select>
+              </div>
               {% endfor %}
             </div>
           </td>
@@ -92,31 +105,33 @@ function addGirlRow() {
     </td>
     <td>
       <select class="nation-select" style="width:90px;">
-        <option value="tw">🇹🇼台灣</option>
-        <option value="vn">🇻🇳越南</option>
-        <option value="th">🇹🇭泰國</option>
-        <option value="id">🇮🇩印尼</option>
+        <option value="tw">🇹🇼 台灣</option>
+        <option value="vn">🇻🇳 越南</option>
+        <option value="th">🇹🇭 泰國</option>
+        <option value="id">🇮🇩 印尼</option>
       </select>
     </td>
     <td>
-      <div class="time-row">`;
+      <div class="time-container">`;
   for (let t of timeslots) {
     const hh = String(t).padStart(2, '0') + '00';
     html += `
-      <div class="time-cell">
-        <label><input type="checkbox" class="hour-check" data-hour="${t}" data-half="0">✅${hh}</label>
-        <label><input type="checkbox" class="half-check" data-hour="${t}" data-half="1">✅30</label>
-      </div>`;
+        <div class="time-block">
+          <label><input type="checkbox" class="hour-check" data-hour="${t}" data-half="0">✅${hh}</label>
+          <label><input type="checkbox" class="half-check" data-hour="${t}" data-half="1">✅30</label>
+        </div>`;
   }
-  html += `</div><div class="duration-row">`;
+  html += `</div><div class="duration-container">`;
   for (let t of timeslots) {
     html += `
-      <select class="duration" style="width:50px;">
-        <option value="">--</option>
-        <option value="40">40</option>
-        <option value="60">60</option>
-        <option value="90">90</option>
-      </select>`;
+        <div class="duration-block">
+          <select class="duration">
+            <option value="">--</option>
+            <option value="40">40</option>
+            <option value="60">60</option>
+            <option value="90">90</option>
+          </select>
+        </div>`;
   }
   html += `</div></td>`;
   tr.innerHTML = html;
@@ -140,7 +155,6 @@ function getNationInfo(nation, langs) {
   else if (nation === 'th') lang = '泰文溝通';
   else if (nation === 'id') lang = '印尼文溝通';
   else lang = '';
-
   return { emoji, lang };
 }
 
