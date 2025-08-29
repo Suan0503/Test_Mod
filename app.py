@@ -66,13 +66,49 @@ with app.app_context():
 @app.route("/")
 @login_required
 def home():
-    try:
-        db.session.execute("SELECT 1")
-        db_status = "資料庫連線正常"
-    except Exception as e:
-        db_status = "資料庫連線異常: " + str(e)
-    return f"LINE Bot 正常運作中～🍵\n{db_status}"
+    user = db.session.query(User).get(session.get('user_id'))
+    import datetime
+    today = datetime.date.today()
+    expire_days = '未設定'
+    group_name = '未知'
+    is_superadmin = False
+    if user:
+        if user.expire_date:
+            expire_days = (user.expire_date.date() - today).days
+        group_map = {
+            'superadmin': '超級管理員',
+            'admin': '管理員',
+            'switchboard': '總機',
+            'operator': '操作人員'
+        }
+        group_name = group_map.get(user.group, '未知')
+        is_superadmin = (user.group == 'superadmin')
+        username = user.username
+    else:
+        username = '未知'
+    return render_template("home.html", username=username, group=group_name, expire_days=expire_days, is_superadmin=is_superadmin)
 
+@app.route('/admin/interface', methods=['GET', 'POST'])
+@login_required
+def admin_interface():
+    user = db.session.query(User).get(session.get('user_id'))
+    if not user or user.group != 'superadmin':
+        return redirect(url_for('home'))
+    msg = None
+    if request.method == 'POST':
+        target_id = request.form.get('user_id')
+        days = int(request.form.get('days', 0))
+        target = db.session.query(User).get(target_id)
+        if target:
+            import datetime
+            if target.expire_date and target.expire_date > datetime.datetime.now():
+                target.expire_date += datetime.timedelta(days=days)
+            else:
+                target.expire_date = datetime.datetime.now() + datetime.timedelta(days=days)
+            db.session.commit()
+            msg = f"已成功為 {target.username} 續費 {days} 天！"
+    users = db.session.query(User).all()
+    return render_template('admin_interface.html', users=users, msg=msg)
 
 # 搜尋功能
 from flask import render_template, request

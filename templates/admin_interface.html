@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>管理介面</title>
+  <link rel="stylesheet" href="/static/admin_custom.css">
+  <style>
+    .user-table { border-collapse: collapse; width:100%; margin-top:32px; }
+    .user-table th, .user-table td { border:1px solid #b6d6ff; padding:8px; text-align:center; }
+    .user-table th { background:#e3f2fd; }
+    .renew-form { display:flex;gap:8px;justify-content:center; }
+    .renew-btn { background:#4caf50;color:#fff;padding:4px 12px;border-radius:6px;border:none;font-weight:600; }
+  </style>
+</head>
+<body>
+  <h2>會員續費管理</h2>
+  {% if msg %}<div style="color:#4caf50;text-align:center;margin-bottom:12px;">{{ msg }}</div>{% endif %}
+  <table class="user-table">
+    <thead>
+      <tr><th>ID</th><th>帳號</th><th>用戶組</th><th>到期日</th><th>續費</th></tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+      <tr>
+        <td>{{ user.id }}</td>
+        <td>{{ user.username }}</td>
+        <td>{{ user.group }}</td>
+        <td>{% if user.expire_date %}{{ user.expire_date.strftime('%Y-%m-%d') }}{% else %}未設定{% endif %}</td>
+        <td>
+          <form class="renew-form" method="POST">
+            <input type="hidden" name="user_id" value="{{ user.id }}">
+            <input type="number" name="days" min="1" max="365" placeholder="天數" required>
+            <button class="renew-btn" type="submit">續費</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <a href="/">回主頁</a>
+</body>
+</html>
