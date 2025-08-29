@@ -244,7 +244,7 @@ def schedule():
     info = get_user_info()
     # 檢查權限，操作人員/總機只能檢視
     user = db.session.query(User).get(session.get('user_id'))
-    can_edit = user and user.user_group in ['admin','superadmin']
+    can_edit = bool(user and user.user_group in ['admin','superadmin'])
     return render_template('schedule.html', can_edit=can_edit, **info)
 
 from flask import jsonify
