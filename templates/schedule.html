@@ -94,7 +94,10 @@ function getTodayStr() {
   const week = weekMap[d.getDay()];
   return `${y}-${m}-${day} 星期${week} 預約表`;
 }
+const canEdit = {{ can_edit|tojson }};
+
 function addTimeRow(btn) {
+  if(!canEdit) return;
   const timesList = btn.parentNode.querySelector('.times-list');
   const div = document.createElement('div');
   div.className = 'time-row';
@@ -145,10 +148,12 @@ function addTimeRow(btn) {
   getScheduleResult();
 }
 function removeTimeRow(btn) {
+  if(!canEdit) return;
   btn.parentNode.remove();
   getScheduleResult();
 }
 function addGirlRow() {
+  if(!canEdit) return;
   const tbody = document.getElementById('girl-rows');
   const tr = document.createElement('tr');
   tr.innerHTML = `
@@ -347,6 +352,7 @@ function autoSaveSchedule() {
 
 // 新增妹妹/時段後也要儲存
 function addGirlRow() {
+  if(!canEdit) return;
   const tbody = document.getElementById('girl-rows');
   const tr = document.createElement('tr');
   tr.innerHTML = `
@@ -376,6 +382,7 @@ function addGirlRow() {
   saveScheduleToStorage();
 }
 function addTimeRow(btn) {
+  if(!canEdit) return;
   const timesList = btn.parentNode.querySelector('.times-list');
   const div = document.createElement('div');
   div.className = 'time-row';
@@ -427,6 +434,7 @@ function addTimeRow(btn) {
   saveScheduleToStorage();
 }
 function removeTimeRow(btn) {
+  if(!canEdit) return;
   btn.parentNode.remove();
   getScheduleResult();
   saveScheduleToStorage();
