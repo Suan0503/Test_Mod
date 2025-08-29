@@ -1,253 +1,246 @@
 {% extends 'admin_custom_master.html' %}
 {% block body %}
 <style>
-  .schedule-wrap{ padding:24px 0; }
-  .table-shell{ overflow:auto; border-radius:10px; background:#f7faff; padding:8px; }
-  .schedule-table{ border-collapse:separate; border-spacing:0; width:100%; min-width:980px; table-layout:fixed; }
-  .schedule-table th, .schedule-table td{ border:1px solid #b6d6ff; background:#fff; padding:10px; vertical-align:top; }
-  .schedule-table thead th{ background:#eaf3ff; text-align:center; font-weight:600; }
+  .schedule-table { border-collapse: collapse; width:100%; }
+  .schedule-table th, .schedule-table td { border:1px solid #b6d6ff; padding:8px 10px; text-align:center; }
+  .schedule-table th { background:#e3f2fd; }
+  .add-girl-btn { margin-top:12px; }
+  .nation-select { width:90px; }
+  .room-input { width:60px; }
+  .lang-check { margin:0 4px; }
+  .time-cell { min-width:54px; display:flex; align-items:center; justify-content:center; gap:2px; }
+  .time-row { display:flex; justify-content:center; gap:6px; margin-bottom:2px; }
+  .time-select-row { display:flex; justify-content:center; gap:6px; margin-bottom:8px; }
+</style>
 
-  .col-girl{ width:300px; }
-  .col-lang{ width:160px; }
-  .col-nation{ width:160px; }
-  .col-time{ min-width:560px; }
-
-  .girl-box{ display:grid; grid-template-columns: 1fr 120px; gap:8px; }
-  .lang-group{ display:flex; gap:12px; align-items:center; }
-  .lang-group label{ display:inline-flex; gap:6px; align-items:center; }
-
-  /* === 時間 chip 版 === */
-  .time-grid{
-    display:grid;
-    grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
-    gap:8px;
-  }
-  .slot-chip{ display:inline-flex; align-items:center; gap:6px; }
-  .slot-chip input[type="checkbox"]{ display:none; } /* 用 label 當按鈕 */
-  .chip{
-    padding:6px 10px 6px 10px;
-    border:1px solid #cfe1ff;
-    border-radius:999px;
-    background:#fff;
-    cursor:pointer;
-    font-variant-numeric: tabular-nums;
-    user-select:none;
-    position:relative;
-    font-size:15px;
-    letter-spacing:1px;
-  }
-  .chip .half-label{
-    position:absolute;
-    top:2px;
-    right:8px;
-    font-size:11px;
-    color:#888;
-    opacity:.7;
-    pointer-events:none;
-  }
-  .slot-chip .dur{
-    display:none;
-    width:64px;
-    padding:4px 6px;
-  }
-  /* 勾選後變色，並顯示方案 */
-  .slot-chip input:checked + label.chip{
-    background:#e8f1ff;
-    border-color:#6aa1ff;
-    box-shadow: 0 0 0 2px rgba(51,122,255,.08) inset;
-  }
-  .slot-chip input:checked + label.chip + select.dur{ display:inline-block; }
-
-              <div class="time-grid">
-                {% set times = [
-                  '11:00','11:30','12:00','12:30',
-                  '01:00','01:30','02:00','02:30','03:00','03:30','04:00','04:30','05:00','05:30',
-                  '06:00','06:30','07:00','07:30','08:00','08:30','09:00','09:30','10:00','10:30',
-                  '11:00','11:30','12:00','12:30','01:00'
-                ] %}
-                {% for t in times %}
-                  {% set id = 't_' ~ loop.index ~ '_' ~ range(1000,9999)|random %}
-                  {% set chip_txt = t.replace(':','') %}
-                  <span class="slot-chip">
-                    <input id="{{ id }}" type="checkbox" class="time-ck" data-time="{{ chip_txt }}">
-                    <label class="chip" for="{{ id }}">{{ chip_txt }}{% if t.endswith('30') %}<span class="half-label">+30</span>{% endif %}</label>
-                    <select class="dur" aria-label="方案">
-                      <option value="40">40</option>
-                      <option value="60" selected>60</option>
-                      <option value="90">90</option>
-                    </select>
-                  </span>
-                {% endfor %}
-              </div>
-
-<div class="schedule-main" style="display:flex; gap:32px;">
-  <div style="flex:1; min-width:420px;">
+<div class="schedule-main" style="display:flex;gap:32px;padding:32px 0;">
+  <div style="flex:1;min-width:320px;">
     <h3>排班表</h3>
+    <table class="schedule-table" id="schedule-table">
+      <thead>
+        <tr>
+          <th style="padding-left:16px;">妹妹</th>
+          <th style="padding-left:8px;">語言</th>
+          <th style="padding-left:8px;">國籍</th>
+          <th style="padding-left:8px;">房間號碼</th>
+          <th colspan="15">時間</th>
+        </tr>
+      </thead>
+      <tbody id="girl-rows">
+        <!-- 多多 -->
+        <tr>
+          <td style="padding-left:16px;">
+            <input type="text" value="多多" class="girl-name" style="width:80px;">
+          </td>
+          <td style="padding-left:8px;">
+            <label><input type="checkbox" class="lang-check" value="zh">中</label>
+            <label><input type="checkbox" class="lang-check" value="en">英</label>
+          </td>
+          <td style="padding-left:8px;">
+            <select class="nation-select">
+              <option value="tw">🇹🇼台灣</option>
+              <option value="vn">🇻🇳越南</option>
+              <option value="th">🇹🇭泰國</option>
+              <option value="id">🇮🇩印尼</option>
+            </select>
+          </td>
+          <td style="padding-left:8px;">
+            <input type="text" class="room-input" value="501007">
+          </td>
+          <td colspan="15">
+            <div class="time-row">
+              {% set timeslots = [11,12,1,2,3,4,5,6,7,8,9,10,11,12,1] %}
+              {% for t in timeslots %}
+                <span class="time-cell">
+                  <input type="checkbox" class="hour-check" data-hour="{{ t }}" data-half="0">
+                  <label style="margin-right:2px;">{{ t }}</label>
+                  <input type="checkbox" class="half-check" data-hour="{{ t }}" data-half="1">
+                  <label style="margin-left:2px;">30</label>
+                </span>
+              {% endfor %}
+            </div>
+            <div class="time-select-row">
+              {% for t in timeslots %}
+                <span style="display:flex;align-items:center;justify-content:center;">
+                  <select class="duration" style="width:50px;">
+                    <option value="">--</option>
+                    <option value="60">60</option>
+                    <option value="90">90</option>
+                  </select>
+                </span>
+              {% endfor %}
+            </div>
+          </td>
+        </tr>
 
-    <div class="table-shell">
-      <table class="schedule-table" id="schedule-table">
-        <thead>
-          <tr>
-            <th class="col-girl">妹妹（名稱／房間號碼）</th>
-            <th class="col-lang">語言</th>
-            <th class="col-nation">國籍</th>
-            <th class="col-time">時間</th>
-          </tr>
-        </thead>
-        <tbody id="girl-rows">
-          <!-- 多多 -->
-          <tr>
-            <td class="col-girl">
-              <div class="girl-box">
-                <input type="text" class="girl-name" value="多多" placeholder="名稱">
-                <input type="text" class="room-input" value="501007" placeholder="房號">
-              </div>
-            </td>
-            <td class="col-lang">
-              <div class="lang-group">
-                <label><input type="checkbox" class="lang-check" value="zh">中</label>
-                <label><input type="checkbox" class="lang-check" value="en">英</label>
-              </div>
-            </td>
-            <td class="col-nation">
-              <select class="nation-select" style="width:100%;">
-                <option value="tw">🇹🇼 台灣</option>
-                <option value="vn">🇻🇳 越南</option>
-                <option value="th">🇹🇭 泰國</option>
-                <option value="id">🇮🇩 印尼</option>
-              </select>
-            </td>
-            <td class="col-time">
-              <div class="time-grid">
-              </div>
-            </td>
-          </tr>
-
-            </td>
-            <td class="col-time">
-              <div class="time-grid">
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
+        <!-- 莎莎 -->
+        <tr>
+          <td style="padding-left:16px;">
+            <input type="text" value="莎莎" class="girl-name" style="width:80px;">
+          </td>
+          <td style="padding-left:8px;">
+            <label><input type="checkbox" class="lang-check" value="zh">中</label>
+            <label><input type="checkbox" class="lang-check" value="en">英</label>
+          </td>
+          <td style="padding-left:8px;">
+            <select class="nation-select">
+              <option value="tw">🇹🇼台灣</option>
+              <option value="vn">🇻🇳越南</option>
+              <option value="th">🇹🇭泰國</option>
+              <option value="id">🇮🇩印尼</option>
+            </select>
+          </td>
+          <td style="padding-left:8px;">
+            <input type="text" class="room-input" value="">
+          </td>
+          <td colspan="15">
+            <div class="time-row">
+              {% set timeslots = [11,12,1,2,3,4,5,6,7,8,9,10,11,12,1] %}
+              {% for t in timeslots %}
+                <span class="time-cell">
+                  <input type="checkbox" class="hour-check" data-hour="{{ t }}" data-half="0">
+                  <label>{{ t }}</label>
+                  <input type="checkbox" class="half-check" data-hour="{{ t }}" data-half="1">
+                  <label>30</label><br>
+                  <select class="duration" style="width:50px;">
+                    <option value="">--</option>
+                    <option value="60">60</option>
+                    <option value="90">90</option>
+                  </select>
+                </span>
+              {% endfor %}
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
     <button class="add-girl-btn" onclick="addGirlRow()">新增妹妹</button>
   </div>
 
-  <div style="flex:1; min-width:320px;">
+  <div style="flex:1;min-width:320px;">
     <h3>即時排班結果</h3>
-    <div id="output-area"></div>
+    <div id="output-area" style="background:#f7f9fe;border-radius:8px;min-height:400px;padding:16px;font-size:16px;white-space:pre-line;"></div>
   </div>
 </div>
 
-{# ---- Jinja 小巨集：產出 chips ---- #}
-
 <script>
-  // 產出 time chips 的 HTML（for 新增妹妹）
-  const TIMES = [
-    '11:00','11:30','12:00','12:30',
-    '01:00','01:30','02:00','02:30','03:00','03:30','04:00','04:30','05:00','05:30',
-    '06:00','06:30','07:00','07:30','08:00','08:30','09:00','09:30','10:00','10:30',
-    '11:00','11:30','12:00','12:30','01:00'
-  ];
-  function chipHTML(){
-    return TIMES.map((t,i)=>{
-      const id = `t_${i}_${Math.floor(1000+Math.random()*9000)}`;
-      const chip_txt = t.replace(':','');
-      const plus30 = t.endsWith('30') ? '<span class="half-label">+30</span>' : '';
-      return `
-        <span class="slot-chip">
-          <input id="${id}" type="checkbox" class="time-ck" data-time="${chip_txt}">
-          <label class="chip" for="${id}">${chip_txt}${plus30}</label>
-          <select class="dur">
-            <option value="40">40</option>
-            <option value="60" selected>60</option>
-            <option value="90">90</option>
-          </select>
-        </span>`;
-    }).join('');
-  }
-
-  function addGirlRow(){
+  function addGirlRow() {
     const tbody = document.getElementById('girl-rows');
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="col-girl">
-        <div class="girl-box">
-          <input type="text" class="girl-name" placeholder="名稱">
-          <input type="text" class="room-input" placeholder="房號">
-        </div>
+    let html = `
+      <td style='padding-left:16px;'>
+        <input type='text' value='' class='girl-name' style='width:80px;'>
       </td>
-      <td class="col-lang">
-        <div class="lang-group">
-          <label><input type="checkbox" class="lang-check" value="zh">中</label>
-          <label><input type="checkbox" class="lang-check" value="en">英</label>
-        </div>
+      <td style='padding-left:8px;'>
+        <label><input type='checkbox' class='lang-check' value='zh'>中</label>
+        <label><input type='checkbox' class='lang-check' value='en'>英</label>
       </td>
-      <td class="col-nation">
-        <select class="nation-select" style="width:100%;">
-          <option value="tw">🇹🇼 台灣</option>
-          <option value="vn">🇻🇳 越南</option>
-          <option value="th">🇹🇭 泰國</option>
-          <option value="id">🇮🇩 印尼</option>
+      <td style='padding-left:8px;'>
+        <select class='nation-select'>
+          <option value='tw'>🇹🇼台灣</option>
+          <option value='vn'>🇻🇳越南</option>
+          <option value='th'>🇹🇭泰國</option>
+          <option value='id'>🇮🇩印尼</option>
         </select>
       </td>
-      <td class="col-time">
-        <div class="time-grid">${chipHTML()}</div>
-      </td>`;
+      <td style='padding-left:8px;'>
+        <input type='text' class='room-input'>
+      </td>
+      <td colspan='15'>
+        <div class='time-row'>`;
+
+    const timeslots = [11,12,1,2,3,4,5,6,7,8,9,10,11,12,1];
+    for (let t of timeslots) {
+      html += `
+        <span class='time-cell'>
+          <input type='checkbox' class='hour-check' data-hour='${t}' data-half='0'>
+          <label style='margin-right:2px;'>${t}</label>
+          <input type='checkbox' class='half-check' data-hour='${t}' data-half='1'>
+          <label style='margin-left:2px;'>30</label>
+        </span>`;
+    }
+
+    html += `</div><div class='time-select-row'>`;
+    for (let t of timeslots) {
+      html += `
+        <span style='display:flex;align-items:center;justify-content:center;'>
+          <select class='duration' style='width:50px;'>
+            <option value=''>--</option>
+            <option value='60'>60</option>
+            <option value='90'>90</option>
+          </select>
+        </span>`;
+    }
+    html += `</div></td>`;
+    tr.innerHTML = html;
     tbody.appendChild(tr);
   }
 
-  function getNationInfo(nation, langs){
-    let emoji='', lang='';
-    if(nation==='tw') emoji='🇹🇼';
-    if(nation==='vn') emoji='🇻🇳';
-    if(nation==='th') emoji='🇹🇭';
-    if(nation==='id') emoji='🇮🇩';
-    if(langs.includes('zh') && nation==='vn') lang='中越文溝通';
-    else if(langs.includes('zh') && nation==='th') lang='中泰文溝通';
-    else if(langs.includes('zh') && nation==='tw') lang='中文溝通';
-    else if(langs.includes('en') && nation==='vn') lang='英越文溝通';
-    else if(langs.includes('en') && nation==='th') lang='英泰文溝通';
-    else if(nation==='vn') lang='越文溝通';
-    else if(nation==='th') lang='泰文溝通';
-    else if(nation==='id') lang='印尼文溝通';
+  function getNationInfo(nation, langs) {
+    let emoji = '';
+    let lang = '';
+    if (nation === 'tw') emoji = '🇹🇼';
+    if (nation === 'vn') emoji = '🇻🇳';
+    if (nation === 'th') emoji = '🇹🇭';
+    if (nation === 'id') emoji = '🇮🇩';
+
+    if (langs.includes('zh') && nation === 'vn') lang = '中越文溝通';
+    else if (langs.includes('zh') && nation === 'th') lang = '中泰文溝通';
+    else if (langs.includes('zh') && nation === 'tw') lang = '中文溝通';
+    else if (langs.includes('en') && nation === 'vn') lang = '英越文溝通';
+    else if (langs.includes('en') && nation === 'th') lang = '英泰文溝通';
+    else if (nation === 'vn') lang = '越文溝通';
+    else if (nation === 'th') lang = '泰文溝通';
+    else if (nation === 'id') lang = '印尼文溝通';
+    else lang = '';
+
     return { emoji, lang };
   }
 
-  function updateOutput(){
+  function getScheduleResult() {
     const tbody = document.getElementById('girl-rows');
+    const timeslots = [11,12,1,2,3,4,5,6,7,8,9,10,11,12,1];
     let result = '';
 
-    [...tbody.children].forEach(tr=>{
-      const name = tr.querySelector('.girl-name')?.value.trim();
-      if(!name) return;
-      const room = tr.querySelector('.room-input')?.value.trim() || '';
-      const langs = [...tr.querySelectorAll('.lang-check')].filter(x=>x.checked).map(x=>x.value);
-      const nation = tr.querySelector('.nation-select')?.value || 'tw';
-      const {emoji, lang} = getNationInfo(nation, langs);
+    for (const tr of tbody.children) {
+      const name = tr.querySelector('.girl-name').value.trim();
+      const langChecks = tr.querySelectorAll('.lang-check');
+      const langs = Array.from(langChecks).filter(c => c.checked).map(c => c.value);
+      const nationSelect = tr.querySelector('.nation-select');
+      const nation = nationSelect.value;
+      const room = tr.querySelector('.room-input').value.trim();
 
-      const lines = [];
-      tr.querySelectorAll('.time-ck').forEach(ck=>{
-        if(ck.checked){
-          const dur = ck.parentElement.querySelector('.dur')?.value || '60';
-          lines.push(`${ck.dataset.time}/${dur}`);
+      if (!name) continue;
+
+      const nationInfo = getNationInfo(nation, langs);
+      let line = `💗${name} 11:00-01:00${nationInfo.emoji ? ' ' + nationInfo.emoji : ''}➡️${nationInfo.lang ? nationInfo.lang : ''}${room ? ' ('+room+')' : ''}`;
+      
+      let slots = [];
+      const hourCells = tr.querySelectorAll('.time-cell');
+      for (let i=0; i<hourCells.length; i++) {
+        const hourCheck = hourCells[i].querySelector('.hour-check');
+        const halfCheck = hourCells[i].querySelector('.half-check');
+        const duration = hourCells[i].querySelector('.duration').value;
+
+        if (hourCheck.checked && halfCheck.checked && duration) {
+          slots.push(`${timeslots[i]}30/${duration}`);
+        } else if (hourCheck.checked && duration) {
+          slots.push(`${timeslots[i]<10 ? '0'+timeslots[i] : timeslots[i]}:00/${duration}`);
+        } else if (halfCheck.checked && duration) {
+          slots.push(`${timeslots[i]}30/${duration}`);
         }
-      });
-
-      let head = `💗${name} 11:00-01:00${emoji ? ' '+emoji : ''}➡️${lang ? lang : ''}${room ? ' ('+room+')' : ''}`;
-      if(lines.length){
-        result += head + '\n' + lines.join('\n') + '\n\n';
       }
-    });
+
+      if (slots.length) {
+        line += '\n' + slots.join('\n');
+        result += line + '\n\n';
+      }
+    }
 
     document.getElementById('output-area').innerText = result.trim();
   }
 
-  // 任何變動就更新輸出
-  document.getElementById('schedule-table').addEventListener('input', updateOutput);
-  document.getElementById('schedule-table').addEventListener('change', updateOutput);
+  document.getElementById('schedule-table').addEventListener('input', getScheduleResult);
+  document.getElementById('schedule-table').addEventListener('change', getScheduleResult);
 </script>
 {% endblock %}
