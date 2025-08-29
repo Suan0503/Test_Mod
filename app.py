@@ -264,13 +264,22 @@ def api_schedule():
     # POST 僅限管理員/超級管理員
     if not user or user.user_group not in ['admin','superadmin']:
         return jsonify({'error':'權限不足'}), 403
-    data = request.json.get('data')
+    payload = request.get_json()
+    print('DEBUG /api/schedule POST payload:', payload)
+    data = payload.get('data') if payload else None
     if not data:
+        print('DEBUG /api/schedule 缺少 data 欄位:', payload)
         return jsonify({'error':'缺少資料'}), 400
-    new_schedule = Schedule(data=data, updated_at=datetime.datetime.now())
-    db.session.add(new_schedule)
-    db.session.commit()
-    return jsonify({'success':True})
+    try:
+        new_schedule = Schedule(data=data, updated_at=datetime.datetime.now())
+        db.session.add(new_schedule)
+        db.session.commit()
+        print('DEBUG /api/schedule 寫入成功:', new_schedule)
+        return jsonify({'success':True})
+    except Exception as e:
+        print('ERROR /api/schedule 寫入失敗:', e)
+        db.session.rollback()
+        return jsonify({'error':'資料庫寫入失敗', 'detail': str(e)}), 500
 
 if __name__ == "__main__":
     # 初始化 admin panel
