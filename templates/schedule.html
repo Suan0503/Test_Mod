@@ -96,6 +96,104 @@ function getTodayStr() {
 }
 const canEdit = {{ can_edit|tojson }};
 
+// 多人同步：載入時自動 fetch 最新班表
+window.addEventListener('DOMContentLoaded',()=>{
+  fetch('/api/schedule').then(r=>r.json()).then(data=>{
+    if(data && Object.keys(data).length) {
+      loadScheduleFromServer(data);
+    } else {
+      loadScheduleFromStorage();
+    }
+  });
+  autoSaveSchedule();
+});
+
+function loadScheduleFromServer(data) {
+  // data 結構需與 saveScheduleToServer 一致
+  const tbody = document.getElementById('girl-rows');
+  tbody.innerHTML = '';
+  for(const girl of data.girls||[]) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>
+        <input type="text" class="girl-name" value="${girl.name}" placeholder="名稱" {% if not can_edit %}readonly{% endif %}>
+        <input type="text" class="room-input" value="${girl.room}" placeholder="房號" {% if not can_edit %}readonly{% endif %}>
+      </td>
+      <td>
+        <label><input type="checkbox" class="lang-check" value="zh" ${girl.langs&&girl.langs.includes('zh')?'checked':''} {% if not can_edit %}disabled{% endif %}>中</label>
+        <label><input type="checkbox" class="lang-check" value="en" ${girl.langs&&girl.langs.includes('en')?'checked':''} {% if not can_edit %}disabled{% endif %}>英</label>
+      </td>
+      <td>
+        <select class="nation-select" style="width:90px;" {% if not can_edit %}disabled{% endif %}>
+          <option value="tw"${girl.nation==='tw'?' selected':''}>🇹🇼 台灣</option>
+          <option value="vn"${girl.nation==='vn'?' selected':''}>🇻🇳 越南</option>
+          <option value="th"${girl.nation==='th'?' selected':''}>🇹🇭 泰國</option>
+          <option value="id"${girl.nation==='id'?' selected':''}>🇮🇩 印尼</option>
+        </select>
+      </td>
+      <td>
+        <div class="times-list"></div>
+        {% if can_edit %}<button class="add-time-btn" onclick="addTimeRow(this)">新增時段</button>{% endif %}
+      </td>
+    `;
+    tbody.appendChild(tr);
+    // 時段
+    const timesList = tr.querySelector('.times-list');
+    for(const t of girl.times||[]) {
+      const div = document.createElement('div');
+      div.className = 'time-row';
+      div.innerHTML = `
+        <select class="time-select">
+          ${timeOptions.map(opt=>`<option value="${opt}"${opt===t.time?' selected':''}>${opt}</option>`).join('')}
+        </select>
+        <select class="duration-select">
+          <option value="40"${t.dur==='40'?' selected':''}>40</option>
+          <option value="60"${t.dur==='60'?' selected':''}>60</option>
+          <option value="90"${t.dur==='90'?' selected':''}>90</option>
+        </select>
+        {% if can_edit %}<button class="remove-time-btn" onclick="removeTimeRow(this)">刪除</button>{% endif %}
+      `;
+      timesList.appendChild(div);
+    }
+  }
+  getScheduleResult();
+}
+
+// 管理員/超級管理員操作時自動 POST 更新
+function saveScheduleToServer() {
+  if(!canEdit) return;
+  const tbody = document.getElementById('girl-rows');
+  const data = { girls: [] };
+  for (const tr of tbody.children) {
+    const name = tr.querySelector('.girl-name').value.trim();
+    const room = tr.querySelector('.room-input').value.trim();
+    const langChecks = tr.querySelectorAll('.lang-check');
+    const langs = Array.from(langChecks).filter(c => c.checked).map(c => c.value);
+    const nation = tr.querySelector('.nation-select').value;
+    const timesList = tr.querySelector('.times-list');
+    const times = [];
+    if(timesList) {
+      for(const timeRow of timesList.children) {
+        const time = timeRow.querySelector('.time-select').value;
+        const dur = timeRow.querySelector('.duration-select').value;
+        times.push({time, dur});
+      }
+    }
+    data.girls.push({name, room, langs, nation, times});
+  }
+  fetch('/api/schedule', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({data})
+  });
+}
+// 監聽所有操作自動同步
+function autoSaveSchedule() {
+  if(!canEdit) return;
+  document.getElementById('girl-rows').addEventListener('input', saveScheduleToServer);
+  document.getElementById('girl-rows').addEventListener('change', saveScheduleToServer);
+}
+
 function addTimeRow(btn) {
   if(!canEdit) return;
   const timesList = btn.parentNode.querySelector('.times-list');
@@ -258,7 +356,7 @@ function copyScheduleResult() {
 }
 
 // 暫存 key
-// SCHEDULE_KEY 只宣告一次
+const SCHEDULE_KEY = 'schedule_temp_v1';
 
 function saveScheduleToStorage() {
   const tbody = document.getElementById('girl-rows');

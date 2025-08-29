@@ -1,6 +1,7 @@
 from extensions import db
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, TIMESTAMP
+from sqlalchemy import Column, Integer, String, TIMESTAMP, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -44,3 +45,9 @@ class User(Base):
     user_group = Column(String(20), default='operator')  # 用戶組：superadmin/admin/operator/switchboard
     expire_date = Column(TIMESTAMP)  # 到期日
     created_at = Column(TIMESTAMP)
+
+class Schedule(Base):
+    __tablename__ = 'schedules'
+    id = Column(Integer, primary_key=True)
+    data = Column(JSONB)
+    updated_at = Column(TIMESTAMP)

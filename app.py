@@ -247,6 +247,29 @@ def schedule():
     can_edit = user and user.user_group in ['admin','superadmin']
     return render_template('schedule.html', can_edit=can_edit, **info)
 
+from flask import jsonify
+from models import Schedule
+import datetime
+
+@app.route('/api/schedule', methods=['GET', 'POST'])
+@login_required
+def api_schedule():
+    user = db.session.query(User).get(session.get('user_id'))
+    # 取得最新班表
+    schedule = db.session.query(Schedule).order_by(Schedule.updated_at.desc()).first()
+    if request.method == 'GET':
+        return jsonify(schedule.data if schedule else {})
+    # POST 僅限管理員/超級管理員
+    if not user or user.user_group not in ['admin','superadmin']:
+        return jsonify({'error':'權限不足'}), 403
+    data = request.json.get('data')
+    if not data:
+        return jsonify({'error':'缺少資料'}), 400
+    new_schedule = Schedule(data=data, updated_at=datetime.datetime.now())
+    db.session.add(new_schedule)
+    db.session.commit()
+    return jsonify({'success':True})
+
 if __name__ == "__main__":
     # 初始化 admin panel
     from hander.admin_panel import init_admin
