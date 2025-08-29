@@ -74,12 +74,19 @@ const timeOptions = [
   '11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00','23:00','00:00','01:00'
 ];
 const durationOptions = ['40','60','90'];
-
+function getTodayStr() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  const weekMap = ['日','一','二','三','四','五','六'];
+  const week = weekMap[d.getDay()];
+  return `${y}-${m}-${day} 星期${week} 預約表`;
+}
 function addTimeRow(btn) {
   const timesList = btn.parentNode.querySelector('.times-list');
   const div = document.createElement('div');
   div.className = 'time-row';
-  // 找到上一個時段，預設下一小時
   let nextTime = '11:00';
   if(timesList.children.length > 0) {
     const lastSelect = timesList.lastElementChild.querySelector('.time-select');
@@ -168,7 +175,7 @@ function getNationInfo(nation, langs) {
 function getScheduleResult() {
   const tbody = document.getElementById('girl-rows');
   let result = '';
-  let copyText = '當日日期 星期幾 預約表\n';
+  let copyText = getTodayStr()+'\n';
   let guestCount = 0;
   for (const tr of tbody.children) {
     const name = tr.querySelector('.girl-name').value.trim();
