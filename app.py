@@ -2,13 +2,15 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))  # ✅ 確保 handler 可被 import
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for, session
 from dotenv import load_dotenv
 
 load_dotenv()
 
 from extensions import db
 from routes.message import message_bp
+from models import User
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 # 設定 secret_key，支援 session/flash
@@ -88,6 +90,51 @@ def search():
         for c in cp:
             results.append({"type": "抽獎券", "line_user_id": c.line_user_id, "report_no": c.report_no, "amount": c.amount})
     return render_template("search_result.html", q=q, results=results)
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    error = None
+    success = None
+    if request.method == 'POST':
+        username = request.form['username'].strip()
+        password = request.form['password']
+        if not username or not password:
+            error = '請輸入帳號和密碼'
+        elif db.session.query(User).filter_by(username=username).first():
+            error = '帳號已存在'
+        else:
+            pw_hash = generate_password_hash(password)
+            user = User(username=username, password_hash=pw_hash)
+            db.session.add(user)
+            db.session.commit()
+            success = '註冊成功，請登入！'
+    return render_template('register.html', error=error, success=success)
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    error = None
+    if request.method == 'POST':
+        username = request.form['username'].strip()
+        password = request.form['password']
+        user = db.session.query(User).filter_by(username=username).first()
+        if not user or not check_password_hash(user.password_hash, password):
+            error = '帳號或密碼錯誤'
+        else:
+            session['user_id'] = user.id
+            session['username'] = user.username
+            return redirect(url_for('schedule'))
+    return render_template('login.html', error=error)
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+@app.route('/schedule')
+def schedule():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    return render_template('schedule.html')
 
 if __name__ == "__main__":
     # 初始化 admin panel

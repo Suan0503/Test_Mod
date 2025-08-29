@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>註冊</title>
+  <link rel="stylesheet" href="/static/admin_custom.css">
+  <style>
+    .login-box { max-width:400px;margin:60px auto;padding:32px;background:#f7f9fe;border-radius:12px;box-shadow:0 2px 12px #b6d6ff; }
+    .login-box h2 { text-align:center;margin-bottom:24px; }
+    .login-box input { width:100%;margin-bottom:16px;padding:8px;border-radius:6px;border:1px solid #b6d6ff; }
+    .login-btn { width:100%;padding:10px;border-radius:6px;background:#4f8cff;color:#fff;border:none;font-weight:600; }
+    .login-box .link { text-align:center;margin-top:12px; }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <h2>註冊新帳號</h2>
+    <form method="POST">
+      <input type="text" name="username" placeholder="帳號" required>
+      <input type="password" name="password" placeholder="密碼" required>
+      <button class="login-btn" type="submit">註冊</button>
+    </form>
+    <div class="link">
+      <a href="/login">已有帳號？登入</a>
+    </div>
+    {% if error %}<div style="color:#f04747;text-align:center;margin-top:8px;">{{ error }}</div>{% endif %}
+    {% if success %}<div style="color:#4caf50;text-align:center;margin-top:8px;">{{ success }}</div>{% endif %}
+  </div>
+</body>
+</html>

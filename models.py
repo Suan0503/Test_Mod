@@ -1,5 +1,9 @@
 from extensions import db
 from datetime import datetime
+from sqlalchemy import Column, Integer, String, TIMESTAMP
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
 
 class Whitelist(db.Model):
     __tablename__ = "whitelist"
@@ -30,3 +34,10 @@ class Coupon(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     report_no = db.Column(db.String(20))  # 新增的流水抽獎券編號
     type = db.Column(db.String(20), default="draw")  # 新增：來源類型 "draw" or "report"
+
+class User(Base):
+    __tablename__ = 'users'
+    id = Column(Integer, primary_key=True)
+    username = Column(String(50), unique=True, nullable=False)
+    password_hash = Column(String(128), nullable=False)
+    created_at = Column(TIMESTAMP)
