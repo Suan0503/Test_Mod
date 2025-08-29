@@ -10,6 +10,18 @@
 </head>
 <body>
 <nav class="admin-gradient-bar">
+  <div style="float:right;display:flex;align-items:center;gap:16px;padding:8px 32px;">
+    {% if username %}
+      <span>登入帳號：{{ username }}</span>
+    {% endif %}
+    {% if group %}
+      <span>用戶組：{{ group }}</span>
+    {% endif %}
+    {% if expire_days %}
+      <span>到期天數：{{ expire_days }}</span>
+    {% endif %}
+    <a href="/logout" style="color:#1976d2;font-weight:600;">登出</a>
+  </div>
 </nav>
   <div class="top-nav-bar">
     <a href="/admin/whitelist/" class="nav-btn">
