@@ -29,62 +29,8 @@
           </th>
         </tr>
       </thead>
-      <tbody id="girl-rows">
-        {% for girl in ['多多', '莎莎'] %}
-        <tr>
-          <td>
-            <input type="text" class="girl-name" value="{{ girl }}" placeholder="名稱" {% if not can_edit %}readonly{% endif %}>
-            <input type="text" class="room-input" placeholder="房號" {% if not can_edit %}readonly{% endif %}>
-          </td>
-          <td>
-            <label><input type="checkbox" class="lang-check" value="zh" {% if not can_edit %}disabled{% endif %}>中</label>
-            <label><input type="checkbox" class="lang-check" value="en" {% if not can_edit %}disabled{% endif %}>英</label>
-          </td>
-          <td>
-            <select class="nation-select" style="width:90px;" {% if not can_edit %}disabled{% endif %}>
-              <option value="tw">🇹🇼 台灣</option>
-              <option value="vn">🇻🇳 越南</option>
-              <option value="th">🇹🇭 泰國</option>
-              <option value="id">🇮🇩 印尼</option>
-            </select>
-          </td>
-          <td>
-            <div class="times-list"></div>
-            {% if can_edit %}
-            <button class="add-time-btn" onclick="addTimeRow(this)">新增時段</button>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </thead>
-      <tbody id="girl-rows">
-        {% for girl in ['多多', '莎莎'] %}
-        <tr>
-          <td>
-            <input type="text" class="girl-name" value="{{ girl }}" placeholder="名稱" {% if not can_edit %}readonly{% endif %}>
-            <input type="text" class="room-input" placeholder="房號" {% if not can_edit %}readonly{% endif %}>
-          </td>
-          <td>
-            <label><input type="checkbox" class="lang-check" value="zh" {% if not can_edit %}disabled{% endif %}>中</label>
-            <label><input type="checkbox" class="lang-check" value="en" {% if not can_edit %}disabled{% endif %}>英</label>
-          </td>
-          <td>
-            <select class="nation-select" style="width:90px;" {% if not can_edit %}disabled{% endif %}>
-              <option value="tw">🇹🇼 台灣</option>
-              <option value="vn">🇻🇳 越南</option>
-              <option value="th">🇹🇭 泰國</option>
-              <option value="id">🇮🇩 印尼</option>
-            </select>
-          </td>
-          <td>
-            <div class="times-list"></div>
-            {% if can_edit %}
-            <button class="add-time-btn" onclick="addTimeRow(this)">新增時段</button>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
+  <tbody id="girl-rows">
+  </tbody>
     </table>
     {% if can_edit %}
     <button class="add-girl-btn" onclick="addGirlRow()" style="margin-top:12px;">新增妹妹</button>
@@ -102,7 +48,7 @@
 </div>
 
 <script>
-const canEdit = {{ can_edit|tojson }};
+const canEdit = {{ can_edit|tojson|safe }};
 const SCHEDULE_KEY = 'schedule_temp_v1';
 
 // 半小時一格
@@ -140,18 +86,6 @@ window.addEventListener('DOMContentLoaded',()=>{
   fetchAndUpdateSchedule();
   autoSaveSchedule();
   setInterval(fetchAndUpdateSchedule, 10000); // 每 10 秒自動更新
-});
-
-// 多人同步：載入時自動 fetch 最新班表
-window.addEventListener('DOMContentLoaded',()=>{
-  fetch('/api/schedule').then(r=>r.json()).then(data=>{
-    if(data && Object.keys(data).length) {
-      loadScheduleFromServer(data);
-    } else {
-      loadScheduleFromStorage();
-    }
-  });
-  autoSaveSchedule();
 });
 
 function loadScheduleFromServer(data) {
@@ -401,7 +335,7 @@ function copyScheduleResult() {
 }
 
 // 暫存 key
-const SCHEDULE_KEY = 'schedule_temp_v1';
+// ...existing code...
 
 function saveScheduleToStorage() {
   const tbody = document.getElementById('girl-rows');
@@ -645,7 +579,7 @@ function copyScheduleResult() {
 }
 
 // 暫存 key
-const SCHEDULE_KEY = 'schedule_temp_v1';
+// ...existing code...
 
 function saveScheduleToStorage() {
   const tbody = document.getElementById('girl-rows');
