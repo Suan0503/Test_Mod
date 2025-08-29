@@ -109,22 +109,21 @@ window.addEventListener('DOMContentLoaded',()=>{
 });
 
 function loadScheduleFromServer(data) {
-  // data 結構需與 saveScheduleToServer 一致
   const tbody = document.getElementById('girl-rows');
   tbody.innerHTML = '';
   for(const girl of data.girls||[]) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>
-        <input type="text" class="girl-name" value="${girl.name}" placeholder="名稱" {% if not can_edit %}readonly{% endif %}>
-        <input type="text" class="room-input" value="${girl.room}" placeholder="房號" {% if not can_edit %}readonly{% endif %}>
+        <input type="text" class="girl-name" value="${girl.name}" placeholder="名稱" ${canEdit ? '' : 'readonly'}>
+        <input type="text" class="room-input" value="${girl.room}" placeholder="房號" ${canEdit ? '' : 'readonly'}>
       </td>
       <td>
-        <label><input type="checkbox" class="lang-check" value="zh" ${girl.langs&&girl.langs.includes('zh')?'checked':''} {% if not can_edit %}disabled{% endif %}>中</label>
-        <label><input type="checkbox" class="lang-check" value="en" ${girl.langs&&girl.langs.includes('en')?'checked':''} {% if not can_edit %}disabled{% endif %}>英</label>
+        <label><input type="checkbox" class="lang-check" value="zh" ${girl.langs&&girl.langs.includes('zh')?'checked':''} ${canEdit ? '' : 'disabled'}>中</label>
+        <label><input type="checkbox" class="lang-check" value="en" ${girl.langs&&girl.langs.includes('en')?'checked':''} ${canEdit ? '' : 'disabled'}>英</label>
       </td>
       <td>
-        <select class="nation-select" style="width:90px;" {% if not can_edit %}disabled{% endif %}>
+        <select class="nation-select" style="width:90px;" ${canEdit ? '' : 'disabled'}>
           <option value="tw"${girl.nation==='tw'?' selected':''}>🇹🇼 台灣</option>
           <option value="vn"${girl.nation==='vn'?' selected':''}>🇻🇳 越南</option>
           <option value="th"${girl.nation==='th'?' selected':''}>🇹🇭 泰國</option>
@@ -133,7 +132,7 @@ function loadScheduleFromServer(data) {
       </td>
       <td>
         <div class="times-list"></div>
-        {% if can_edit %}<button class="add-time-btn" onclick="addTimeRow(this)">新增時段</button>{% endif %}
+        ${canEdit ? '<button class="add-time-btn" onclick="addTimeRow(this)">新增時段</button>' : ''}
       </td>
     `;
     tbody.appendChild(tr);
@@ -151,7 +150,7 @@ function loadScheduleFromServer(data) {
           <option value="60"${t.dur==='60'?' selected':''}>60</option>
           <option value="90"${t.dur==='90'?' selected':''}>90</option>
         </select>
-        {% if can_edit %}<button class="remove-time-btn" onclick="removeTimeRow(this)">刪除</button>{% endif %}
+        ${canEdit ? '<button class="remove-time-btn" onclick="removeTimeRow(this)">刪除</button>' : ''}
       `;
       timesList.appendChild(div);
     }
@@ -699,4 +698,4 @@ window.addEventListener('DOMContentLoaded',()=>{
 document.getElementById('schedule-table').addEventListener('input', getScheduleResult);
 document.getElementById('schedule-table').addEventListener('change', getScheduleResult);
 </script>
-{% endblock %}
+{% endblock %
