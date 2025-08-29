@@ -51,11 +51,25 @@ def admin_required(f):
 
 app.register_blueprint(message_bp)
 
+# 取得目前登入者資訊
+
+def get_user_info():
+    user = db.session.query(User).get(session.get('user_id'))
+    username = user.username if user else None
+    group = user.user_group if user else None
+    import datetime
+    today = datetime.date.today()
+    expire_days = None
+    if user and user.expire_date:
+        expire_days = (user.expire_date.date() - today).days
+    return dict(username=username, group=group, expire_days=expire_days)
+
 # 即時班表更新頁面
 @app.route("/admin/schedule/")
 @login_required
 def admin_schedule():
-    return render_template("schedule.html", username=session.get('username'), role=session.get('role'))
+    info = get_user_info()
+    return render_template("schedule.html", **info)
 
 # 初始化 admin panel，確保 /admin 路徑可用
 from hander.admin_panel import init_admin
@@ -91,6 +105,7 @@ def home():
 @app.route('/admin/interface', methods=['GET', 'POST'])
 @login_required
 def admin_interface():
+    info = get_user_info()
     user = db.session.query(User).get(session.get('user_id'))
     if not user or user.user_group != 'superadmin':
         return redirect(url_for('home'))
@@ -108,7 +123,7 @@ def admin_interface():
             db.session.commit()
             msg = f"已成功為 {target.username} 續費 {days} 天！"
     users = db.session.query(User).all()
-    return render_template('admin_interface.html', users=users, msg=msg)
+    return render_template('admin_interface.html', users=users, msg=msg, **info)
 
 # 搜尋功能
 from flask import render_template, request
@@ -136,8 +151,9 @@ def search():
 @app.route('/admin/user', methods=['GET'])
 @admin_required
 def admin_user():
+    info = get_user_info()
     users = db.session.query(User).all()
-    return render_template('admin_user.html', users=users)
+    return render_template('admin_user.html', users=users, **info)
 
 @app.route('/admin/user/delete', methods=['POST'])
 @admin_required
@@ -205,7 +221,8 @@ def logout():
 @app.route('/schedule')
 @login_required
 def schedule():
-    return render_template('schedule.html', username=session.get('username'), role=session.get('role'))
+    info = get_user_info()
+    return render_template('schedule.html', **info)
 
 if __name__ == "__main__":
     # 初始化 admin panel
