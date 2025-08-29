@@ -293,4 +293,4 @@ if __name__ == "__main__":
             user = User(username='admin', password_hash=generate_password_hash('1234'), role='admin', user_group='superadmin')
             db.session.add(user)
             db.session.commit()
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
