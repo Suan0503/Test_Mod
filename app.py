@@ -76,6 +76,12 @@ from hander.admin_panel import init_admin
 with app.app_context():
     db.create_all()
     init_admin(app)
+    # 檢查是否已有 superadmin
+    from werkzeug.security import generate_password_hash
+    if not db.session.query(User).filter_by(username='admin').first():
+        user = User(username='admin', password_hash=generate_password_hash('1234'), role='admin', user_group='superadmin')
+        db.session.add(user)
+        db.session.commit()
 
 @app.route("/")
 @login_required
@@ -230,4 +236,10 @@ if __name__ == "__main__":
     with app.app_context():
         db.create_all()
         init_admin(app)
+        # 檢查是否已有 superadmin
+        from werkzeug.security import generate_password_hash
+        if not db.session.query(User).filter_by(username='admin').first():
+            user = User(username='admin', password_hash=generate_password_hash('1234'), role='admin', user_group='superadmin')
+            db.session.add(user)
+            db.session.commit()
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
