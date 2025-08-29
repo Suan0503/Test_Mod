@@ -1,134 +1,94 @@
 {% extends 'admin_custom_master.html' %}
 {% block body %}
 <style>
-  .schedule-table { border-collapse: collapse; width:100%; }
-  .schedule-table th, .schedule-table td { border:1px solid #b6d6ff; padding:8px; text-align:center; }
-  .schedule-table th { background:#e3f2fd; }
-  .girl-name, .room-input { width:80px; display:block; margin:2px auto; }
-  .lang-check { margin:0 4px; }
-  .time-entry { display:flex; align-items:center; gap:6px; margin-bottom:4px; }
-  .time-entry select, .time-entry input { width:80px; }
-  .time-control { margin-top:6px; text-align:center; }
+.schedule-table { border-collapse: collapse; width:100%; }
+.schedule-table th, .schedule-table td { border:1px solid #b6d6ff; padding:6px 8px; text-align:center; }
+.schedule-table th { background:#e3f2fd; }
+.add-girl-btn { margin-top:12px; }
 </style>
-
 <div class="schedule-main" style="display:flex;gap:32px;padding:32px 0;">
-  <div style="flex:1;">
+  <div style="flex:1;min-width:320px;">
     <h3>排班表</h3>
     <table class="schedule-table" id="schedule-table">
       <thead>
         <tr>
-          <th>妹妹<br><small>（名稱＋房號）</small></th>
-          <th>語言</th>
-          <th>國籍</th>
-          <th>時間</th>
+          <th>妹妹</th>
+          {% for hour in range(13, 19) %}
+            <th>{{ hour }}</th>
+          {% endfor %}
         </tr>
       </thead>
       <tbody id="girl-rows">
         <tr>
+          <td><input type="text" value="多多" class="girl-name" style="width:80px;"></td>
+          {% for hour in range(13, 19) %}
           <td>
-            <input type="text" class="girl-name" value="多多" placeholder="名稱">
-            <input type="text" class="room-input" placeholder="房號">
-          </td>
-          <td>
-            <label><input type="checkbox" class="lang-check" value="zh">中</label>
-            <label><input type="checkbox" class="lang-check" value="en">英</label>
-          </td>
-          <td>
-            <select class="nation-select" style="width:90px;">
-              <option value="tw">🇹🇼 台灣</option>
-              <option value="vn">🇻🇳 越南</option>
-              <option value="th">🇹🇭 泰國</option>
-              <option value="id">🇮🇩 印尼</option>
+            <input type="checkbox" class="hour-check">
+            <select class="duration" style="width:50px;">
+              <option value="">--</option>
+              <option value="60">60</option>
+              <option value="90">90</option>
             </select>
           </td>
+          {% endfor %}
+        </tr>
+        <tr>
+          <td><input type="text" value="莎莎" class="girl-name" style="width:80px;"></td>
+          {% for hour in range(13, 19) %}
           <td>
-            <div class="time-slot-list"></div>
-            <div class="time-control">
-              <button type="button" onclick="addTimeSlot(this)">＋新增時間</button>
-              <button type="button" onclick="sortTimeSlots(this)">🔄刷新排序</button>
-            </div>
+            <input type="checkbox" class="hour-check">
+            <select class="duration" style="width:50px;">
+              <option value="">--</option>
+              <option value="60">60</option>
+              <option value="90">90</option>
+            </select>
           </td>
+          {% endfor %}
         </tr>
       </tbody>
     </table>
+    <button class="add-girl-btn" onclick="addGirlRow()">新增妹妹</button>
   </div>
-
-  <div style="flex:1;">
+  <div style="flex:1;min-width:320px;">
     <h3>即時排班結果</h3>
     <div id="output-area" style="background:#f7f9fe;border-radius:8px;min-height:400px;padding:16px;font-size:16px;white-space:pre-line;"></div>
   </div>
 </div>
-
 <script>
-function addTimeSlot(btn) {
-  const list = btn.closest('td').querySelector('.time-slot-list');
-  const wrapper = document.createElement('div');
-  wrapper.className = 'time-entry';
-  wrapper.innerHTML = `
-    <input type="number" class="time-value" min="0" max="2359" placeholder="時間 (e.g. 1200)">
-    <select class="duration">
-      <option value="">--</option>
-      <option value="40">40</option>
-      <option value="60">60</option>
-      <option value="90">90</option>
-    </select>
-    <button onclick="this.parentElement.remove()">刪除</button>
-  `;
-  list.appendChild(wrapper);
-  getScheduleResult();
+function addGirlRow() {
+  const tbody = document.getElementById('girl-rows');
+  const tr = document.createElement('tr');
+  let html = '<td><input type="text" value="" class="girl-name" style="width:80px;"></td>';
+  for(let i=0;i<6;i++) {
+    html += `<td><input type="checkbox" class="hour-check"><select class="duration" style="width:50px;"><option value="">--</option><option value="60">60</option><option value="90">90</option></select></td>`;
+  }
+  tr.innerHTML = html;
+  tbody.appendChild(tr);
 }
-
-function sortTimeSlots(btn) {
-  const list = btn.closest('td').querySelector('.time-slot-list');
-  const entries = Array.from(list.querySelectorAll('.time-entry'));
-  entries.sort((a, b) => {
-    const ta = parseInt(a.querySelector('.time-value').value || 0);
-    const tb = parseInt(b.querySelector('.time-value').value || 0);
-    return ta - tb;
-  });
-  entries.forEach(e => list.appendChild(e));
-  getScheduleResult();
-}
-
 function getScheduleResult() {
   const tbody = document.getElementById('girl-rows');
+  const hours = [13,14,15,16,17,18];
   let result = '';
-  for (const tr of tbody.children) {
+  for(const tr of tbody.children) {
     const name = tr.querySelector('.girl-name').value.trim();
-    const room = tr.querySelector('.room-input').value.trim();
-    const langs = Array.from(tr.querySelectorAll('.lang-check')).filter(c => c.checked).map(c => c.value);
-    const nation = tr.querySelector('.nation-select').value;
-    if (!name) continue;
-
-    let line = `💗${name} ${nationText(nation)} ${langText(nation, langs)}${room ? ' ('+room+')' : ''}`;
+    if(!name) continue;
+    let line = `💗${name} 11:00-01:00➡️中越文溝通🇻🇳(ID)`;
     let slots = [];
-    tr.querySelectorAll('.time-entry').forEach(entry => {
-      const time = entry.querySelector('.time-value').value;
-      const dur = entry.querySelector('.duration').value;
-      if (time && dur) slots.push(`${time} / ${dur}分`);
-    });
-    if (slots.length) line += '\n' + slots.join('\n');
-    result += line + '\n\n';
+    const tds = tr.querySelectorAll('td');
+    for(let i=1;i<tds.length;i++) {
+      const checked = tds[i].querySelector('.hour-check').checked;
+      const duration = tds[i].querySelector('.duration').value;
+      if(checked && duration) {
+        slots.push(`${hours[i-1]}:00/${duration}`);
+      }
+    }
+    if(slots.length) {
+      line += '\n' + slots.join('\n');
+      result += line + '\n\n';
+    }
   }
   document.getElementById('output-area').innerText = result.trim();
 }
-
-function nationText(n) {
-  return n === 'tw' ? '🇹🇼' : n === 'vn' ? '🇻🇳' : n === 'th' ? '🇹🇭' : '🇮🇩';
-}
-
-function langText(nation, langs) {
-  if (langs.includes('zh') && nation === 'vn') return '中越文溝通';
-  if (langs.includes('zh') && nation === 'th') return '中泰文溝通';
-  if (langs.includes('zh') && nation === 'tw') return '中文溝通';
-  if (langs.includes('en') && nation === 'vn') return '英越文溝通';
-  if (langs.includes('en') && nation === 'th') return '英泰文溝通';
-  if (nation === 'vn') return '越文溝通';
-  if (nation === 'th') return '泰文溝通';
-  if (nation === 'id') return '印尼文溝通';
-  return '';
-}
-
 document.getElementById('schedule-table').addEventListener('input', getScheduleResult);
 document.getElementById('schedule-table').addEventListener('change', getScheduleResult);
 </script>
