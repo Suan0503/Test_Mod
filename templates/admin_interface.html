@@ -13,24 +13,35 @@
   </style>
 </head>
 <body>
-  <h2>會員續費管理</h2>
-  {% if msg %}<div style="color:#4caf50;text-align:center;margin-bottom:12px;">{{ msg }}</div>{% endif %}
+  <h2>會員續費與用戶組管理（超級管理員專用）</h2>
+  <div style="color:#1976d2;font-size:15px;margin-bottom:12px;">可直接修改用戶組（user_group）與續費天數</div>
   <table class="user-table">
     <thead>
-      <tr><th>ID</th><th>帳號</th><th>用戶組</th><th>到期日</th><th>續費</th></tr>
+      <tr><th>ID</th><th>帳號</th><th>用戶組</th><th>到期日</th><th>續費</th><th>變更用戶組</th></tr>
     </thead>
     <tbody>
       {% for user in users %}
       <tr>
         <td>{{ user.id }}</td>
         <td>{{ user.username }}</td>
-        <td>{{ user.group }}</td>
+        <td>{{ user.user_group }}</td>
         <td>{% if user.expire_date %}{{ user.expire_date.strftime('%Y-%m-%d') }}{% else %}未設定{% endif %}</td>
         <td>
           <form class="renew-form" method="POST">
             <input type="hidden" name="user_id" value="{{ user.id }}">
             <input type="number" name="days" min="1" max="365" placeholder="天數" required>
             <button class="renew-btn" type="submit">續費</button>
+          </form>
+        </td>
+        <td>
+          <form method="POST" action="/admin/user/group" style="display:inline;">
+            <input type="hidden" name="user_id" value="{{ user.id }}">
+            <select name="user_group" onchange="this.form.submit()">
+              <option value="superadmin" {% if user.user_group=='superadmin' %}selected{% endif %}>超級管理員</option>
+              <option value="admin" {% if user.user_group=='admin' %}selected{% endif %}>管理員</option>
+              <option value="switchboard" {% if user.user_group=='switchboard' %}selected{% endif %}>總機</option>
+              <option value="operator" {% if user.user_group=='operator' %}selected{% endif %}>操作人員</option>
+            </select>
           </form>
         </td>
       </tr>

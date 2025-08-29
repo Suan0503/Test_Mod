@@ -182,6 +182,20 @@ def admin_user_role():
         db.session.commit()
     return redirect(url_for('admin_user'))
 
+@app.route('/admin/user/group', methods=['POST'])
+@login_required
+def admin_user_group():
+    user = db.session.query(User).get(session.get('user_id'))
+    if not user or user.user_group != 'superadmin':
+        return redirect(url_for('home'))
+    target_id = request.form.get('user_id')
+    new_group = request.form.get('user_group')
+    target = db.session.query(User).get(target_id)
+    if target and new_group in ['superadmin','admin','switchboard','operator']:
+        target.user_group = new_group
+        db.session.commit()
+    return redirect(url_for('admin_interface'))
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     error = None
