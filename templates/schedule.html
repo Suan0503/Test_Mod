@@ -10,6 +10,9 @@
   .time-select, .duration-select { width: 90px; }
   .remove-time-btn { background: #f04747; color: #fff; border: none; border-radius: 6px; padding: 2px 8px; cursor: pointer; }
   .add-time-btn, .sort-time-btn { margin: 8px 4px; padding: 4px 12px; border-radius: 6px; border: none; background: #4f8cff; color: #fff; cursor: pointer; }
+  .copy-btn { margin-bottom: 12px; padding: 6px 18px; border-radius: 6px; border: none; background: #38c6ff; color: #fff; cursor: pointer; font-weight: 600; }
+  .result-header { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+  .result-sep { color: #1976d2; margin: 8px 0; }
 </style>
 
 <div class="schedule-main" style="display:flex;gap:32px;padding:32px 0;">
@@ -58,6 +61,10 @@
 
   <div style="flex:1;">
     <h3>即時排班結果</h3>
+    <div class="result-header">
+      <span id="guest-count">總客數：0</span>
+      <button class="copy-btn" onclick="copyScheduleResult()">一鍵複製</button>
+    </div>
     <div id="output-area" style="background:#f7f9fe;border-radius:8px;min-height:400px;padding:16px;font-size:16px;white-space:pre-line;"></div>
   </div>
 </div>
@@ -77,8 +84,9 @@ function addTimeRow(btn) {
       ${timeOptions.map(t=>`<option value="${t}">${t}</option>`).join('')}
     </select>
     <select class="duration-select">
-      <option value="">--</option>
-      ${durationOptions.map(d=>`<option value="${d}">${d}</option>`).join('')}
+      <option value="40">40</option>
+      <option value="60" selected>60</option>
+      <option value="90">90</option>
     </select>
     <button class="remove-time-btn" onclick="removeTimeRow(this)">刪除</button>
   `;
@@ -153,6 +161,8 @@ function getNationInfo(nation, langs) {
 function getScheduleResult() {
   const tbody = document.getElementById('girl-rows');
   let result = '';
+  let copyText = '當日日期 星期幾 預約表\n';
+  let guestCount = 0;
   for (const tr of tbody.children) {
     const name = tr.querySelector('.girl-name').value.trim();
     const room = tr.querySelector('.room-input').value.trim();
@@ -170,15 +180,25 @@ function getScheduleResult() {
         const dur = timeRow.querySelector('.duration-select').value;
         if(time && dur) {
           slots.push(`${time}/${dur}`);
+          guestCount++;
         }
       }
     }
     if (slots.length) {
       line += '\n' + slots.join('\n');
-      result += line + '\n\n';
+      result += line + '\n<div class="result-sep">------------</div>\n';
+      copyText += line + '\n------------\n';
     }
   }
-  document.getElementById('output-area').innerText = result.trim();
+  document.getElementById('output-area').innerHTML = result.trim();
+  document.getElementById('guest-count').innerText = `總客數：${guestCount}`;
+  window._copyScheduleText = copyText.trim();
+}
+function copyScheduleResult() {
+  if(window._copyScheduleText) {
+    navigator.clipboard.writeText(window._copyScheduleText);
+    alert('已複製到剪貼簿！');
+  }
 }
 document.getElementById('schedule-table').addEventListener('input', getScheduleResult);
 document.getElementById('schedule-table').addEventListener('change', getScheduleResult);
