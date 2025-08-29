@@ -41,6 +41,6 @@ class User(Base):
     username = Column(String(50), unique=True, nullable=False)
     password_hash = Column(String(256), nullable=False)
     role = Column(String(20), default='user')  # 權限分級：user/admin
-    group = Column(String(20), default='operator')  # 用戶組：superadmin/admin/operator/switchboard
+    user_group = Column(String(20), default='operator')  # 用戶組：superadmin/admin/operator/switchboard
     expire_date = Column(TIMESTAMP)  # 到期日
     created_at = Column(TIMESTAMP)

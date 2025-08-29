@@ -81,8 +81,8 @@ def home():
             'switchboard': '總機',
             'operator': '操作人員'
         }
-        group_name = group_map.get(user.group, '未知')
-        is_superadmin = (user.group == 'superadmin')
+        group_name = group_map.get(user.user_group, '未知')
+        is_superadmin = (user.user_group == 'superadmin')
         username = user.username
     else:
         username = '未知'
@@ -92,7 +92,7 @@ def home():
 @login_required
 def admin_interface():
     user = db.session.query(User).get(session.get('user_id'))
-    if not user or user.group != 'superadmin':
+    if not user or user.user_group != 'superadmin':
         return redirect(url_for('home'))
     msg = None
     if request.method == 'POST':
