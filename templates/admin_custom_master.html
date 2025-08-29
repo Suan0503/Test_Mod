@@ -10,6 +10,12 @@
 </head>
 <body>
 <nav class="admin-gradient-bar">
+  <div style="float:left;display:flex;align-items:center;gap:8px;padding:8px 16px;">
+    <a href="/" class="nav-btn" style="background:#fff;color:#1976d2;font-weight:600;border-radius:8px;padding:6px 18px;margin-right:8px;">
+      <span class="nav-icon"><i class="fa fa-home"></i></span>
+      <span class="nav-text">主頁</span>
+    </a>
+  </div>
   <div style="float:right;display:flex;align-items:center;gap:16px;padding:8px 32px;">
     {% if username %}
       <span>登入帳號：{{ username }}</span>
