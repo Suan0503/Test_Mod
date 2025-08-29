@@ -58,9 +58,27 @@
   }
   .slot-chip input:checked + label.chip + select.dur{ display:inline-block; }
 
-  .add-girl-btn{ margin-top:12px; }
-  #output-area{ background:#f7f9fe; border-radius:8px; min-height:420px; padding:16px; font-size:15px; white-space:pre-line; }
-</style>
+              <div class="time-grid">
+                {% set times = [
+                  '11:00','11:30','12:00','12:30',
+                  '01:00','01:30','02:00','02:30','03:00','03:30','04:00','04:30','05:00','05:30',
+                  '06:00','06:30','07:00','07:30','08:00','08:30','09:00','09:30','10:00','10:30',
+                  '11:00','11:30','12:00','12:30','01:00'
+                ] %}
+                {% for t in times %}
+                  {% set id = 't_' ~ loop.index ~ '_' ~ range(1000,9999)|random %}
+                  {% set chip_txt = t.replace(':','') %}
+                  <span class="slot-chip">
+                    <input id="{{ id }}" type="checkbox" class="time-ck" data-time="{{ chip_txt }}">
+                    <label class="chip" for="{{ id }}">{{ chip_txt }}{% if t.endswith('30') %}<span class="half-label">+30</span>{% endif %}</label>
+                    <select class="dur" aria-label="方案">
+                      <option value="40">40</option>
+                      <option value="60" selected>60</option>
+                      <option value="90">90</option>
+                    </select>
+                  </span>
+                {% endfor %}
+              </div>
 
 <div class="schedule-main" style="display:flex; gap:32px;">
   <div style="flex:1; min-width:420px;">
@@ -106,27 +124,6 @@
             </td>
           </tr>
 
-          <!-- 莎莎 -->
-          <tr>
-            <td class="col-girl">
-              <div class="girl-box">
-                <input type="text" class="girl-name" value="莎莎" placeholder="名稱">
-                <input type="text" class="room-input" value="" placeholder="房號">
-              </div>
-            </td>
-            <td class="col-lang">
-              <div class="lang-group">
-                <label><input type="checkbox" class="lang-check" value="zh">中</label>
-                <label><input type="checkbox" class="lang-check" value="en">英</label>
-              </div>
-            </td>
-            <td class="col-nation">
-              <select class="nation-select" style="width:100%;">
-                <option value="tw">🇹🇼 台灣</option>
-                <option value="vn">🇻🇳 越南</option>
-                <option value="th">🇹🇭 泰國</option>
-                <option value="id">🇮🇩 印尼</option>
-              </select>
             </td>
             <td class="col-time">
               <div class="time-grid">
