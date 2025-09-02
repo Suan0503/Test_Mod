@@ -1,3 +1,45 @@
+from linebot.models import FlexSendMessage
+
+# 學生證風格 Flex Message 組裝
+def build_student_card_flex(phone, nickname, number, lineid, join_code, avatar_url=None):
+    return {
+        "type": "flex",
+        "altText": "茗殿學生證",
+        "contents": {
+            "type": "bubble",
+            "size": "mega",
+            "hero": {
+                "type": "image",
+                "url": avatar_url or "https://i.imgur.com/your_avatar.png",
+                "size": "full",
+                "aspectRatio": "1:1",
+                "aspectMode": "cover"
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "md",
+                "contents": [
+                    {"type": "text", "text": "茗殿學生證", "weight": "bold", "size": "xl", "color": "#1E90FF", "align": "center"},
+                    {"type": "separator"},
+                    {"type": "box", "layout": "vertical", "margin": "md", "contents": [
+                        {"type": "text", "text": f"暱稱：{nickname}", "size": "md", "color": "#333333"},
+                        {"type": "text", "text": f"編號：{number}", "size": "md", "color": "#333333"},
+                        {"type": "text", "text": f"LINE ID：{lineid}", "size": "md", "color": "#333333"},
+                        {"type": "text", "text": f"手機：{phone}", "size": "md", "color": "#333333"},
+                        {"type": "text", "text": f"加入密碼：{join_code}", "size": "md", "color": "#1E90FF", "weight": "bold"}
+                    ]}
+                ]
+            },
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": "歡迎加入茗殿", "align": "center", "color": "#888888", "size": "sm"}
+                ]
+            }
+        }
+    }
 # -*- coding: utf-8 -*-
 from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage, ImageMessage, FollowEvent,
@@ -274,16 +316,18 @@ def handle_text(event):
             reply_with_reverify(event, "您已通過驗證，無法重新驗證。")
             return
         if normalize_phone(user_text) == normalize_phone(existing.phone):
-            reply = (
-                f"📱 {existing.phone}\n"
-                f"🌸 暱稱：{existing.name or display_name}\n"
-                f"       個人編號：{existing.id}\n"
-                f"🔗 LINE ID：{existing.line_id or '未登記'}\n"
-                f"🕒 {existing.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
-                f"✅ 驗證成功，歡迎加入茗殿\n"
-                f"🌟 加入密碼：ming666"
+            flex_msg = build_student_card_flex(
+                phone=existing.phone,
+                nickname=existing.name or display_name,
+                number=existing.id,
+                lineid=existing.line_id or '未登記',
+                join_code="ming666",
+                avatar_url=None  # 可串接用戶頭像網址
             )
-            reply_with_menu(event.reply_token, reply)
+            line_bot_api.reply_message(
+                event.reply_token,
+                FlexSendMessage(alt_text="茗殿學生證", contents=flex_msg["contents"])
+            )
         else:
             reply_with_reverify(event, "⚠️ 已驗證，若要查看資訊請輸入您當時驗證的手機號碼。")
         return
@@ -442,15 +486,18 @@ def handle_image(event):
             record, _ = update_or_create_whitelist_from_data(
                 data, user_id, reverify=tu.get("reverify", False)
             )
-            reply = (
-                f"📱 {record.phone}\n"
-                f"🌸 暱稱：{record.name or '用戶'}\n"
-                f"🔗 LINE ID：{record.line_id or '未登記'}\n"
-                f"🕒 {record.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
-                f"✅ 驗證成功，歡迎加入茗殿\n"
-                f"🌟 加入密碼：ming666"
+            flex_msg = build_student_card_flex(
+                phone=record.phone,
+                nickname=record.name or '用戶',
+                number=record.id,
+                lineid=record.line_id or '未登記',
+                join_code="ming666",
+                avatar_url=None
             )
-            reply_with_menu(event.reply_token, reply)
+            line_bot_api.reply_message(
+                event.reply_token,
+                FlexSendMessage(alt_text="茗殿學生證", contents=flex_msg["contents"])
+            )
             pop_temp_user(user_id)
 
         # 修正：用 .strip().lower() 強化容錯
@@ -548,15 +595,18 @@ def handle_post_ocr_confirm(event):
             record, _ = update_or_create_whitelist_from_data(
                 data, user_id, reverify=data.get("reverify", False)
             )
-            reply = (
-                f"📱 {record.phone}\n"
-                f"🌸 暱稱：{record.name or '用戶'}\n"
-                f"🔗 LINE ID：{record.line_id or '未登記'}\n"
-                f"🕒 {record.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
-                f"✅ 驗證成功，歡迎加入茗殿\n"
-                f"🌟 加入密碼：ming666"
+            flex_msg = build_student_card_flex(
+                phone=record.phone,
+                nickname=record.name or '用戶',
+                number=record.id,
+                lineid=record.line_id or '未登記',
+                join_code="ming666",
+                avatar_url=None
             )
-            reply_with_menu(event.reply_token, reply)
+            line_bot_api.reply_message(
+                event.reply_token,
+                FlexSendMessage(alt_text="茗殿學生證", contents=flex_msg["contents"])
+            )
             pop_temp_user(user_id)
             return True
         # 管理員人工驗證流程
@@ -574,15 +624,18 @@ def handle_post_ocr_confirm(event):
                 record, _ = update_or_create_whitelist_from_data(
                     data, user_id, reverify=True
                 )
-                reply = (
-                    f"📱 {record.phone}\n"
-                    f"🌸 暱稱：{record.name or '用戶'}\n"
-                    f"🔗 LINE ID：{record.line_id or '未登記'}\n"
-                    f"🕒 {record.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
-                    f"✅ 驗證成功，歡迎加入茗殿\n"
-                    f"🌟 加入密碼：ming666"
+                flex_msg = build_student_card_flex(
+                    phone=record.phone,
+                    nickname=record.name or '用戶',
+                    number=record.id,
+                    lineid=record.line_id or '未登記',
+                    join_code="ming666",
+                    avatar_url=None
                 )
-                reply_with_menu(event.reply_token, reply)
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    FlexSendMessage(alt_text="茗殿學生證", contents=flex_msg["contents"])
+                )
                 manual_verify_pending.pop(user_id, None)
                 pop_temp_user(user_id)
                 return True
