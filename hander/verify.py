@@ -6,14 +6,6 @@ from linebot.models import (
 from extensions import handler, line_bot_api, db
 from models import Blacklist, Whitelist
 from utils.temp_users import get_temp_user, set_temp_user, pop_temp_user
-
-# 補助：取得所有暫存用戶（僅限 dict 模式）
-def get_all_temp_users():
-    try:
-        from utils.temp_users import temp_users
-        return temp_users.items()
-    except Exception:
-        return []
 from hander.admin import ADMIN_IDS
 from utils.menu_helpers import reply_with_menu
 from utils.db_utils import update_or_create_whitelist_from_data
@@ -22,6 +14,134 @@ from datetime import datetime, timedelta
 import pytz
 from PIL import Image
 import pytesseract
+from typing import Optional, Dict, Any, Tuple
+from dataclasses import dataclass, field
+from enum import Enum
+
+# ────────────── 狀態與訊息常量 ──────────────
+class VerifyStep(str, Enum):
+    WAITING_PHONE = "waiting_phone"
+    WAITING_LINEID = "waiting_lineid"
+    WAITING_SCREENSHOT = "waiting_screenshot"
+    WAITING_CONFIRM_AFTER_OCR = "waiting_confirm_after_ocr"
+    AWAITING_PHONE = "awaiting_phone"
+    AWAITING_LINEID = "awaiting_lineid"
+
+REVERIFY_TEXT = "重新驗證"
+NOT_SET_TEXTS = ["尚未設定", "未設定", "無", "none", "not set"]
+VERIFY_CODE_LENGTH = 8
+VERIFY_CODE_EXPIRE = 900
+OCR_DEBUG_IMAGE_BASEURL = os.getenv("OCR_DEBUG_IMAGE_BASEURL", "").rstrip("/")
+OCR_DEBUG_IMAGE_DIR = os.getenv("OCR_DEBUG_IMAGE_DIR", "/tmp/ocr_debug")
+
+# ────────────── 資料結構 ──────────────
+@dataclass
+class ManualVerifyPending:
+    phone: str
+    line_id: str
+    nickname: str
+    code: str
+    initiated_by_admin: str
+    created_at: datetime
+    code_verified: bool = False
+    code_verified_at: Optional[datetime] = None
+    allow_user_confirm_until: Optional[datetime] = None
+
+@dataclass
+class AdminManualFlow:
+    step: str
+    nickname: str
+    phone: Optional[str] = None
+
+manual_verify_pending: Dict[str, ManualVerifyPending] = {}
+admin_manual_flow: Dict[str, AdminManualFlow] = {}
+
+# ────────────── 工具函式 ──────────────
+def normalize_phone(phone: str) -> str:
+    phone = (phone or "").replace(" ", "").replace("-", "")
+    if phone.startswith("+886"):
+        return "0" + phone[4:]
+    return phone
+
+def make_qr(*labels_texts):
+    return QuickReply(items=[
+        QuickReplyButton(action=MessageAction(label=lbl, text=txt))
+        for (lbl, txt) in labels_texts
+    ])
+
+def reply_basic(event, text):
+    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=text))
+
+def reply_with_reverify(event, text):
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(
+            text=text,
+            quick_reply=make_qr((REVERIFY_TEXT, REVERIFY_TEXT))
+        )
+    )
+
+def reply_with_choices(event, text, choices):
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=text, quick_reply=make_qr(*choices))
+    )
+
+def save_debug_image(temp_path: str, user_id: str) -> Optional[str]:
+    try:
+        if not (OCR_DEBUG_IMAGE_BASEURL and OCR_DEBUG_IMAGE_DIR):
+            return None
+        os.makedirs(OCR_DEBUG_IMAGE_DIR, exist_ok=True)
+        fname = f"{user_id}_{int(time.time())}.jpg"
+        dest = os.path.join(OCR_DEBUG_IMAGE_DIR, fname)
+        shutil.copyfile(temp_path, dest)
+        return f"{OCR_DEBUG_IMAGE_BASEURL}/{fname}"
+    except Exception:
+        logging.exception("save_debug_image failed")
+        return None
+
+def generate_verification_code(length: int = VERIFY_CODE_LENGTH) -> str:
+    return "".join(str(secrets.randbelow(10)) for _ in range(length))
+
+def _find_pending_by_code(code: str) -> Tuple[Optional[str], Optional[ManualVerifyPending]]:
+    for key, pending in manual_verify_pending.items():
+        if pending and getattr(pending, "code", None) == code:
+            return key, pending
+    return None, None
+
+def get_all_temp_users():
+    try:
+        from utils.temp_users import temp_users
+        return temp_users.items()
+    except Exception:
+        return []
+
+def get_display_name(user_id: str) -> str:
+    try:
+        profile = line_bot_api.get_profile(user_id)
+        return profile.display_name
+    except Exception:
+        return "用戶"
+
+def get_whitelist_by_user(user_id: str):
+    return Whitelist.query.filter_by(line_user_id=user_id).first()
+
+def get_whitelist_by_phone(phone: str):
+    return Whitelist.query.filter_by(phone=phone).first()
+
+def get_blacklist_by_phone(phone: str):
+    return Blacklist.query.filter_by(phone=phone).first()
+
+def error_handler(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception:
+            logging.exception(f"{func.__name__} error")
+            event = args[0] if args else None
+            if event and hasattr(event, "reply_token"):
+                reply_basic(event, "系統發生錯誤，請稍後再試或聯絡管理員。")
+    return wrapper
 
 # ───────────────────────────────────────────────────────────────
 # 全域設定
@@ -133,17 +253,14 @@ def start_manual_verify_by_admin(admin_id, target_key, nickname, phone, line_id)
         code = generate_verification_code(8)
 
     tz = pytz.timezone("Asia/Taipei")
-    manual_verify_pending[target_key] = {
-        "phone": phone,
-        "line_id": line_id,
-        "nickname": nickname,
-        "code": code,
-        "initiated_by_admin": admin_id,
-        "created_at": datetime.now(tz),
-        "code_verified": False,
-        "code_verified_at": None,
-        "allow_user_confirm_until": None,
-    }
+    manual_verify_pending[target_key] = ManualVerifyPending(
+        phone=phone,
+        line_id=line_id,
+        nickname=nickname,
+        code=code,
+        initiated_by_admin=admin_id,
+        created_at=datetime.now(tz)
+    )
 
     logging.info(f"manual_verify_pending created for {target_key} by admin {admin_id} (code={code})")
     return code
@@ -154,17 +271,17 @@ def admin_approve_manual_verify(admin_id, target_user_id):
         return False, "找不到待審核項目。"
     tz = pytz.timezone("Asia/Taipei")
     pending_data = {
-        "phone": pending.get("phone"),
-        "line_id": pending.get("line_id"),
-        "name": pending.get("nickname"),
+        "phone": pending.phone,
+        "line_id": pending.line_id,
+        "name": pending.nickname,
         "date": datetime.now(tz).strftime("%Y-%m-%d"),
     }
     record, _ = update_or_create_whitelist_from_data(pending_data, target_user_id, reverify=True)
     try:
         line_bot_api.push_message(target_user_id, TextSendMessage(text=(
             f"📱 {record.phone}\n"
-            f"🌸 暱稱：{record.name or pending.get('nickname')}\n"
-            f"🔗 LINE ID：{record.line_id or pending.get('line_id')}\n"
+            f"🌸 暱稱：{record.name or pending.nickname}\n"
+            f"🔗 LINE ID：{record.line_id or pending.line_id}\n"
             f"🕒 {record.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
             f"管理員已人工核准，驗證完成，歡迎加入。"
         )))
@@ -209,24 +326,24 @@ def handle_text(event):
     if user_id in ADMIN_IDS:
         if user_text.startswith("手動驗證 - "):
             nickname = user_text.replace("手動驗證 - ", "").strip()
-            admin_manual_flow[user_id] = {"step": "awaiting_phone", "nickname": nickname}
+            admin_manual_flow[user_id] = AdminManualFlow(step="awaiting_phone", nickname=nickname)
             reply_basic(event, f"開始手動驗證（暱稱：{nickname}）。請輸入手機號碼（09開頭）。")
             return
 
-        if user_id in admin_manual_flow and admin_manual_flow[user_id].get("step") == "awaiting_phone":
+        if user_id in admin_manual_flow and admin_manual_flow[user_id].step == "awaiting_phone":
             phone = normalize_phone(user_text)
             if not re.match(r"^09\d{8}$", phone):
                 reply_basic(event, "請輸入正確的手機號（09開頭共10碼）。")
                 return
-            admin_manual_flow[user_id]["phone"] = phone
-            admin_manual_flow[user_id]["step"] = "awaiting_lineid"
+            admin_manual_flow[user_id].phone = phone
+            admin_manual_flow[user_id].step = "awaiting_lineid"
             reply_basic(event, "請輸入該使用者的 LINE ID（或輸入：尚未設定）。")
             return
 
-        if user_id in admin_manual_flow and admin_manual_flow[user_id].get("step") == "awaiting_lineid":
+        if user_id in admin_manual_flow and admin_manual_flow[user_id].step == "awaiting_lineid":
             line_id = user_text.strip()
-            phone = admin_manual_flow[user_id].get("phone")
-            nickname = admin_manual_flow[user_id].get("nickname")
+            phone = admin_manual_flow[user_id].phone
+            nickname = admin_manual_flow[user_id].nickname
             if not phone:
                 reply_basic(event, "發生錯誤：找不到先前輸入的手機號，請重新開始手動驗證流程。")
                 admin_manual_flow.pop(user_id, None)
