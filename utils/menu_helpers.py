@@ -121,17 +121,17 @@ def get_menu_carousel():
     """
     主功能選單，深色夏日風格
     """
-    main_bg1 = "#1C2636"     # 深夏夜藍
-    main_bg2 = "#222E44"     # 次深夜藍
-    btn_yellow = "#FFD700"   # 金黃
-    btn_green = "#11806A"    # 深夏綠
-    btn_blue = "#2C4A6B"     # 深藍
-    btn_white = "#FDF6EE"    # 柔米白
-    btn_orange = "#FF9800"   # 橘色
-    btn_pink = "#D97092"     # 夏夜玫瑰粉
-    btn_lblue = "#4B99C2"    # 深天藍
-    btn_lgreen = "#2BB673"   # 夏夜綠
-    btn_gray = "#31485C"     # 深灰藍
+    # 學院祭主題色系
+    main_bg1 = "#254D7A"     # 學院藍
+    main_bg2 = "#F5F5F5"     # 學院白
+    btn_gold = "#FFD700"     # 學院金
+    btn_green = "#3CB371"    # 學院綠
+    btn_blue = "#254D7A"     # 學院藍
+    btn_white = "#FFFFFF"    # 純白
+    btn_red = "#E53935"      # 學院紅
+    btn_orange = "#FF9800"   # 活力橘
+    btn_gray = "#B0BEC5"     # 淺灰
+    btn_purple = "#7C4DFF"   # 活力紫
 
     bubbles = []
 
@@ -147,13 +147,13 @@ def get_menu_carousel():
             "contents": [
                 {
                     "type": "text",
-                    "text": "🏖️ 夏日茗殿選單 1/2",
+                    "text": "� 學院祭主選單 1/2",
                     "weight": "bold",
                     "size": "lg",
                     "align": "center",
-                    "color": "#FFD700"
+                    "color": btn_gold
                 },
-                {"type": "separator", "color": "#31485C"},
+                {"type": "separator", "color": btn_gray},
                 {
                     "type": "box",
                     "layout": "vertical",
@@ -164,17 +164,17 @@ def get_menu_carousel():
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "🍧 開啟主選單",
+                                "label": "� 學院驗證資訊",
                                 "text": "驗證資訊"
                             },
                             "style": "primary",
-                            "color": btn_yellow
+                            "color": btn_gold
                         },
                         {
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "🌴 每日抽獎",
+                                "label": "� 學院抽獎",
                                 "text": "每日抽獎"
                             },
                             "style": "primary",
@@ -184,7 +184,7 @@ def get_menu_carousel():
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "📢 廣告專區",
+                                "label": "🏆 學院祭活動專區",
                                 "text": "廣告專區"
                             },
                             "style": "primary",
@@ -194,7 +194,7 @@ def get_menu_carousel():
                             "type": "button",
                             "action": {
                                 "type": "uri",
-                                "label": "📅 班表查詢",
+                                "label": "📅 活動班表查詢",
                                 "uri": "https://t.me/+svlFjBpb4hxkYjFl"
                             },
                             "style": "secondary",
@@ -204,7 +204,7 @@ def get_menu_carousel():
                             "type": "button",
                             "action": {
                                 "type": "uri",
-                                "label": "🕶️ 預約諮詢",
+                                "label": "�️ 預約諮詢",
                                 "uri": choose_link()
                             },
                             "style": "secondary",
@@ -228,13 +228,13 @@ def get_menu_carousel():
             "contents": [
                 {
                     "type": "text",
-                    "text": "🏝️ 夏日茗殿選單 2/2",
+                    "text": "� 學院祭主選單 2/2",
                     "weight": "bold",
                     "size": "lg",
                     "align": "center",
-                    "color": "#FFD700"
+                    "color": btn_blue
                 },
-                {"type": "separator", "color": "#31485C"},
+                {"type": "separator", "color": btn_gray},
                 {
                     "type": "box",
                     "layout": "vertical",
@@ -245,37 +245,37 @@ def get_menu_carousel():
                             "type": "button",
                             "action": {
                                 "type": "uri",
-                                "label": "🌺 茗殿討論區",
+                                "label": "�️ 學院討論區",
                                 "uri": "https://line.me/ti/g2/mq8VqBIVupL1lsIXuAulnqZNz5vw7VKrVYjNDg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default"
                             },
                             "style": "primary",
-                            "color": btn_lgreen
+                            "color": btn_green
                         },
                         {
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "📝 回報文登記(暫停使用)",
+                                "label": "📝 活動回報(暫停)",
                                 "text": "回報文"
                             },
                             "style": "primary",
-                            "color": btn_pink
+                            "color": btn_purple
                         },
                         {
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "💸 折價券管理",
+                                "label": "� 折價券管理",
                                 "text": "折價券管理"
                             },
                             "style": "primary",
-                            "color": btn_lblue
+                            "color": btn_red
                         },
                         {
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "🧊 呼叫管理員（暫停使用）",
+                                "label": "�‍🎓 呼叫管理員(暫停)",
                                 "text": "呼叫管理員"
                             },
                             "style": "secondary",
@@ -285,7 +285,7 @@ def get_menu_carousel():
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "🌞 活動快訊（暫停使用）",
+                                "label": "� 活動快訊(暫停)",
                                 "text": "活動快訊"
                             },
                             "style": "primary",
@@ -298,7 +298,7 @@ def get_menu_carousel():
     })
 
     return FlexSendMessage(
-        alt_text="🏖️ 夏日主功能選單",
+        alt_text="� 學院祭主功能選單",
         contents={
             "type": "carousel",
             "contents": bubbles
