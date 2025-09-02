@@ -89,14 +89,14 @@ def entrypoint(event):
         if today_coupon:
             # 已抽過：直接顯示今日結果（Flex）
             amount = today_coupon.amount
-            flex_msg = get_today_coupon_flex(user_id, display_name, amount)
+            flex_msg = get_today_coupon_flex(user_id, display_name, {"amount": amount, "type": "unknown"})
             line_bot_api.reply_message(event.reply_token, [flex_msg])
             return
         else:
             # 沒抽過：抽獎、存檔、Flex
             amount = draw_coupon()
             save_coupon_record(user_id, amount, Coupon, db)
-            flex_msg = get_today_coupon_flex(user_id, display_name, amount)
+            flex_msg = get_today_coupon_flex(user_id, display_name, {"amount": amount, "type": "unknown"})
             line_bot_api.reply_message(event.reply_token, [flex_msg])
             return
 

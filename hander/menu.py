@@ -55,13 +55,13 @@ def handle_menu(event):
         today_str = datetime.now(tz).strftime("%Y-%m-%d")
         coupon = Coupon.query.filter_by(line_user_id=user_id, date=today_str, type="draw").first()
         if coupon:
-            flex = get_today_coupon_flex(user_id, display_name, coupon.amount)
+            flex = get_today_coupon_flex(user_id, display_name, {"amount": coupon.amount, "type": getattr(coupon, "type", "unknown")})
             line_bot_api.reply_message(event.reply_token, flex)
             return
 
         amount = draw_coupon()  # 0/100/200/300
         save_coupon_record(user_id, amount, Coupon, db, type="draw")
-        flex = get_today_coupon_flex(user_id, display_name, amount)
+    flex = get_today_coupon_flex(user_id, display_name, {"amount": amount, "type": "unknown"})
         line_bot_api.reply_message(event.reply_token, flex)
         return
 
