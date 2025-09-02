@@ -7,7 +7,7 @@ from hander.verify import handle_verify
 from utils.temp_users import temp_users
 from models import Whitelist, Coupon
 from utils.draw_utils import draw_coupon, has_drawn_today, save_coupon_record, get_today_coupon_flex
-# import pytz  # 若未用可移除
+from pytz import timezone
 from datetime import datetime
 
 from hander.follow import handle_follow
@@ -57,7 +57,7 @@ def entrypoint(event):
 
     # 驗證資訊
     if user_text == "驗證資訊":
-        tz = pytz.timezone("Asia/Taipei")
+        tz = timezone("Asia/Taipei")
         user = Whitelist.query.filter_by(line_user_id=user_id).first()
         if user:
             reply = (
@@ -107,7 +107,7 @@ def entrypoint(event):
 
     # 折價券管理
     if user_text in ["折價券管理", "券紀錄", "我的券紀錄"]:
-        tz = pytz.timezone("Asia/Taipei")
+        tz = timezone("Asia/Taipei")
         now = datetime.now(tz)
         today_str = now.strftime('%Y-%m-%d')
         month_str = now.strftime('%Y-%m')
