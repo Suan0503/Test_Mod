@@ -31,7 +31,7 @@ REVERIFY_TEXT = "重新驗證"
 NOT_SET_TEXTS = ["尚未設定", "未設定", "無", "none", "not set"]
 VERIFY_CODE_LENGTH = 8
 VERIFY_CODE_EXPIRE = 900
-OCR_DEBUG_IMAGE_BASEURL = os.getenv("OCR_DEBUG_IMAGE_BASEURL", "").rstrip("/")
+OCR_DEBUG_IMAGE_BASEURL = os.getenpip install pillowv("OCR_DEBUG_IMAGE_BASEURL", "").rstrip("/")
 OCR_DEBUG_IMAGE_DIR = os.getenv("OCR_DEBUG_IMAGE_DIR", "/tmp/ocr_debug")
 
 # ────────────── 資料結構 ──────────────
@@ -119,7 +119,7 @@ def get_all_temp_users():
 def get_display_name(user_id: str) -> str:
     try:
         profile = line_bot_api.get_profile(user_id)
-        return profile.display_name
+        return profile.display_name or "用戶"
     except Exception:
         return "用戶"
 
@@ -172,56 +172,10 @@ admin_manual_flow = {}
 # ───────────────────────────────────────────────────────────────
 # 小工具
 # ───────────────────────────────────────────────────────────────
-def normalize_phone(phone):
-    phone = (phone or "").replace(" ", "").replace("-", "")
-    if phone.startswith("+886"):
-        return "0" + phone[4:]
-    return phone
-
-def make_qr(*labels_texts):
-    """快速小工具：產生 QuickReply from tuples(label, text)"""
-    return QuickReply(items=[
-        QuickReplyButton(action=MessageAction(label=lbl, text=txt))
-        for (lbl, txt) in labels_texts
-    ])
-
-def reply_basic(event, text):
-    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=text))
-
-def reply_with_reverify(event, text):
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(
-            text=text,
-            quick_reply=make_qr(("重新驗證", "重新驗證"))
-        )
-    )
-
-def reply_with_choices(event, text, choices):
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=text, quick_reply=make_qr(*choices))
-    )
-
-def save_debug_image(temp_path, user_id):
-    try:
-        if not (OCR_DEBUG_IMAGE_BASEURL and OCR_DEBUG_IMAGE_DIR):
-            return None
-        os.makedirs(OCR_DEBUG_IMAGE_DIR, exist_ok=True)
-        fname = f"{user_id}_{int(time.time())}.jpg"
-        dest = os.path.join(OCR_DEBUG_IMAGE_DIR, fname)
-        shutil.copyfile(temp_path, dest)
-        return f"{OCR_DEBUG_IMAGE_BASEURL}/{fname}"
-    except Exception:
-        logging.exception("save_debug_image failed")
-        return None
-
-def generate_verification_code(length=8):
-    return "".join(str(secrets.randbelow(10)) for _ in range(length))
 
 def _find_pending_by_code(code):
     for key, pending in manual_verify_pending.items():
-        if pending and pending.get("code") == code:
+        if pending and getattr(pending, "code", None) == code:
             return key, pending
     return None, None
 
