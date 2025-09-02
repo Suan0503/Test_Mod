@@ -41,9 +41,9 @@ def extract_lineid_phone(image_path, debug=False):
 
     # 根據平台裁切區域
     if platform == 'ios':
-        # 手機號碼區域（座標可微調）
-        phone_crop = image.crop((50, 500, w-50, 600))
-        id_crop = image.crop((50, 650, w-50, 750))
+        # 手機號碼區域（座標加大範圍，提升容錯）
+        phone_crop = image.crop((30, 550, w-30, 670))
+        id_crop = image.crop((30, 700, w-30, 820))
     else:
         # Android 深色背景，區域略下移
         phone_crop = image.crop((50, 500, w-50, 620))
