@@ -45,7 +45,7 @@ MENU_BUTTONS: List[List[Dict[str, Any]]] = [
         {"label": f"{E.TICKET} 學生證查詢（主選單）", "type": "message", "text": "驗證資訊", "color": "btn_gold", "style": "primary"},
         {"label": f"{E.PARTY} 福利社優惠（抽獎）", "type": "message", "text": "每日抽獎", "color": "btn_green", "style": "primary"},
         # 學院祭活動專區：按鈕改成典雅金邊（primary+深藍），更學院風
-        {"label": f"{E.TROPHY} 資優學生（廣告）", "type": "message", "text": "廣告專區", "color": "btn_blue", "style": "primary"},
+        {"label": f"{E.TROPHY} 資優學生介紹（廣告）", "type": "message", "text": "廣告專區", "color": "btn_gold", "style": "primary"},
         {"label": f"{E.CAL} 課表查詢（班表）", "type": "uri", "uri": "https://t.me/+svlFjBpb4hxkYjFl", "color": "btn_white", "style": "secondary"},
         {"label": "🗓️ 點我找老師（總機）", "type": "uri", "uri": None, "color": "btn_orange", "style": "secondary", "dynamic_uri": True},
     ],
