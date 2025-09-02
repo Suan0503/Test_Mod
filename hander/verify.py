@@ -173,11 +173,6 @@ admin_manual_flow = {}
 # 小工具
 # ───────────────────────────────────────────────────────────────
 
-def _find_pending_by_code(code):
-    for key, pending in manual_verify_pending.items():
-        if pending and getattr(pending, "code", None) == code:
-            return key, pending
-    return None, None
 
 # ───────────────────────────────────────────────────────────────
 # 1) 加入好友：送歡迎訊息
