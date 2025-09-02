@@ -285,28 +285,54 @@ def handle_text(event):
     tu = get_temp_user(user_id)
     phone_pattern = r"^09\d{8}$"
 
-    # 首次進入驗證流程
-    if not tu:
-        set_temp_user(user_id, {"step": "waiting_phone", "name": display_name})
-        reply_basic(event, "歡迎～請直接輸入手機號碼（09開頭）進行驗證。")
-        return
-
-    # 等待手機號碼
-    if tu.get("step") == "waiting_phone":
+    # 首次進入驗證流程或用戶重新輸入手機
+    phone_pattern = r"^09\d{8}$"
+    if not tu or (re.match(phone_pattern, user_text) and (not tu.get("phone") or tu.get("step") == "waiting_phone")):
         phone = normalize_phone(user_text)
-        if not re.match(phone_pattern, phone):
-            reply_basic(event, "⚠️ 請輸入正確的手機號碼（09開頭共10碼）")
+        # 查詢白名單
+        owner = Whitelist.query.filter_by(phone=phone).first()
+        if owner and owner.line_user_id == user_id:
+            # 已驗證過，直接開啟主選單
+            reply = (
+                "✅ 驗證成功，歡迎加入茗殿\n"
+                "🌟 加入密碼：ming666"
+            )
+            reply_with_menu(event.reply_token, reply)
+            return
+        elif owner and owner.line_user_id and owner.line_user_id != user_id:
+            reply_basic(event, "❌ 此手機已綁定其他帳號，請聯絡客服協助。")
             return
         # 黑名單檢查
         if Blacklist.query.filter_by(phone=phone).first():
             reply_basic(event, "❌ 此手機號碼無法通過驗證，請聯絡管理員。")
             pop_temp_user(user_id)
             return
-        # 白名單重複檢查
-        owner = Whitelist.query.filter_by(phone=phone).first()
-        if owner and owner.line_user_id and owner.line_user_id != user_id:
-            reply_basic(event, "❌ 此手機已綁定其他帳號，請聯絡客服協助。")
+        # 未驗證者，直接進入第一階段
+        set_temp_user(user_id, {"step": "waiting_lineid", "name": display_name, "phone": phone})
+        reply_basic(event,
+            "【步驟 1️⃣】請輸入您的手機號碼（09開頭）進行驗證\n"
+            "\n"
+            "【步驟 2️⃣】手機號已登記成功！請輸入您的 LINE ID（未設定請輸入：尚未設定）\n"
+            "👉 LINE ID位置：LINE主頁 > 右上角設定 > 個人檔案 > 查看您設定的ID 並打在聊天室"
+        )
+        return
+
+    # 等待手機號碼
+    if tu.get("step") == "waiting_lineid":
+        line_id = user_text.strip()
+        if not line_id:
+            reply_basic(event, "⚠️ 請輸入有效的 LINE ID（或輸入：尚未設定）")
             return
+        tu["line_id"] = line_id
+        tu["step"] = "waiting_screenshot"
+        set_temp_user(user_id, tu)
+        reply_basic(
+            event,
+            "【步驟 3️⃣】請上傳您的 LINE 個人頁面截圖\n"
+            "📸 請截圖 LINE主頁 > 右上角設定 > 個人檔案 > 點進去後截圖\n"
+            "需清楚顯示 LINE 名稱與（若有）ID，作為驗證依據"
+        )
+        return
         tu["phone"] = phone
         tu["step"] = "waiting_lineid"
         set_temp_user(user_id, tu)
@@ -369,10 +395,7 @@ def handle_text(event):
         reply_basic(event, msg)
         return
 
-    if user_text == "重新驗證":
-        set_temp_user(user_id, {"step": "waiting_phone", "name": display_name, "reverify": True})
-        reply_basic(event, "請輸入您的手機號碼（09開頭）開始重新驗證～")
-        return
+    # 重新驗證指令移除，直接由手機輸入觸發
 
     if re.match(r"^\d{8}$", user_text):
         pending = manual_verify_pending.get(user_id)
