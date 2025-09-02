@@ -1,6 +1,6 @@
 import re
 import pytesseract
-from PIL import Image, ImageEnhance, ImageOps
+from PIL import Image
 
 def normalize_phone(phone_raw):
     # 去掉空白與 - 和 +號
@@ -19,59 +19,23 @@ def normalize_phone(phone_raw):
         return phone_raw
     return phone
 
-def detect_platform(image):
-    w, h = image.size
-    # iOS: 淺色背景，Android: 深色背景
-    # 取左上角像素判斷亮度
-    px = image.convert('L').getpixel((10, 10))
-    if px > 180:
-        return 'ios'
-    else:
-        return 'android'
-
-def preprocess_crop(crop_img):
-    gray = ImageOps.grayscale(crop_img)
-    enhanced = ImageEnhance.Contrast(gray).enhance(2.0)
-    return enhanced
-
 def extract_lineid_phone(image_path, debug=False):
     image = Image.open(image_path)
-    w, h = image.size
-    platform = detect_platform(image)
+    text = pytesseract.image_to_string(image, lang='eng+chi_tra')
 
-    # 根據平台裁切區域
-    if platform == 'ios':
-        # 手機號碼區域（座標加大範圍，提升容錯）
-        phone_crop = image.crop((30, 550, w-30, 670))
-        id_crop = image.crop((30, 700, w-30, 820))
-    else:
-        # Android 深色背景，區域略下移
-        phone_crop = image.crop((50, 500, w-50, 620))
-        id_crop = image.crop((50, 700, w-50, 800))
-
-    phone_crop = preprocess_crop(phone_crop)
-    id_crop = preprocess_crop(id_crop)
-
-    phone_text = pytesseract.image_to_string(phone_crop, lang='eng+chi_tra')
-    id_text = pytesseract.image_to_string(id_crop, lang='eng')
-
-    # 手機號碼正則
-    phone_match = re.search(r'((?:\+?886)[ -]?\d{3}[ -]?\d{3}[ -]?\d{3}|09\d{8})', phone_text)
+    # 支援 +886 903 587 063、886903587063、09xxxxxxxx
+    phone_match = re.search(r'((?:\+?886)[ -]?\d{3}[ -]?\d{3}[ -]?\d{3}|09\d{8})', text)
     phone = normalize_phone(phone_match.group(0)) if phone_match else None
 
-    # LINE ID 正則
-    lineid_match = re.search(r'([A-Za-z0-9_\-\.]{3,})', id_text)
+    # LINE ID 抓法不變
+    lineid_match = re.search(r'ID[\s:：]{0,2}([A-Za-z0-9_\-\.]{3,})', text, re.IGNORECASE)
     lineid = lineid_match.group(1) if lineid_match else None
 
     if debug:
-        print(f"平台: {platform}")
-        print("手機區域OCR：", phone_text)
-        print("ID區域OCR：", id_text)
+        print("OCR全文：\n", text)
         print("手機:", phone)
         print("LINE ID:", lineid)
 
-    # 全文也回傳（方便除錯）
-    text = f"[phone_crop]\n{phone_text}\n[id_crop]\n{id_text}"
     return phone, lineid, text
 
 if __name__ == "__main__":
