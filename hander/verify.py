@@ -443,21 +443,21 @@ def handle_text(event):
             found_key, found_pending = _find_pending_by_code(user_text)
             if found_pending:
                 manual_verify_pending[user_id] = found_pending
-                if found_key != user_id:
-                    manual_verify_pending.pop(found_key, None)
+                if found_key and found_key != user_id:
+                    manual_verify_pending.pop(found_key)
                 pending = found_pending
                 pending_key = user_id
 
-        if pending and pending.get("code") == user_text:
+        if pending and pending.code == user_text:
             tz = pytz.timezone("Asia/Taipei")
-            pending["code_verified"] = True
-            pending["code_verified_at"] = datetime.now(tz)
-            pending["allow_user_confirm_until"] = datetime.now(tz) + timedelta(minutes=5)
+            pending.code_verified = True
+            pending.code_verified_at = datetime.now(tz)
+            pending.allow_user_confirm_until = datetime.now(tz) + timedelta(minutes=5)
             confirm_msg = (
-                f"📱 {pending.get('phone')}\n"
-                f"🌸 暱稱： {pending.get('nickname')}\n"
+                f"📱 {pending.phone}\n"
+                f"🌸 暱稱： {pending.nickname}\n"
                 f"       個人編號： (驗證後產生)\n"
-                f"🔗 LINE ID：{pending.get('line_id')}\n"
+                f"🔗 LINE ID：{pending.line_id}\n"
                 f"🕒 {datetime.now(tz).strftime('%Y/%m/%d %H:%M:%S')}\n\n"
                 "此為管理員手動驗證，如無誤請輸入 1 完成驗證（或等待管理員直接核准）。"
             )
@@ -678,14 +678,14 @@ def handle_post_ocr_confirm(event):
             return True
         # 管理員人工驗證流程
         pending = manual_verify_pending.get(user_id)
-        if pending and pending.get("code_verified"):
-            until = pending.get("allow_user_confirm_until")
+        if pending and pending.code_verified:
+            until = pending.allow_user_confirm_until
             now = datetime.now(tz)
             if until and now <= until:
                 data = {
-                    "phone": pending.get("phone"),
-                    "line_id": pending.get("line_id"),
-                    "name": pending.get("nickname"),
+                    "phone": pending.phone,
+                    "line_id": pending.line_id,
+                    "name": pending.nickname,
                     "date": now.strftime("%Y-%m-%d"),
                 }
                 record, _ = update_or_create_whitelist_from_data(
@@ -700,11 +700,11 @@ def handle_post_ocr_confirm(event):
                     f"🌟 加入密碼：ming666"
                 )
                 reply_with_menu(event.reply_token, reply)
-                manual_verify_pending.pop(user_id, None)
+                manual_verify_pending.pop(user_id)
                 pop_temp_user(user_id)
                 return True
             else:
-                manual_verify_pending.pop(user_id, None)
+                manual_verify_pending.pop(user_id)
                 reply_basic(event, "按 1 時限已過，請重新向管理員申請手動驗證或等待管理員核准。")
                 return True
         reply_basic(event, "無效指令或無待處理的人工驗證。若要重新驗證請點「重新驗證」。")
@@ -716,20 +716,20 @@ def handle_post_ocr_confirm(event):
             found_key, found_pending = _find_pending_by_code(user_text)
             if found_pending:
                 manual_verify_pending[user_id] = found_pending
-                if found_key != user_id:
-                    manual_verify_pending.pop(found_key, None)
+                if found_key and found_key != user_id:
+                    manual_verify_pending.pop(found_key)
                 pending = found_pending
 
-        if pending and pending.get("code") == user_text:
+        if pending and pending.code == user_text:
             tz = pytz.timezone("Asia/Taipei")
-            pending["code_verified"] = True
-            pending["code_verified_at"] = datetime.now(tz)
-            pending["allow_user_confirm_until"] = datetime.now(tz) + timedelta(minutes=5)
+            pending.code_verified = True
+            pending.code_verified_at = datetime.now(tz)
+            pending.allow_user_confirm_until = datetime.now(tz) + timedelta(minutes=5)
             confirm_msg = (
-                f"📱 {pending.get('phone')}\n"
-                f"🌸 暱稱： {pending.get('nickname')}\n"
+                f"📱 {pending.phone}\n"
+                f"🌸 暱稱： {pending.nickname}\n"
                 f"       個人編號： (驗證後產生)\n"
-                f"🔗 LINE ID：{pending.get('line_id')}\n"
+                f"🔗 LINE ID：{pending.line_id}\n"
                 f"🕒 {datetime.now(tz).strftime('%Y/%m/%d %H:%M:%S')}\n\n"
                 "此為管理員手動驗證，如無誤按「完成驗證」。"
             )
