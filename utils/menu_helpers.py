@@ -1,7 +1,107 @@
+
 from linebot.models import TextSendMessage, FlexSendMessage
 from extensions import line_bot_api
 from storage import ADMIN_IDS  # 管理員清單
 import os
+from typing import List, Dict, Any, Optional
+
+# ────────────── 主題設定（可多主題/多語系） ──────────────
+MENU_THEME = {
+    "name": "學院祭",
+    "main_bg1": "#254D7A",     # 學院藍
+    "main_bg2": "#F5F5F5",     # 學院白
+    "btn_gold": "#FFD700",     # 學院金
+    "btn_green": "#3CB371",    # 學院綠
+    "btn_blue": "#254D7A",     # 學院藍
+    "btn_white": "#FFFFFF",    # 純白
+    "btn_red": "#E53935",      # 學院紅
+    "btn_orange": "#FF9800",   # 活力橘
+    "btn_gray": "#B0BEC5",     # 淺灰
+    "btn_purple": "#7C4DFF",   # 活力紫
+    "alt_text": "🎓 學院祭主功能選單",
+    "carousel_titles": ["🎓 學院祭主選單 1/2", "🏫 學院祭主選單 2/2"],
+    "carousel_title_colors": ["#FFD700", "#254D7A"],
+}
+
+# ────────────── 主選單按鈕資料化 ──────────────
+MENU_BUTTONS: List[List[Dict[str, Any]]] = [
+    [
+        {"label": "🎫 學院驗證資訊", "type": "message", "text": "驗證資訊", "color": "btn_gold", "style": "primary"},
+        {"label": "🎉 學院抽獎", "type": "message", "text": "每日抽獎", "color": "btn_green", "style": "primary"},
+        {"label": "🏆 學院祭活動專區", "type": "message", "text": "廣告專區", "color": "btn_blue", "style": "primary"},
+        {"label": "📅 活動班表查詢", "type": "uri", "uri": "https://t.me/+svlFjBpb4hxkYjFl", "color": "btn_white", "style": "secondary"},
+        {"label": "🗓️ 預約諮詢", "type": "uri", "uri": None, "color": "btn_orange", "style": "secondary", "dynamic_uri": True},
+    ],
+    [
+        {"label": "🏛️ 學院討論區", "type": "uri", "uri": "https://line.me/ti/g2/mq8VqBIVupL1lsIXuAulnqZNz5vw7VKrVYjNDg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default", "color": "btn_green", "style": "primary"},
+        {"label": "📝 活動回報(暫停)", "type": "message", "text": "回報文", "color": "btn_purple", "style": "primary"},
+        {"label": "💰 折價券管理", "type": "message", "text": "折價券管理", "color": "btn_red", "style": "primary"},
+        {"label": "🧑‍🎓 呼叫管理員(暫停)", "type": "message", "text": "呼叫管理員", "color": "btn_gray", "style": "secondary"},
+        {"label": "🎈 活動快訊(暫停)", "type": "message", "text": "活動快訊", "color": "btn_orange", "style": "primary"},
+    ]
+]
+
+# ────────────── 主選單產生函式 ──────────────
+def build_menu_bubble(page: int) -> Dict[str, Any]:
+    theme = MENU_THEME
+    buttons = []
+    for btn in MENU_BUTTONS[page]:
+        color = theme[btn["color"]]
+        action = None
+        if btn["type"] == "message":
+            action = {"type": "message", "label": btn["label"], "text": btn["text"]}
+        elif btn["type"] == "uri":
+            uri = btn.get("uri")
+            if btn.get("dynamic_uri"):
+                uri = choose_link()
+            action = {"type": "uri", "label": btn["label"], "uri": uri}
+        buttons.append({
+            "type": "button",
+            "action": action,
+            "style": btn["style"],
+            "color": color
+        })
+    return {
+        "type": "bubble",
+        "size": "mega",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "md",
+            "backgroundColor": theme["main_bg1"] if page == 0 else theme["main_bg2"],
+            "contents": [
+                {
+                    "type": "text",
+                    "text": theme["carousel_titles"][page],
+                    "weight": "bold",
+                    "size": "lg",
+                    "align": "center",
+                    "color": theme["carousel_title_colors"][page]
+                },
+                {"type": "separator", "color": theme["btn_gray"]},
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "margin": "lg",
+                    "spacing": "sm",
+                    "contents": buttons
+                }
+            ]
+        }
+    }
+
+def get_menu_carousel() -> FlexSendMessage:
+    """
+    主功能選單，主題/按鈕資料化，易於維護與擴充
+    """
+    bubbles = [build_menu_bubble(0), build_menu_bubble(1)]
+    return FlexSendMessage(
+        alt_text=MENU_THEME["alt_text"],
+        contents={
+            "type": "carousel",
+            "contents": bubbles
+        }
+    )
 
 def choose_link():
     group = [
@@ -305,11 +405,11 @@ def get_menu_carousel():
         }
     )
 
-def reply_with_menu(token, text=None):
+def reply_with_menu(token: str, text: Optional[str] = None) -> None:
     """
     回覆主選單與可選的說明文字
     """
-    msgs = []
+    msgs: List[Any] = []
     if text:
         msgs.append(TextSendMessage(text=text))
     msgs.append(get_menu_carousel())
