@@ -31,19 +31,23 @@ def handle_menu(event):
     # 驗證資訊
     if user_text == "驗證資訊":
         existing = Whitelist.query.filter_by(line_user_id=user_id).first()
+        from hander.verify import build_student_card_flex
+        from linebot.models import FlexSendMessage, TextSendMessage
         if existing:
-            reply = (
-                f"📱 {existing.phone}\n"
-                f"🌸 暱稱：{existing.name or display_name}\n"
-                f"       個人編號：{existing.id}\n"
-                f"🔗 LINE ID：{existing.line_id or '未登記'}\n"
-                f"🕒 {existing.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
-                f"✅ 驗證成功，歡迎加入茗殿\n"
-                f"🌟 加入密碼：ming666"
+            flex_msg = build_student_card_flex(
+                phone=existing.phone,
+                nickname=existing.name or display_name,
+                number=existing.id,
+                lineid=existing.line_id or '未登記',
+                join_code="ming666",
+                avatar_url=None
             )
-            line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=reply), get_menu_carousel()])
+            line_bot_api.reply_message(event.reply_token, [
+                FlexSendMessage(alt_text="茗殿學生證", contents=flex_msg["contents"]),
+                get_menu_carousel()
+            ])
         else:
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 你尚未完成驗證，請輸入手機號碼進行驗證。"))
+            line_bot_api.reply_message(event.reply_token, [TextSendMessage(text="⚠️ 你尚未完成驗證，請輸入手機號碼進行驗證。"), get_menu_carousel()])
         return
 
     # 每日抽獎
