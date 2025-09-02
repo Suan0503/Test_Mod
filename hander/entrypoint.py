@@ -91,7 +91,7 @@ def entrypoint(event):
             amount = today_coupon.amount
             safe_display_name = display_name if isinstance(display_name, str) and display_name else ""
             safe_amount = amount if isinstance(amount, int) else 0
-            flex_msg = get_today_coupon_flex(user_id, safe_display_name, {"amount": safe_amount, "type": "unknown"})
+            flex_msg = get_today_coupon_flex(user_id, safe_display_name, safe_amount)
             line_bot_api.reply_message(event.reply_token, [flex_msg])
             return
         else:
@@ -101,7 +101,7 @@ def entrypoint(event):
             save_coupon_record(user_id, safe_amount, Coupon, db)
             safe_display_name = display_name if isinstance(display_name, str) and display_name else ""
             safe_amount = amount if isinstance(amount, int) else 0
-            flex_msg = get_today_coupon_flex(user_id, safe_display_name, {"amount": safe_amount, "type": "unknown"})
+            flex_msg = get_today_coupon_flex(user_id, safe_display_name, safe_amount)
             line_bot_api.reply_message(event.reply_token, [flex_msg])
             return
 

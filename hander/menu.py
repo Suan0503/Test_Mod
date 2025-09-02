@@ -58,7 +58,7 @@ def handle_menu(event):
             safe_display_name = display_name if isinstance(display_name, str) and display_name else ""
             safe_amount = getattr(coupon, "amount", 0)
             safe_type = getattr(coupon, "type", "unknown")
-            flex = get_today_coupon_flex(user_id, safe_display_name, {"amount": safe_amount, "type": safe_type})
+            flex = get_today_coupon_flex(user_id, safe_display_name, safe_amount)
             line_bot_api.reply_message(event.reply_token, flex)
             return
 
@@ -66,7 +66,7 @@ def handle_menu(event):
         safe_amount = amount if isinstance(amount, int) else 0
         save_coupon_record(user_id, safe_amount, Coupon, db)
         safe_display_name = display_name if isinstance(display_name, str) and display_name else ""
-        flex = get_today_coupon_flex(user_id, safe_display_name, {"amount": safe_amount, "type": "unknown"})
+        flex = get_today_coupon_flex(user_id, safe_display_name, safe_amount)
         line_bot_api.reply_message(event.reply_token, flex)
         return
 
