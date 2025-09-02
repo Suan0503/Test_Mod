@@ -82,8 +82,8 @@ def get_today_coupon_flex(user_id: str, display_name: str, amount: int) -> FlexS
     if amount == 0:
         text, color = COUPON_TEXTS[0]
     else:
-        text, color = COUPON_TEXTS["default"]
-        text = text.format(amount=amount)
+        _, color = COUPON_TEXTS["default"]
+        text = f"🎁 恭喜你抽中 {amount} 元折價券"
     return FlexSendMessage(
         alt_text=FLEX_TEMPLATE["alt_text"],
         contents={
