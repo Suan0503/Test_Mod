@@ -7,7 +7,7 @@ from hander.verify import handle_verify
 from utils.temp_users import temp_users
 from models import Whitelist, Coupon
 from utils.draw_utils import draw_coupon, has_drawn_today, save_coupon_record, get_today_coupon_flex
-import pytz
+# import pytz  # 若未用可移除
 from datetime import datetime
 
 from hander.follow import handle_follow
@@ -89,14 +89,19 @@ def entrypoint(event):
         if today_coupon:
             # 已抽過：直接顯示今日結果（Flex）
             amount = today_coupon.amount
-            flex_msg = get_today_coupon_flex(user_id, display_name, {"amount": amount, "type": "unknown"})
+            safe_display_name = display_name if isinstance(display_name, str) and display_name else ""
+            safe_amount = amount if isinstance(amount, int) else 0
+            flex_msg = get_today_coupon_flex(user_id, safe_display_name, {"amount": safe_amount, "type": "unknown"})
             line_bot_api.reply_message(event.reply_token, [flex_msg])
             return
         else:
             # 沒抽過：抽獎、存檔、Flex
             amount = draw_coupon()
-            save_coupon_record(user_id, amount, Coupon, db)
-            flex_msg = get_today_coupon_flex(user_id, display_name, {"amount": amount, "type": "unknown"})
+            safe_amount = amount if isinstance(amount, int) else 0
+            save_coupon_record(user_id, safe_amount, Coupon, db)
+            safe_display_name = display_name if isinstance(display_name, str) and display_name else ""
+            safe_amount = amount if isinstance(amount, int) else 0
+            flex_msg = get_today_coupon_flex(user_id, safe_display_name, {"amount": safe_amount, "type": "unknown"})
             line_bot_api.reply_message(event.reply_token, [flex_msg])
             return
 

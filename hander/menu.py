@@ -1,10 +1,10 @@
 from linebot.models import TextSendMessage
 from extensions import line_bot_api, db
 from models import Whitelist, Coupon
-from utils.menu import get_menu_carousel
+from utils.menu_helpers import get_menu_carousel
 from utils.draw_utils import draw_coupon, get_today_coupon_flex, has_drawn_today, save_coupon_record
 from utils.verify_guard import guard_verified
-import pytz
+from pytz import timezone
 from datetime import datetime
 
 def handle_menu(event):
@@ -16,7 +16,7 @@ def handle_menu(event):
             return
     # ▲
 
-    tz = pytz.timezone("Asia/Taipei")
+    tz = timezone("Asia/Taipei")
     try:
         profile = line_bot_api.get_profile(user_id)
         display_name = profile.display_name
@@ -55,13 +55,18 @@ def handle_menu(event):
         today_str = datetime.now(tz).strftime("%Y-%m-%d")
         coupon = Coupon.query.filter_by(line_user_id=user_id, date=today_str, type="draw").first()
         if coupon:
-            flex = get_today_coupon_flex(user_id, display_name, {"amount": coupon.amount, "type": getattr(coupon, "type", "unknown")})
+            safe_display_name = display_name if isinstance(display_name, str) and display_name else ""
+            safe_amount = getattr(coupon, "amount", 0)
+            safe_type = getattr(coupon, "type", "unknown")
+            flex = get_today_coupon_flex(user_id, safe_display_name, {"amount": safe_amount, "type": safe_type})
             line_bot_api.reply_message(event.reply_token, flex)
             return
 
         amount = draw_coupon()  # 0/100/200/300
-        save_coupon_record(user_id, amount, Coupon, db, type="draw")
-    flex = get_today_coupon_flex(user_id, display_name, {"amount": amount, "type": "unknown"})
+        safe_amount = amount if isinstance(amount, int) else 0
+        save_coupon_record(user_id, safe_amount, Coupon, db)
+        safe_display_name = display_name if isinstance(display_name, str) and display_name else ""
+        flex = get_today_coupon_flex(user_id, safe_display_name, {"amount": safe_amount, "type": "unknown"})
         line_bot_api.reply_message(event.reply_token, flex)
         return
 
