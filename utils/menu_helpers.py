@@ -42,18 +42,18 @@ MENU_THEME = {
 # ────────────── 主選單按鈕資料化 ──────────────
 MENU_BUTTONS: List[List[Dict[str, Any]]] = [
     [
-        {"label": f"{E.TICKET} 學院驗證資訊", "type": "message", "text": "驗證資訊", "color": "btn_gold", "style": "primary"},
-        {"label": f"{E.PARTY} 學院抽獎", "type": "message", "text": "每日抽獎", "color": "btn_green", "style": "primary"},
+        {"label": f"{E.TICKET} 學生證查詢（主選單）", "type": "message", "text": "驗證資訊", "color": "btn_gold", "style": "primary"},
+        {"label": f"{E.PARTY} 福利社優惠（抽獎）", "type": "message", "text": "每日抽獎", "color": "btn_green", "style": "primary"},
         # 學院祭活動專區：按鈕改成典雅金邊（primary+深藍），更學院風
-        {"label": f"{E.TROPHY} 學院祭活動專區", "type": "message", "text": "廣告專區", "color": "btn_blue", "style": "primary"},
-        {"label": f"{E.CAL} 活動班表查詢", "type": "uri", "uri": "https://t.me/+svlFjBpb4hxkYjFl", "color": "btn_white", "style": "secondary"},
-        {"label": "🗓️ 預約諮詢", "type": "uri", "uri": None, "color": "btn_orange", "style": "secondary", "dynamic_uri": True},
+        {"label": f"{E.TROPHY} 資優學生介紹（廣告）", "type": "message", "text": "廣告專區", "color": "btn_blue", "style": "primary"},
+        {"label": f"{E.CAL} 課表查詢（班表）", "type": "uri", "uri": "https://t.me/+svlFjBpb4hxkYjFl", "color": "btn_white", "style": "secondary"},
+        {"label": "🗓️ 點我找老師（總機）", "type": "uri", "uri": None, "color": "btn_orange", "style": "secondary", "dynamic_uri": True},
     ],
     [
-        {"label": f"🏛️ 學院討論區", "type": "uri", "uri": "https://line.me/ti/g2/mq8VqBIVupL1lsIXuAulnqZNz5vw7VKrVYjNDg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default", "color": "btn_green", "style": "primary"},
+        {"label": f"🏛️ 學院討論區（聊天群）", "type": "uri", "uri": "https://line.me/ti/g2/mq8VqBIVupL1lsIXuAulnqZNz5vw7VKrVYjNDg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default", "color": "btn_green", "style": "primary"},
         {"label": f"{E.NOTE} 活動回報(暫停)", "type": "message", "text": "回報文", "color": "btn_purple", "style": "primary"},
         {"label": f"{E.MONEY_BAG} 折價券管理", "type": "message", "text": "折價券管理", "color": "btn_red", "style": "primary"},
-        {"label": f"{E.STUDENT} 呼叫管理員(暫停)", "type": "message", "text": "呼叫管理員", "color": "btn_gray", "style": "secondary"},
+        {"label": f"{E.STUDENT} 報告教官(暫停)", "type": "message", "text": "呼叫管理員", "color": "btn_gray", "style": "secondary"},
         {"label": f"{E.BALLOON} 活動快訊(暫停)", "type": "message", "text": "活動快訊", "color": "btn_orange", "style": "primary"},
     ]
 ]
