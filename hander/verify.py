@@ -267,9 +267,9 @@ def admin_reject_manual_verify(admin_id, target_user_id):
 @handler.add(MessageEvent, message=TextMessage)
 def handle_text(event):
     user_id = event.source.user_id
+    user_id = event.source.user_id
     user_text = (event.message.text or "").strip()
     tz = pytz.timezone("Asia/Taipei")
-
     try:
         profile = line_bot_api.get_profile(user_id)
         display_name = profile.display_name
@@ -278,79 +278,60 @@ def handle_text(event):
 
     # 管理員命令/流程優先處理
     if user_id in ADMIN_IDS:
-        if user_text.startswith("手動驗證 - "):
-            nickname = user_text.replace("手動驗證 - ", "").strip()
-            admin_manual_flow[user_id] = AdminManualFlow(step="awaiting_phone", nickname=nickname)
-            reply_basic(event, f"開始手動驗證（暱稱：{nickname}）。請輸入手機號碼（09開頭）。")
-            return
+        # ...existing code...
+        pass
 
-        if user_id in admin_manual_flow and admin_manual_flow[user_id].step == "awaiting_phone":
-            phone = normalize_phone(user_text)
-            if not re.match(r"^09\d{8}$", phone):
-                reply_basic(event, "請輸入正確的手機號（09開頭共10碼）。")
-                return
-            admin_manual_flow[user_id].phone = phone
-            admin_manual_flow[user_id].step = "awaiting_lineid"
-            reply_basic(event, "請輸入該使用者的 LINE ID（或輸入：尚未設定）。")
-            return
+    # 非管理員 / 一般流程
+    tu = get_temp_user(user_id)
+    phone_pattern = r"^09\d{8}$"
 
-        if user_id in admin_manual_flow and admin_manual_flow[user_id].step == "awaiting_lineid":
-            line_id = user_text.strip()
-            phone = admin_manual_flow[user_id].phone
-            nickname = admin_manual_flow[user_id].nickname
-            if not phone:
-                reply_basic(event, "發生錯誤：找不到先前輸入的手機號，請重新開始手動驗證流程。")
-                admin_manual_flow.pop(user_id, None)
-                return
-            target_user_id = None
-            for uid, data in get_all_temp_users():
-                if data.get("phone") and normalize_phone(data.get("phone")) == normalize_phone(phone):
-                    target_user_id = uid
-                    break
-            if not target_user_id:
-                code = start_manual_verify_by_admin(user_id, phone, nickname, phone, line_id)
-                admin_manual_flow.pop(user_id, None)
-                reply_basic(event, f"找不到 temp_users 中的對應 user，但已建立手動驗證（暫存 key 為手機號）。\n已產生驗證碼：{code}\n請將驗證碼貼給使用者，以完成驗證。")
-                return
+    # 首次進入驗證流程
+    if not tu:
+        set_temp_user(user_id, {"step": "waiting_phone", "name": display_name})
+        reply_basic(event, "歡迎～請直接輸入手機號碼（09開頭）進行驗證。")
+        return
 
-            code = start_manual_verify_by_admin(user_id, target_user_id, nickname, phone, line_id)
-            admin_manual_flow.pop(user_id, None)
-            reply_basic(event, f"已產生驗證碼：{code}\n請將驗證碼貼給使用者 {target_user_id} 以完成驗證。")
+    # 等待手機號碼
+    if tu.get("step") == "waiting_phone":
+        phone = normalize_phone(user_text)
+        if not re.match(phone_pattern, phone):
+            reply_basic(event, "⚠️ 請輸入正確的手機號碼（09開頭共10碼）")
             return
+        # 黑名單檢查
+        if Blacklist.query.filter_by(phone=phone).first():
+            reply_basic(event, "❌ 此手機號碼無法通過驗證，請聯絡管理員。")
+            pop_temp_user(user_id)
+            return
+        # 白名單重複檢查
+        owner = Whitelist.query.filter_by(phone=phone).first()
+        if owner and owner.line_user_id and owner.line_user_id != user_id:
+            reply_basic(event, "❌ 此手機已綁定其他帳號，請聯絡客服協助。")
+            return
+        tu["phone"] = phone
+        tu["step"] = "waiting_lineid"
+        set_temp_user(user_id, tu)
+        reply_basic(event, "✅ 手機號已登記～請輸入您的 LINE ID（未設定請輸入：尚未設定）")
+        return
 
-        if user_text.startswith("核准 "):
-            parts = user_text.split(None, 1)
-            if len(parts) < 2:
-                reply_basic(event, "請指定要核准的 user_id，例如：核准 U1234567890")
-                return
-            target = parts[1].strip()
-            ok, msg = admin_approve_manual_verify(user_id, target)
-            reply_basic(event, msg)
+    # 等待 LINE ID
+    if tu.get("step") == "waiting_lineid":
+        line_id = user_text.strip()
+        if not line_id:
+            reply_basic(event, "⚠️ 請輸入有效的 LINE ID（或輸入：尚未設定）")
             return
+        tu["line_id"] = line_id
+        tu["step"] = "waiting_screenshot"
+        set_temp_user(user_id, tu)
+        reply_basic(
+            event,
+            "� 請上傳您的 LINE 個人頁面截圖\n"
+            "👉 路徑：LINE主頁 > 右上角設定 > 個人檔案 > 點進去後截圖\n"
+            "需清楚顯示 LINE 名稱與（若有）ID，作為驗證依據"
+        )
+        return
 
-        if user_text.startswith("拒絕 "):
-            parts = user_text.split(None, 1)
-            if len(parts) < 2:
-                reply_basic(event, "請指定要拒絕的 user_id，例如：拒絕 U1234567890")
-                return
-            target = parts[1].strip()
-            ok, msg = admin_reject_manual_verify(user_id, target)
-            reply_basic(event, msg)
-            return
-
-    # 非管理員 / 一般流程處理
-    existing = Whitelist.query.filter_by(line_user_id=user_id).first()
-    if existing:
-        if user_text == "重新驗證":
-            reply_with_reverify(event, "您已通過驗證，無法重新驗證。")
-            return
-        if normalize_phone(user_text) == normalize_phone(existing.phone):
-            reply = (
-                f"📱 {existing.phone}\n"
-                f"🌸 暱稱：{existing.name or display_name}\n"
-                f"       個人編號：{existing.id}\n"
-                f"🔗 LINE ID：{existing.line_id or '未登記'}\n"
-                f"🕒 {existing.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
+    # 其他分支（如查詢、重新驗證、人工驗證等）
+    # ...existing code...
                 f"✅ 驗證成功，歡迎加入茗殿\n"
                 f"🌟 加入密碼：ming666"
             )
