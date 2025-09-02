@@ -31,7 +31,7 @@ REVERIFY_TEXT = "重新驗證"
 NOT_SET_TEXTS = ["尚未設定", "未設定", "無", "none", "not set"]
 VERIFY_CODE_LENGTH = 8
 VERIFY_CODE_EXPIRE = 900
-OCR_DEBUG_IMAGE_BASEURL = os.getenpip install pillowv("OCR_DEBUG_IMAGE_BASEURL", "").rstrip("/")
+OCR_DEBUG_IMAGE_BASEURL = os.getenv("OCR_DEBUG_IMAGE_BASEURL", "").rstrip("/")
 OCR_DEBUG_IMAGE_DIR = os.getenv("OCR_DEBUG_IMAGE_DIR", "/tmp/ocr_debug")
 
 # ────────────── 資料結構 ──────────────
