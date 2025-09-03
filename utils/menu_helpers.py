@@ -72,7 +72,7 @@ def get_ad_menu():
                 "paddingAll": "16px",
                 "contents": [{
                     "type": "text",
-                    "text": "🪄 夏季廣告塔",
+                    "text": "🪄 茗殿廣告塔",
                     "weight": "bold",
                     "size": "lg",
                     "align": "center",
@@ -140,7 +140,7 @@ def get_menu_carousel():
                         },
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "📜 公告佈告欄", "text": "廣告專區"},
+                            "action": {"type": "message", "label": "📜 學員介紹", "text": "廣告專區"},
                             "style": "primary",
                             "color": MAG_EMER
                         },
@@ -152,7 +152,7 @@ def get_menu_carousel():
                         },
                         {
                             "type": "button",
-                            "action": {"type": "uri", "label": "🔮 預約水晶球", "uri": choose_link()},
+                            "action": {"type": "uri", "label": "🔮 預約水晶球（總機）", "uri": choose_link()},
                             "style": "secondary",
                             "color": MAG_BURG
                         }
@@ -217,13 +217,13 @@ def get_menu_carousel():
                         },
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "🧙 管理員召喚（暫停）", "text": "呼叫管理員"},
+                            "action": {"type": "message", "label": "🧙 召喚魔法師（管理員）", "text": "呼叫管理員"},
                             "style": "secondary",
                             "color": MAG_STEEL
                         },
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "🌟 最新魔法快訊（暫停）", "text": "活動快訊"},
+                            "action": {"type": "message", "label": "🌟 最新魔法快訊！限時開啟！", "text": "活動快訊"},
                             "style": "primary",
                             "color": MAG_BURG
                         }
