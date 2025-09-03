@@ -121,17 +121,17 @@ def get_menu_carousel():
     """
     主功能選單，深色夏日風格
     """
-    main_bg1 = "#FFE4EC"     # 櫻花粉
-    main_bg2 = "#FFF0F5"     # 櫻花白
+    main_bg1 = "#F8BBD0"     # 深櫻花粉
+    main_bg2 = "#F48FB1"     # 深櫻花粉紫
     btn_yellow = "#FFD700"   # 金黃
-    btn_green = "#B7E2C7"    # 櫻花淡綠
-    btn_blue = "#A3C1E2"     # 櫻花淡藍
+    btn_green = "#81C784"    # 深櫻花綠
+    btn_blue = "#64B5F6"     # 深櫻花藍
     btn_white = "#FFFFFF"    # 純白
-    btn_orange = "#FFB6B9"   # 櫻花橘粉
-    btn_pink = "#FFB7DD"     # 櫻花粉紅
-    btn_lblue = "#B2D7FF"    # 櫻花淺藍
-    btn_lgreen = "#D6F5E3"   # 櫻花淺綠
-    btn_gray = "#E5C9D6"     # 櫻花灰紫
+    btn_orange = "#FF8A65"   # 深櫻花橘
+    btn_pink = "#F06292"     # 深櫻花粉紅
+    btn_lblue = "#4FC3F7"    # 深櫻花淺藍
+    btn_lgreen = "#AED581"   # 深櫻花淺綠
+    btn_gray = "#B39DDB"     # 深櫻花灰紫
 
     bubbles = []
 
