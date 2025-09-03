@@ -1,7 +1,21 @@
 from linebot.models import FlexSendMessage
 
 # 學生證風格 Flex Message 組裝
-def build_student_card_flex(phone, nickname, number, lineid, join_code, avatar_url=None):
+def build_student_card_flex(phone, nickname, number, lineid, join_code, time_str=None, avatar_url=None):
+    # 統一學生證卡片格式，支援時間欄位
+    body_contents = [
+        {"type": "text", "text": "茗殿學生證", "weight": "bold", "size": "xl", "color": "#1E90FF", "align": "center"},
+        {"type": "separator"},
+        {"type": "box", "layout": "vertical", "margin": "md", "contents": [
+            {"type": "text", "text": f"暱稱：{nickname}", "size": "md", "color": "#333333"},
+            {"type": "text", "text": f"編號：{number}", "size": "md", "color": "#333333"},
+            {"type": "text", "text": f"LINE ID：{lineid}", "size": "md", "color": "#333333"},
+            {"type": "text", "text": f"手機：{phone}", "size": "md", "color": "#333333"},
+            {"type": "text", "text": f"加入密碼：{join_code}", "size": "md", "color": "#1E90FF", "weight": "bold"}
+        ]}
+    ]
+    if time_str:
+        body_contents.append({"type": "text", "text": f"時間：{time_str}", "size": "sm", "color": "#888888", "align": "center", "margin": "md"})
     return {
         "type": "flex",
         "altText": "茗殿學生證",
@@ -19,17 +33,7 @@ def build_student_card_flex(phone, nickname, number, lineid, join_code, avatar_u
                 "type": "box",
                 "layout": "vertical",
                 "spacing": "md",
-                "contents": [
-                    {"type": "text", "text": "茗殿學生證", "weight": "bold", "size": "xl", "color": "#1E90FF", "align": "center"},
-                    {"type": "separator"},
-                    {"type": "box", "layout": "vertical", "margin": "md", "contents": [
-                        {"type": "text", "text": f"暱稱：{nickname}", "size": "md", "color": "#333333"},
-                        {"type": "text", "text": f"編號：{number}", "size": "md", "color": "#333333"},
-                        {"type": "text", "text": f"LINE ID：{lineid}", "size": "md", "color": "#333333"},
-                        {"type": "text", "text": f"手機：{phone}", "size": "md", "color": "#333333"},
-                        {"type": "text", "text": f"加入密碼：{join_code}", "size": "md", "color": "#1E90FF", "weight": "bold"}
-                    ]}
-                ]
+                "contents": body_contents
             },
             "footer": {
                 "type": "box",
@@ -322,7 +326,8 @@ def handle_text(event):
                 number=existing.id,
                 lineid=existing.line_id or '未登記',
                 join_code="ming666",
-                avatar_url=None  # 可串接用戶頭像網址
+                time_str=existing.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S'),
+                avatar_url=None
             )
             line_bot_api.reply_message(
                 event.reply_token,
@@ -492,6 +497,7 @@ def handle_image(event):
                 number=record.id,
                 lineid=record.line_id or '未登記',
                 join_code="ming666",
+                time_str=record.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S'),
                 avatar_url=None
             )
             line_bot_api.reply_message(
@@ -601,6 +607,7 @@ def handle_post_ocr_confirm(event):
                 number=record.id,
                 lineid=record.line_id or '未登記',
                 join_code="ming666",
+                time_str=record.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S'),
                 avatar_url=None
             )
             line_bot_api.reply_message(
@@ -630,6 +637,7 @@ def handle_post_ocr_confirm(event):
                     number=record.id,
                     lineid=record.line_id or '未登記',
                     join_code="ming666",
+                    time_str=record.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S'),
                     avatar_url=None
                 )
                 line_bot_api.reply_message(
