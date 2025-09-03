@@ -3,7 +3,7 @@
 
 body {
     background: linear-gradient(135deg, #2d1e4d 0%, #1a2337 100%);
-    color: #f3e9c7;
+    color: #f8f6f2;
     font-family: 'Cormorant Garamond', serif;
     min-height: 100vh;
     background-image: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1500&q=80');
@@ -14,8 +14,10 @@ body {
 
 h1, h2, h3, h4, h5 {
     font-family: 'Cinzel', serif;
-    color: #e0c97f;
-    text-shadow: 0 2px 8px #3a2a5d;
+    color: #ffe082;
+    text-shadow: 0 1px 0 #3a2a5d, 0 0 8px #e0c97f;
+    letter-spacing: 1.5px;
+    -webkit-text-stroke: 1px #3a2a5d;
 }
 
 .card, .panel, .menu {
@@ -59,12 +61,23 @@ input, select, textarea {
 }
 
 .magic-effect {
-    animation: sparkle 2s infinite linear;
+    animation: glow 2s infinite alternate;
+    filter: drop-shadow(0 0 6px #ffe082);
 }
 @keyframes sparkle {
-    0% { text-shadow: 0 0 8px #e0c97f, 0 0 16px #6b4f8a; }
-    50% { text-shadow: 0 0 24px #e0c97f, 0 0 32px #6b4f8a; }
-    100% { text-shadow: 0 0 8px #e0c97f, 0 0 16px #6b4f8a; }
+    0% { text-shadow: 0 1px 0 #3a2a5d, 0 0 8px #e0c97f; }
+    100% { text-shadow: 0 2px 12px #ffe082, 0 0 24px #6b4f8a; }
+}
+
+@keyframes glow {
+    from {
+        text-shadow: 0 1px 0 #3a2a5d, 0 0 8px #e0c97f;
+        color: #ffe082;
+    }
+    to {
+        text-shadow: 0 2px 12px #ffe082, 0 0 24px #6b4f8a;
+        color: #fffbe6;
+    }
 }
 
 /* 可自訂更多魔法學院風格細節 */
