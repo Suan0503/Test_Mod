@@ -1,7 +1,0 @@
-WELCOME = "歡迎加入🍵茗殿🍵\n請正確按照步驟提供資料配合快速驗證\n\n➡️ 請輸入手機號碼進行驗證（含09開頭）"
-ASK_LINEID = "✅ 手機號已登記，請輸入您的 LINE ID"
-ASK_SCREENSHOT = "📸 請上傳您的 LINE 個人頁面截圖（需清楚顯示 LINE 名稱與ID）"
-INVALID_PHONE = "⚠️ 請輸入有效的手機號碼（09開頭）"
-INVALID_LINEID = "⚠️ 請輸入有效的 LINE ID（或輸入：尚未設定）"
-OCR_RESULT = "OCR結果：{text}"
-VERIFY_SUCCESS = "✅ 驗證成功，感謝您的配合！"
