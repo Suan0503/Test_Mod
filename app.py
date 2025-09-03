@@ -22,6 +22,10 @@ app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+# 本機預設使用 SQLite 以便開發/測試
+if not DATABASE_URL:
+    db_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'app.db')
+    DATABASE_URL = f"sqlite:///{db_path}"
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -74,14 +78,20 @@ def admin_schedule():
     return render_template("schedule.html", can_edit=can_edit, **info)
 
 # 初始化 admin panel，確保 /admin 路徑可用
-import handler.admin_panel as init_admin
+from handler.admin_panel import init_admin
+from models import Base
 with app.app_context():
     db.create_all()
+    # 也建立使用 declarative_base 定義的資料表（User, Schedule）
+    try:
+        Base.metadata.create_all(bind=db.engine)
+    except Exception as e:
+        print("警告：建立 Base metadata 資料表失敗：", e)
     init_admin(app)
     # 檢查是否已有 superadmin
     from werkzeug.security import generate_password_hash
     if not db.session.query(User).filter_by(username='admin').first():
-        user = User(username='admin', password_hash=generate_password_hash('1234'), role='admin', user_group='superadmin')
+        user = User(username='admin', password_hash=generate_password_hash('1234', method='pbkdf2:sha256'), role='admin', user_group='superadmin')
         db.session.add(user)
         db.session.commit()
 
@@ -264,7 +274,8 @@ def api_schedule():
     # POST 僅限管理員/超級管理員
     if not user or user.user_group not in ['admin','superadmin']:
         return jsonify({'error':'權限不足'}), 403
-    data = request.json.get('data')
+    payload = request.get_json(silent=True) or {}
+    data = payload.get('data')
     if not data:
         return jsonify({'error':'缺少資料'}), 400
     new_schedule = Schedule(data=data, updated_at=datetime.datetime.now())
@@ -274,14 +285,19 @@ def api_schedule():
 
 if __name__ == "__main__":
     # 初始化 admin panel
-    from hander.admin_panel import init_admin
+    from handler.admin_panel import init_admin
+    from models import Base
     with app.app_context():
         db.create_all()
+        try:
+            Base.metadata.create_all(bind=db.engine)
+        except Exception as e:
+            print("警告：建立 Base metadata 資料表失敗：", e)
         init_admin(app)
         # 檢查是否已有 superadmin
         from werkzeug.security import generate_password_hash
         if not db.session.query(User).filter_by(username='admin').first():
-            user = User(username='admin', password_hash=generate_password_hash('1234'), role='admin', user_group='superadmin')
+            user = User(username='admin', password_hash=generate_password_hash('1234', method='pbkdf2:sha256'), role='admin', user_group='superadmin')
             db.session.add(user)
             db.session.commit()
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))

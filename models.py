@@ -1,7 +1,10 @@
 from extensions import db
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, TIMESTAMP, Text
-from sqlalchemy.dialects.postgresql import JSONB
+try:
+    from sqlalchemy import JSON as SAJSON
+except Exception:
+    from sqlalchemy import Text as SAJSON
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -49,5 +52,5 @@ class User(Base):
 class Schedule(Base):
     __tablename__ = 'schedules'
     id = Column(Integer, primary_key=True)
-    data = Column(JSONB)
+    data = Column(SAJSON)
     updated_at = Column(TIMESTAMP)
