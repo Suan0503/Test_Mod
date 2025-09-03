@@ -5,6 +5,7 @@ from linebot.models import MessageEvent, TextMessage
 import config
 from handlers.welcome import register_welcome_handler
 from handlers.verify import register_verify_handlers
+from handlers.menu import register_menu_handler
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from models.verify_user import Base
@@ -21,8 +22,10 @@ SessionLocal = sessionmaker(bind=engine)
 Base.metadata.create_all(engine)
 
 # 註冊各種 handler
+
 register_welcome_handler(handler)
 register_verify_handlers(handler)
+register_menu_handler(handler)
 
 @app.route("/callback", methods=['POST'])
 def callback():
