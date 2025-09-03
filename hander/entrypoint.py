@@ -3,7 +3,7 @@ from extensions import handler, line_bot_api, db
 from utils.menu_helpers import reply_with_menu, notify_admins, reply_with_ad_menu
 from hander.report import handle_report, handle_report_postback
 from hander.admin import handle_admin
-from hander.verify import handle_verify
+from handler.verify import handle_verify
 from utils.temp_users import temp_users
 from models import Whitelist, Coupon
 from utils.draw_utils import draw_coupon, has_drawn_today, save_coupon_record, get_today_coupon_flex

@@ -3,7 +3,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 from flask_admin import Admin
-from flask_admin.contrib.sqla import ModelView
+from handler.admin import *
 from models import Whitelist, Blacklist, Coupon
 from extensions import db
 

@@ -20,4 +20,4 @@ def callback():
     return "OK"
 
 # ⭐ 只 import entrypoint（這會自動帶入各功能模組）
-import hander.entrypoint
+    import handler.entrypoint

@@ -31,7 +31,7 @@ def handle_menu(event):
     # 驗證資訊
     if user_text == "驗證資訊":
         existing = Whitelist.query.filter_by(line_user_id=user_id).first()
-        from hander.verify import build_student_card_flex
+        from handler.verify import build_student_card_flex
         from linebot.models import FlexSendMessage, TextSendMessage
         if existing:
             flex_msg = build_student_card_flex(

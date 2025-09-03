@@ -74,7 +74,7 @@ def admin_schedule():
     return render_template("schedule.html", can_edit=can_edit, **info)
 
 # 初始化 admin panel，確保 /admin 路徑可用
-from hander.admin_panel import init_admin
+import handler.admin_panel as init_admin
 with app.app_context():
     db.create_all()
     init_admin(app)
