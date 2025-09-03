@@ -3,3 +3,4 @@ line-bot-sdk
 sqlalchemy
 jinja2
 bootstrap-flask
+gunicorn
