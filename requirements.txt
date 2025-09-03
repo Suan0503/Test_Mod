@@ -4,7 +4,7 @@ flask_admin
 python-dotenv
 psycopg2-binary
 python-dotenv
-line-bot-sdk>=3.0.0
+line-bot-sdk==2.4.1
 pytz
 psycopg2-binary
 pillow
@@ -15,4 +15,3 @@ gunicorn
 wtforms==2.3.3
 
 redis
-aiohttp>=3.9.0
