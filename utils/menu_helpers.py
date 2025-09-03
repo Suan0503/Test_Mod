@@ -121,17 +121,17 @@ def get_menu_carousel():
     """
     主功能選單，深色夏日風格
     """
-    main_bg1 = "#1C2636"     # 深夏夜藍
-    main_bg2 = "#222E44"     # 次深夜藍
+    main_bg1 = "#FFE4EC"     # 櫻花粉
+    main_bg2 = "#FFF0F5"     # 櫻花白
     btn_yellow = "#FFD700"   # 金黃
-    btn_green = "#11806A"    # 深夏綠
-    btn_blue = "#2C4A6B"     # 深藍
-    btn_white = "#FDF6EE"    # 柔米白
-    btn_orange = "#FF9800"   # 橘色
-    btn_pink = "#D97092"     # 夏夜玫瑰粉
-    btn_lblue = "#4B99C2"    # 深天藍
-    btn_lgreen = "#2BB673"   # 夏夜綠
-    btn_gray = "#31485C"     # 深灰藍
+    btn_green = "#B7E2C7"    # 櫻花淡綠
+    btn_blue = "#A3C1E2"     # 櫻花淡藍
+    btn_white = "#FFFFFF"    # 純白
+    btn_orange = "#FFB6B9"   # 櫻花橘粉
+    btn_pink = "#FFB7DD"     # 櫻花粉紅
+    btn_lblue = "#B2D7FF"    # 櫻花淺藍
+    btn_lgreen = "#D6F5E3"   # 櫻花淺綠
+    btn_gray = "#E5C9D6"     # 櫻花灰紫
 
     bubbles = []
 
@@ -147,13 +147,13 @@ def get_menu_carousel():
             "contents": [
                 {
                     "type": "text",
-                    "text": "🏖️ 夏日茗殿選單 1/2",
+                    "text": "� 櫻花開學祭選單 1/2",
                     "weight": "bold",
                     "size": "lg",
                     "align": "center",
-                    "color": "#FFD700"
+                    "color": btn_pink
                 },
-                {"type": "separator", "color": "#31485C"},
+                {"type": "separator", "color": btn_gray},
                 {
                     "type": "box",
                     "layout": "vertical",
@@ -164,8 +164,18 @@ def get_menu_carousel():
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "🍧 開啟主選單",
+                                "label": "� 開啟主選單",
                                 "text": "驗證資訊"
+                            },
+                            "style": "primary",
+                            "color": btn_pink
+                        },
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "message",
+                                "label": "� 開學抽獎",
+                                "text": "每日抽獎"
                             },
                             "style": "primary",
                             "color": btn_yellow
@@ -174,21 +184,11 @@ def get_menu_carousel():
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "🌴 每日抽獎",
-                                "text": "每日抽獎"
-                            },
-                            "style": "primary",
-                            "color": btn_green
-                        },
-                        {
-                            "type": "button",
-                            "action": {
-                                "type": "message",
-                                "label": "📢 廣告專區",
+                                "label": "📢 活動專區",
                                 "text": "廣告專區"
                             },
                             "style": "primary",
-                            "color": btn_blue
+                            "color": btn_green
                         },
                         {
                             "type": "button",
@@ -228,13 +228,13 @@ def get_menu_carousel():
             "contents": [
                 {
                     "type": "text",
-                    "text": "🏝️ 夏日茗殿選單 2/2",
+                    "text": "� 茗殿開學祭選單 2/2",
                     "weight": "bold",
                     "size": "lg",
                     "align": "center",
-                    "color": "#FFD700"
+                    "color": btn_pink
                 },
-                {"type": "separator", "color": "#31485C"},
+                {"type": "separator", "color": btn_gray},
                 {
                     "type": "box",
                     "layout": "vertical",
@@ -298,7 +298,7 @@ def get_menu_carousel():
     })
 
     return FlexSendMessage(
-        alt_text="🏖️ 夏日主功能選單",
+        alt_text="� 櫻花開學祭主功能選單",
         contents={
             "type": "carousel",
             "contents": bubbles
