@@ -15,3 +15,4 @@ gunicorn
 wtforms==2.3.3
 
 redis
+aiohttp>=3.9.0
