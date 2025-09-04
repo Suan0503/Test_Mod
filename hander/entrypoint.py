@@ -189,10 +189,13 @@ def entrypoint(event):
             msg = "🌟 目前無進行中活動，敬請期待！"
             reply_with_menu(event.reply_token, msg)
         else:
-            # 若有圖片網址，可用 Flex 或多訊息方式回覆
+            # 若有圖片網址，直接用 ImageSendMessage 顯示圖片
             if img_url:
-                line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=msg),
-                    TextSendMessage(text=img_url)])
+                from linebot.models import ImageSendMessage
+                line_bot_api.reply_message(event.reply_token, [
+                    TextSendMessage(text=msg),
+                    ImageSendMessage(original_content_url=img_url, preview_image_url=img_url)
+                ])
             else:
                 reply_with_menu(event.reply_token, msg)
         return
