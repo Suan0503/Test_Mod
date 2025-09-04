@@ -16,12 +16,13 @@
     <form action="/schedule/add" method="post" style="background:rgba(44,34,68,0.85);border-radius:12px;padding:1.5em;box-shadow:0 4px 24px #1a2337;">
       <h4 style="color:#ffe082;">新增班表</h4>
       <label for="sister">選擇妹妹：</label>
-      <select name="sister" id="sister" required>
+      <select name="sister" id="sister" onchange="document.getElementById('new_sister').style.display = this.value === '新增' ? 'block' : 'none';" required>
         {% for name in sisters %}
         <option value="{{ name }}">{{ name }}</option>
         {% endfor %}
         <option value="新增">＋ 新增妹妹</option>
       </select>
+      <input type="text" name="new_sister" id="new_sister" placeholder="請輸入新妹妹名稱" style="display:none;margin-top:8px;">
       <br><br>
       <label for="hour">時段：</label>
       <select name="hour" id="hour" required>
