@@ -58,6 +58,35 @@ def entrypoint(event):
     # 驗證資訊
     if user_text == "驗證資訊":
         tz = pytz.timezone("Asia/Taipei")
+        now = datetime.now(tz)
+        today_str = now.strftime('%Y-%m-%d')
+        pre_event_end = datetime(2025, 9, 10, tzinfo=tz)
+        img_url = "https://raw.githubusercontent.com/Suan0503/Test_Mod/refs/heads/main/static/20250904.jpg"  # 你的前導圖網址
+        # 9/1~9/9 每日首次跳前導圖
+        if now < pre_event_end:
+            if user_id not in temp_users or temp_users[user_id].get('pre_event_shown') != today_str:
+                from linebot.models import ImageSendMessage
+                if user_id not in temp_users:
+                    temp_users[user_id] = {}
+                temp_users[user_id]['pre_event_shown'] = today_str
+                user = Whitelist.query.filter_by(line_user_id=user_id).first()
+                if user:
+                    reply = (
+                        f"📱 {user.phone}\n"
+                        f"🌸 暱稱：{user.name or '未登記'}\n"
+                        f"       個人編號：{user.id}\n"
+                        f"🔗 LINE ID：{user.line_id or '未登記'}\n"
+                        f"🕒 {user.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
+                        f"✅ 驗證成功，歡迎加入茗殿\n"
+                        f"🌟 加入密碼：ming666"
+                    )
+                else:
+                    reply = "查無你的驗證資訊，請先完成驗證流程。"
+                line_bot_api.reply_message(event.reply_token, [
+                    ImageSendMessage(original_content_url=img_url, preview_image_url=img_url),
+                    TextSendMessage(text=reply)
+                ])
+                return
         user = Whitelist.query.filter_by(line_user_id=user_id).first()
         if user:
             reply = (
