@@ -149,15 +149,52 @@ def entrypoint(event):
         reply_with_menu(event.reply_token)
         return
 
-    # 活動快訊：9/7 前尚未開放
+    # 活動快訊：多活動期間判斷
     if user_text == "活動快訊":
         tz = pytz.timezone("Asia/Taipei")
         now = datetime.now(tz)
-        open_date = datetime(2025, 9, 7, tzinfo=tz)
-        if now < open_date:
-            reply_with_menu(event.reply_token, "🌟 限時活動於9/7開啟 敬請期待！")
+        # 第一活動：9/1 ~ 9/30
+        act1_start = datetime(2025, 9, 1, tzinfo=tz)
+        act1_end = datetime(2025, 9, 30, 23, 59, 59, tzinfo=tz)
+        # 第二活動：9/10 ~ 9/30
+        act2_start = datetime(2025, 9, 10, tzinfo=tz)
+        act2_end = datetime(2025, 9, 30, 23, 59, 59, tzinfo=tz)
+
+        msg = ""
+        img_url = None
+        # 第一活動
+        if act1_start <= now <= act1_end:
+            msg += "🌸 茗殿好鄰居 1+1 活動 🌸\n"
+            msg += "⏰ 即日起～9月底\n\n"
+            msg += "💌 邀好友‧齊享優惠\n"
+            msg += "✔️ 邀請好友加入並完成驗證：\n"
+            msg += "\t• 邀請人 🎁 折價券 200 元\n"
+            msg += "\t• 好友 🎁 折價券 100 元\n\n"
+            msg += "👭 一起來更划算！\n"
+            msg += "當日兩人同行預約 👉 現折 100 元\n\n"
+            msg += "⚡溫馨提醒：\n領取折價券時，記得主動告知活動喔！"
+            img_url = "https://github.com/Suan0503/Test_Mod/blob/main/static/%E5%A5%BD%E9%84%B0%E5%B1%851+1.png?raw=true"  # 請換成好鄰居1+1.png的實際網址
+
+        # 第二活動
+        if act2_start <= now <= act2_end:
+            if msg:
+                msg += "\n\n"
+            msg += "🏫✨ 茗殿學院祭 — 少女的邀請 ✨🏫\n"
+            msg += "⏰ 活動期間：9/10～9/30\n\n"
+            msg += "🎀 妹妹們換上 清純校服，帶來滿滿青春氣息 💕\n"
+            msg += "🎁 特別準備了 祭典限定特典，\n只送給參加的有緣人！（數量有限，送完為止）\n\n"
+            msg += "🌸 在這個屬於學院的季節，\n快來和妹妹們留下專屬回憶吧！"
+
+        if not msg:
+            msg = "🌟 目前無進行中活動，敬請期待！"
+            reply_with_menu(event.reply_token, msg)
         else:
-            reply_with_menu(event.reply_token)
+            # 若有圖片網址，可用 Flex 或多訊息方式回覆
+            if img_url:
+                line_bot_api.reply_message(event.reply_token, [TextSendMessage(text=msg),
+                    TextSendMessage(text=img_url)])
+            else:
+                reply_with_menu(event.reply_token, msg)
         return
 
     # 呼叫管理員
