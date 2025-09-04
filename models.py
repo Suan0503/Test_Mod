@@ -1,3 +1,7 @@
+
+from extensions import db
+from datetime import datetime
+
 class ManualVerifyCode(db.Model):
     __tablename__ = "manual_verify_code"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -6,8 +10,6 @@ class ManualVerifyCode(db.Model):
     nickname = db.Column(db.String(255))
     line_id = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-from extensions import db
-from datetime import datetime
 
 class Whitelist(db.Model):
     __tablename__ = "whitelist"
