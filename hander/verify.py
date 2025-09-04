@@ -320,28 +320,27 @@ def handle_text(event):
         return
 
     if re.match(r"^\d{8}$", user_text):
-        # 新增：查詢資料庫 ManualVerifyCode
-        from models import ManualVerifyCode
-        code_obj = ManualVerifyCode.query.filter_by(code=user_text).first()
-        if code_obj:
+        pending = manual_verify_pending.get(user_id)
+        pending_key = user_id
+        if not pending:
+            found_key, found_pending = _find_pending_by_code(user_text)
+            if found_pending:
+                manual_verify_pending[user_id] = found_pending
+                if found_key != user_id:
+                    manual_verify_pending.pop(found_key, None)
+                pending = found_pending
+                pending_key = user_id
+
+        if pending and pending.get("code") == user_text:
             tz = pytz.timezone("Asia/Taipei")
-            # 驗證成功，暫存到 manual_verify_pending 以便後續流程
-            manual_verify_pending[user_id] = {
-                "phone": code_obj.phone,
-                "line_id": code_obj.line_id,
-                "nickname": code_obj.nickname,
-                "code": code_obj.code,
-                "initiated_by_admin": None,
-                "created_at": code_obj.created_at,
-                "code_verified": True,
-                "code_verified_at": datetime.now(tz),
-                "allow_user_confirm_until": datetime.now(tz) + timedelta(minutes=5),
-            }
+            pending["code_verified"] = True
+            pending["code_verified_at"] = datetime.now(tz)
+            pending["allow_user_confirm_until"] = datetime.now(tz) + timedelta(minutes=5)
             confirm_msg = (
-                f"📱 {code_obj.phone}\n"
-                f"🌸 暱稱： {code_obj.nickname}\n"
+                f"📱 {pending.get('phone')}\n"
+                f"🌸 暱稱： {pending.get('nickname')}\n"
                 f"       個人編號： (驗證後產生)\n"
-                f"🔗 LINE ID：{code_obj.line_id}\n"
+                f"🔗 LINE ID：{pending.get('line_id')}\n"
                 f"🕒 {datetime.now(tz).strftime('%Y/%m/%d %H:%M:%S')}\n\n"
                 "此為管理員手動驗證，如無誤請輸入 1 完成驗證（或等待管理員直接核准）。"
             )
