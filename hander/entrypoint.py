@@ -146,6 +146,25 @@ def entrypoint(event):
         "主選單", "功能選單", "選單", "menu", "Menu",
         "查詢規則", "規則查詢"
     ]:
+        tz = pytz.timezone("Asia/Taipei")
+        now = datetime.now(tz)
+        today_str = now.strftime('%Y-%m-%d')
+        # 第二活動前導圖：9/1~9/9，每日首次顯示
+        pre_event_end = datetime(2025, 9, 10, tzinfo=tz)
+        img_url = "https://raw.githubusercontent.com/Suan0503/Test_Mod/refs/heads/main/static/20250904.jpg"  # 請換成你的前導圖網址
+        if now < pre_event_end:
+            # 檢查 temp_users 是否已記錄今日已顯示
+            if user_id not in temp_users or temp_users[user_id].get('pre_event_shown') != today_str:
+                from linebot.models import ImageSendMessage
+                # 記錄今日已顯示
+                if user_id not in temp_users:
+                    temp_users[user_id] = {}
+                temp_users[user_id]['pre_event_shown'] = today_str
+                line_bot_api.reply_message(event.reply_token, [
+                    ImageSendMessage(original_content_url=img_url, preview_image_url=img_url),
+                    TextSendMessage(text="主選單如下：")
+                ])
+                return
         reply_with_menu(event.reply_token)
         return
 
