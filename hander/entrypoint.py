@@ -173,7 +173,7 @@ def entrypoint(event):
             msg += "👭 一起來更划算！\n"
             msg += "當日兩人同行預約 👉 現折 100 元\n\n"
             msg += "⚡溫馨提醒：\n領取折價券時，記得主動告知活動喔！"
-            img_url = "https://github.com/Suan0503/Test_Mod/blob/main/static/%E5%A5%BD%E9%84%B0%E5%B1%851+1.png?raw=true"  # 請換成好鄰居1+1.png的實際網址
+            img_url = "https://raw.githubusercontent.com/Suan0503/Test_Mod/refs/heads/main/static/%E5%A5%BD%E9%84%B0%E5%B1%851%2B1.png"  # 請換成好鄰居1+1.png的實際網址
 
         # 第二活動
         if act2_start <= now <= act2_end:
