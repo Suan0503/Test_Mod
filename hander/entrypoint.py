@@ -144,9 +144,20 @@ def entrypoint(event):
     # 主選單/功能選單/查詢規則/活動快訊
     if user_text in [
         "主選單", "功能選單", "選單", "menu", "Menu",
-        "查詢規則", "規則查詢", "活動快訊"
+        "查詢規則", "規則查詢"
     ]:
         reply_with_menu(event.reply_token)
+        return
+
+    # 活動快訊：9/7 前尚未開放
+    if user_text == "活動快訊":
+        tz = pytz.timezone("Asia/Taipei")
+        now = datetime.now(tz)
+        open_date = datetime(2025, 9, 7, tzinfo=tz)
+        if now < open_date:
+            reply_with_menu(event.reply_token, "🌟 限時活動於9/7開啟 敬請期待！")
+        else:
+            reply_with_menu(event.reply_token)
         return
 
     # 呼叫管理員
