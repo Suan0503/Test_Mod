@@ -4,3 +4,4 @@ pytesseract
 SQLAlchemy
 psycopg2-binary
 Pillow
+gunicorn
