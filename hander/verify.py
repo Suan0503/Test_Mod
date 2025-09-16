@@ -195,6 +195,8 @@ def admin_reject_manual_verify(admin_id, target_user_id):
 # ───────────────────────────────────────────────────────────────
 @handler.add(MessageEvent, message=TextMessage)
 def handle_text(event):
+    user_id = event.source.user_id
+    user_text = (event.message.text or "").strip()
     logging.info(f"[handle_text] user_id={user_id} 收到 user_text={user_text}")
     user_id = event.source.user_id
     user_text = (event.message.text or "").strip()
