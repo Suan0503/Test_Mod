@@ -25,6 +25,11 @@ def get_temp_user(user_id):
 	return temp_users.get(user_id)
 
 def set_temp_user(user_id, data):
+	# 強制補齊 user_id 欄位
+	data["user_id"] = user_id
+	# 強制補齊 nickname 欄位（如無則預設為空字串）
+	if "nickname" not in data:
+		data["nickname"] = data.get("name", "")
 	if redis_client:
 		redis_client.set(f"temp_user:{user_id}", json.dumps(data), ex=3600)
 	temp_users[user_id] = data
