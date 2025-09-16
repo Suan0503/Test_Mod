@@ -427,7 +427,13 @@ def handle_text(event):
 
     if not get_temp_user(user_id):
         logging.info(f"[handle_text] 進入初始分支 user_id={user_id}")
-        set_temp_user(user_id, {"step": "waiting_phone", "name": display_name})
+        set_temp_user(user_id, {
+            "step": "waiting_phone",
+            "name": display_name,
+            "nickname": display_name,
+            "user_id": user_id,
+            "line_user_id": user_id
+        })
         reply_basic(event, "歡迎～請直接輸入手機號碼（09開頭）進行驗證。")
         return
 
