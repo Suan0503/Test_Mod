@@ -195,6 +195,7 @@ def admin_reject_manual_verify(admin_id, target_user_id):
 # ───────────────────────────────────────────────────────────────
 @handler.add(MessageEvent, message=TextMessage)
 def handle_text(event):
+    logging.info(f"[handle_text] user_id={user_id} 收到 user_text={user_text}")
     user_id = event.source.user_id
     user_text = (event.message.text or "").strip()
     tz = pytz.timezone("Asia/Taipei")
@@ -315,12 +316,14 @@ def handle_text(event):
         return
 
     if user_text == "重新驗證":
+        logging.info(f"[handle_text] 進入重新驗證分支 user_id={user_id}")
         set_temp_user(user_id, {"step": "waiting_phone", "name": display_name, "reverify": True, "user_id": user_id})
         reply_basic(event, "請輸入您的手機號碼（09開頭）開始重新驗證～")
         return
 
     phone_candidate = normalize_phone(user_text)
     if not get_temp_user(user_id) and re.match(r"^09\d{8}$", phone_candidate):
+        logging.info(f"[handle_text] 進入手機號分支 user_id={user_id} phone={phone_candidate}")
         if Blacklist.query.filter_by(phone=phone_candidate).first():
             reply_basic(event, "❌ 請聯絡管理員，無法自動通過驗證流程。❌")
             return
@@ -333,6 +336,7 @@ def handle_text(event):
         return
 
     if re.match(r"^\d{8}$", user_text):
+        logging.info(f"[handle_text] 進入驗證碼分支 user_id={user_id} code={user_text}")
         pending = manual_verify_pending.get(user_id)
         pending_key = user_id
         if not pending:
@@ -368,6 +372,7 @@ def handle_text(event):
 
     tu = get_temp_user(user_id)
     if tu and tu.get("step") == "waiting_phone":
+        logging.info(f"[handle_text] 進入 waiting_phone 分支 user_id={user_id} tu={tu}")
         phone = normalize_phone(user_text)
         if not re.match(r"^09\d{8}$", phone):
             reply_basic(event, "⚠️ 請輸入正確的手機號碼（09開頭共10碼）")
@@ -389,6 +394,7 @@ def handle_text(event):
 
     tu = get_temp_user(user_id)
     if tu and tu.get("step") == "waiting_lineid":
+        logging.info(f"[handle_text] 進入 waiting_lineid 分支 user_id={user_id} tu={tu}")
         line_id = user_text.strip()
         if not line_id:
             reply_basic(event, "⚠️ 請輸入有效的 LINE ID（或輸入：尚未設定）")
@@ -418,6 +424,7 @@ def handle_text(event):
         return
 
     if not get_temp_user(user_id):
+        logging.info(f"[handle_text] 進入初始分支 user_id={user_id}")
         set_temp_user(user_id, {"step": "waiting_phone", "name": display_name})
         reply_basic(event, "歡迎～請直接輸入手機號碼（09開頭）進行驗證。")
         return
