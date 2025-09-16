@@ -21,12 +21,12 @@
       </button>
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ml-auto">
-          <li class="nav-item mx-2"><a class="nav-link" style="color:#222;" href="/admin/whitelist/"><i class="fa fa-list"></i> 白名單列表</a></li>
-          <li class="nav-item mx-2"><a class="nav-link" style="color:#222;" href="/admin/blacklist/"><i class="fa fa-ban"></i> 黑名單列表</a></li>
-          <li class="nav-item mx-2"><a class="nav-link" style="color:#222;" href="/admin/coupon/"><i class="fa fa-ticket"></i> 抽獎券列表</a></li>
-          <li class="nav-item mx-2"><a class="nav-link" style="color:#222;" href="/admin/pending_verify/"><i class="fa fa-clock"></i> 暫存驗證名單</a></li>
-          <li class="nav-item mx-2"><a class="nav-link" style="color:#222;" href="/admin/whitelist/new/"><i class="fa fa-user-plus"></i> 新增白名單</a></li>
-          <li class="nav-item mx-2"><a class="nav-link" style="color:#222;" href="/admin/blacklist/new/"><i class="fa fa-user"></i> 新增黑名單</a></li>
+          <li class="nav-item mx-2"><a class="btn btn-primary" href="/admin/whitelist/"><i class="fa fa-list"></i> 白名單列表</a></li>
+          <li class="nav-item mx-2"><a class="btn btn-danger" href="/admin/blacklist/"><i class="fa fa-ban"></i> 黑名單列表</a></li>
+          <li class="nav-item mx-2"><a class="btn btn-warning" href="/admin/coupon/"><i class="fa fa-ticket"></i> 抽獎券列表</a></li>
+          <li class="nav-item mx-2"><a class="btn btn-info" href="/admin/pending_verify/"><i class="fa fa-clock"></i> 暫存驗證名單</a></li>
+          <li class="nav-item mx-2"><a class="btn btn-success" href="/admin/whitelist/new/"><i class="fa fa-user-plus"></i> 新增白名單</a></li>
+          <li class="nav-item mx-2"><a class="btn btn-secondary" href="/admin/blacklist/new/"><i class="fa fa-user"></i> 新增黑名單</a></li>
         </ul>
       </div>
     </nav>
@@ -54,14 +54,17 @@
               <h2 class="mb-3 font-weight-bold" style="color:#2d3a4b;"><i class="fa fa-cogs"></i> 歡迎使用後台管理系統</h2>
               <p class="lead mb-4" style="color:#555;">快速管理白名單、黑名單、抽獎券與即時班表。<br>所有操作都將記錄於系統，請謹慎使用！</p>
               <div class="row mt-4">
-                <div class="col-md-4 mb-3">
+                <div class="col-md-3 mb-3">
                   <a href="/admin/whitelist/" class="btn btn-lg btn-outline-success w-100"><i class="fa fa-list"></i> 白名單列表</a>
                 </div>
-                <div class="col-md-4 mb-3">
+                <div class="col-md-3 mb-3">
                   <a href="/admin/blacklist/" class="btn btn-lg btn-outline-danger w-100"><i class="fa fa-ban"></i> 黑名單列表</a>
                 </div>
-                <div class="col-md-4 mb-3">
+                <div class="col-md-3 mb-3">
                   <a href="/admin/coupon/" class="btn btn-lg btn-outline-warning w-100"><i class="fa fa-ticket"></i> 抽獎券列表</a>
+                </div>
+                <div class="col-md-3 mb-3">
+                  <a href="/admin/pending_verify/" class="btn btn-lg btn-outline-info w-100"><i class="fa fa-clock"></i> 暫存驗證名單</a>
                 </div>
               </div>
               <div class="row mt-2">
