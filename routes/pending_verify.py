@@ -26,7 +26,7 @@ def pending_verify():
             db.session.commit()
             pop_temp_user(user_id)
             flash(f"已通過驗證並加入白名單：{user.get('nickname')}", 'success')
-            return redirect(url_for('home'))
+            return redirect(url_for('pending_verify.pending_verify'))
         else:
             flash("找不到該暫存用戶資料。", 'danger')
             return redirect(url_for('pending_verify.pending_verify'))
