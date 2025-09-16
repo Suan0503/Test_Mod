@@ -319,6 +319,19 @@ def handle_text(event):
         reply_basic(event, "請輸入您的手機號碼（09開頭）開始重新驗證～")
         return
 
+    phone_candidate = normalize_phone(user_text)
+    if not get_temp_user(user_id) and re.match(r"^09\d{8}$", phone_candidate):
+        if Blacklist.query.filter_by(phone=phone_candidate).first():
+            reply_basic(event, "❌ 請聯絡管理員，無法自動通過驗證流程。❌")
+            return
+        owner = Whitelist.query.filter_by(phone=phone_candidate).first()
+        if owner and owner.line_user_id and owner.line_user_id != user_id:
+            reply_basic(event, "❌ 此手機已綁定其他帳號，請聯絡客服協助。")
+            return
+        set_temp_user(user_id, {"step": "waiting_lineid", "name": display_name, "phone": phone_candidate, "user_id": user_id})
+        reply_basic(event, "✅ 手機號已登記～請輸入您的 LINE ID（未設定請輸入：尚未設定）")
+        return
+
     if re.match(r"^\d{8}$", user_text):
         pending = manual_verify_pending.get(user_id)
         pending_key = user_id
@@ -352,18 +365,6 @@ def handle_text(event):
                 )
             )
             return
-    phone_candidate = normalize_phone(user_text)
-    if not get_temp_user(user_id) and re.match(r"^09\d{8}$", phone_candidate):
-        if Blacklist.query.filter_by(phone=phone_candidate).first():
-            reply_basic(event, "❌ 請聯絡管理員，無法自動通過驗證流程。❌")
-            return
-        owner = Whitelist.query.filter_by(phone=phone_candidate).first()
-        if owner and owner.line_user_id and owner.line_user_id != user_id:
-            reply_basic(event, "❌ 此手機已綁定其他帳號，請聯絡客服協助。")
-            return
-        set_temp_user(user_id, {"step": "waiting_lineid", "name": display_name, "phone": phone_candidate, "user_id": user_id})
-        reply_basic(event, "✅ 手機號已登記～請輸入您的 LINE ID（未設定請輸入：尚未設定）")
-        return
 
     tu = get_temp_user(user_id)
     if tu and tu.get("step") == "waiting_phone":
