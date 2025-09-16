@@ -315,9 +315,9 @@ def handle_text(event):
         return
 
     if user_text == "重新驗證":
-    set_temp_user(user_id, {"step": "waiting_phone", "name": display_name, "reverify": True, "user_id": user_id})
-    reply_basic(event, "請輸入您的手機號碼（09開頭）開始重新驗證～")
-    return
+        set_temp_user(user_id, {"step": "waiting_phone", "name": display_name, "reverify": True, "user_id": user_id})
+        reply_basic(event, "請輸入您的手機號碼（09開頭）開始重新驗證～")
+        return
 
     if re.match(r"^\d{8}$", user_text):
         pending = manual_verify_pending.get(user_id)
@@ -361,8 +361,7 @@ def handle_text(event):
         if owner and owner.line_user_id and owner.line_user_id != user_id:
             reply_basic(event, "❌ 此手機已綁定其他帳號，請聯絡客服協助。")
             return
-
-    set_temp_user(user_id, {"step": "waiting_lineid", "name": display_name, "phone": phone_candidate, "user_id": user_id})
+        set_temp_user(user_id, {"step": "waiting_lineid", "name": display_name, "phone": phone_candidate, "user_id": user_id})
         reply_basic(event, "✅ 手機號已登記～請輸入您的 LINE ID（未設定請輸入：尚未設定）")
         return
 
@@ -380,11 +379,10 @@ def handle_text(event):
         if owner and owner.line_user_id and owner.line_user_id != user_id:
             reply_basic(event, "❌ 此手機已綁定其他帳號，請聯絡客服協助。")
             return
-
         tu["phone"] = phone
         tu["step"] = "waiting_lineid"
-    tu["user_id"] = user_id
-    set_temp_user(user_id, tu)
+        tu["user_id"] = user_id
+        set_temp_user(user_id, tu)
         reply_basic(event, "✅ 手機號已登記～請輸入您的 LINE ID（未設定請輸入：尚未設定）")
         return
 
@@ -396,8 +394,8 @@ def handle_text(event):
             return
         tu["line_id"] = line_id
         tu["step"] = "waiting_screenshot"
-    tu["user_id"] = user_id
-    set_temp_user(user_id, tu)
+        tu["user_id"] = user_id
+        set_temp_user(user_id, tu)
         reply_basic(
             event,
             "📸 請上傳您的 LINE 個人頁面截圖\n"
