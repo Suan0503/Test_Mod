@@ -11,13 +11,14 @@ def pending_verify():
         user_id = request.form.get('user_id')
         user = temp_users.get(user_id)
         if user:
-            # 加入白名單，補齊所有欄位
+            # 自動補齊 line_user_id
+            line_user_id = user.get('line_user_id') or user.get('user_id') or user_id
             from datetime import datetime
             wl = Whitelist(
                 phone=user.get('phone'),
                 name=user.get('nickname'),
                 line_id=user.get('line_id'),
-                line_user_id=user.get('line_user_id'),
+                line_user_id=line_user_id,
                 date=datetime.now().strftime('%Y-%m-%d'),
                 created_at=datetime.now()
             )
