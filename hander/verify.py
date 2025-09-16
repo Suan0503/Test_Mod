@@ -316,8 +316,8 @@ def handle_text(event):
 
     if user_text == "重新驗證":
     set_temp_user(user_id, {"step": "waiting_phone", "name": display_name, "reverify": True, "user_id": user_id})
-        reply_basic(event, "請輸入您的手機號碼（09開頭）開始重新驗證～")
-        return
+    reply_basic(event, "請輸入您的手機號碼（09開頭）開始重新驗證～")
+    return
 
     if re.match(r"^\d{8}$", user_text):
         pending = manual_verify_pending.get(user_id)
