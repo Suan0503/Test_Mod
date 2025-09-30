@@ -130,7 +130,7 @@ def get_menu_carousel():
                     "contents": [
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "🐇 玉兔報到（驗證）", "text": "驗證資訊"},
+                            "action": {"type": "message", "label": "🐇 島民身分證（個人資訊）", "text": "驗證資訊"},
                             "style": "primary",
                             "color": MID_PINK
                         },
@@ -142,19 +142,19 @@ def get_menu_carousel():
                         },
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "🎑 賞月活動", "text": "廣告專區"},
+                            "action": {"type": "message", "label": "🎑 賞月大平台(廣告)", "text": "廣告專區"},
                             "style": "primary",
                             "color": MID_BLUE
                         },
                         {
                             "type": "button",
-                            "action": {"type": "uri", "label": "🍊 柚子聊天室", "uri": "https://t.me/+svlFjBpb4hxkYjFl"},
+                            "action": {"type": "uri", "label": "🍊 高級食材賣場(班表群)", "uri": "https://t.me/+svlFjBpb4hxkYjFl"},
                             "style": "secondary",
                             "color": MID_GREEN
                         },
                         {
                             "type": "button",
-                            "action": {"type": "uri", "label": "🏮 燈謎總機", "uri": choose_link()},
+                            "action": {"type": "uri", "label": "🏮 專屬引導員", "uri": choose_link()},
                             "style": "secondary",
                             "color": MID_MOON
                         }
@@ -200,7 +200,7 @@ def get_menu_carousel():
                             "type": "button",
                             "action": {
                                 "type": "uri",
-                                "label": "🌕 賞月大廳",
+                                "label": "🌕 賞月大廳(社群)",
                                 "uri": "https://line.me/ti/g2/mq8VqBIVupL1lsIXuAulnqZNz5vw7VKrVYjNDg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default"
                             },
                             "style": "primary",
@@ -214,13 +214,13 @@ def get_menu_carousel():
                         },
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "🍊 柚子兌換袋", "text": "折價券管理"},
+                            "action": {"type": "message", "label": "🍊 柚子兌換袋(折價券)", "text": "折價券管理"},
                             "style": "primary",
                             "color": MID_GREEN
                         },
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "👩‍🚀 召喚嫦娥（管理員）", "text": "呼叫管理員"},
+                            "action": {"type": "message", "label": "👩‍🎤 召喚嫦娥（管理員）", "text": "呼叫管理員"},
                             "style": "secondary",
                             "color": MID_RABBIT
                         },
