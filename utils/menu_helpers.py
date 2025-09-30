@@ -108,7 +108,7 @@ def get_menu_carousel():
             "paddingAll": "16px",
             "contents": [{
                 "type": "text",
-                "text": "� 中秋月圓選單 1/2",
+                "text": "🌕 中秋月圓選單 1/2",
                 "weight": "bold",
                 "align": "center",
                 "size": "lg",
@@ -148,7 +148,7 @@ def get_menu_carousel():
                         },
                         {
                             "type": "button",
-                            "action": {"type": "uri", "label": "� 柚子聊天室", "uri": "https://t.me/+svlFjBpb4hxkYjFl"},
+                            "action": {"type": "uri", "label": "🍊 柚子聊天室", "uri": "https://t.me/+svlFjBpb4hxkYjFl"},
                             "style": "secondary",
                             "color": MID_GREEN
                         },
@@ -200,7 +200,7 @@ def get_menu_carousel():
                             "type": "button",
                             "action": {
                                 "type": "uri",
-                                "label": "� 賞月大廳",
+                                "label": "🌕 賞月大廳",
                                 "uri": "https://line.me/ti/g2/mq8VqBIVupL1lsIXuAulnqZNz5vw7VKrVYjNDg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default"
                             },
                             "style": "primary",
