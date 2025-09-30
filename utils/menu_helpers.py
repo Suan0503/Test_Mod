@@ -4,17 +4,18 @@ from extensions import line_bot_api
 from storage import ADMIN_IDS  # 管理員清單
 from secrets import choice as secrets_choice
 
-# ================= 魔法學院配色（可依喜好微調） =================
-# 深色主題：午夜藍 / 靛紫為底，羊皮紙、鍍金點綴，酒紅與翡翠綠作功能色
-MAG_BG_1   = "#1A2242"  # 深靛藍（頁1底）
-MAG_BG_2   = "#121934"  # 午夜藍（頁2底）
-MAG_GOLD   = "#D4AF37"  # 鍍金字/強調
-MAG_PARCH  = "#E9DFC7"  # 羊皮紙
-MAG_BURG   = "#7C1E2B"  # 酒紅
-MAG_EMER   = "#2E7D5B"  # 翡翠綠
-MAG_INDIGO = "#283E6D"  # 靛藍（按鈕色）
-MAG_PURPLE = "#6B4AAE"  # 魔法紫（按鈕色）
-MAG_STEEL  = "#3E4A72"  # 鋼藍（中性色）
+
+# ================= 中秋節配色 =================
+# 主題：月亮黃、玉兔白、天青藍、柚子綠、嫦娥粉
+MID_BG_1   = "#FFF7D6"  # 月光米黃（頁1底）
+MID_BG_2   = "#E6F0FF"  # 天青藍（頁2底）
+MID_MOON   = "#FFD700"  # 金月亮
+MID_RABBIT = "#F8F8F8"  # 玉兔白
+MID_GREEN  = "#B7E4C7"  # 柚子綠
+MID_PINK   = "#FFD1DC"  # 嫦娥粉
+MID_BROWN  = "#B08968"  # 月餅棕
+MID_BLUE   = "#A5C8E1"  # 天青藍
+
 
 # ====== 共用：隨機客服/預約群連結 ======
 def choose_link():
@@ -41,8 +42,8 @@ JKF_LINKS = [
 
 # ====== 廣告專區（魔法學院主題）======
 def get_ad_menu():
-    btn_primary   = MAG_INDIGO   # 靛藍
-    btn_secondary = MAG_PURPLE   # 魔法紫
+    btn_primary   = MID_BROWN   # 月餅棕
+    btn_secondary = MID_GREEN   # 柚子綠
 
     buttons = []
     for i, link in enumerate(JKF_LINKS):
@@ -68,24 +69,24 @@ def get_ad_menu():
             "header": {
                 "type": "box",
                 "layout": "vertical",
-                "backgroundColor": MAG_BG_2,
+                "backgroundColor": MID_BG_2,
                 "paddingAll": "16px",
                 "contents": [{
                     "type": "text",
-                    "text": "🪄 茗殿廣告塔",
+                    "text": "🏮 中秋廣告專區",
                     "weight": "bold",
                     "size": "lg",
                     "align": "center",
-                    "color": MAG_GOLD
+                    "color": MID_MOON
                 }]
             },
             "body": {
                 "type": "box",
                 "layout": "vertical",
-                "backgroundColor": MAG_BG_2,
+                "backgroundColor": MID_BG_2,
                 "spacing": "md",
                 "contents": [
-                    {"type": "separator", "color": MAG_STEEL},
+                    {"type": "separator", "color": MID_BROWN},
                     {"type": "box", "layout": "vertical", "spacing": "sm", "margin": "lg", "contents": buttons}
                 ]
             },
@@ -95,31 +96,32 @@ def get_ad_menu():
 
 # ====== 魔法學院主選單（兩頁 Carousel）======
 def get_menu_carousel():
-    # 第一頁 - 靛藍/金色主題
+
+    # 第一頁 - 中秋主題
     page1 = {
         "type": "bubble",
         "size": "mega",
         "header": {
             "type": "box",
             "layout": "vertical",
-            "backgroundColor": MAG_BG_1,
+            "backgroundColor": MID_BG_1,
             "paddingAll": "16px",
             "contents": [{
                 "type": "text",
-                "text": "🏰 茗殿魔法學院選單 1/2",
+                "text": "� 中秋月圓選單 1/2",
                 "weight": "bold",
                 "align": "center",
                 "size": "lg",
-                "color": MAG_GOLD
+                "color": MID_MOON
             }]
         },
         "body": {
             "type": "box",
             "layout": "vertical",
-            "backgroundColor": MAG_BG_1,
+            "backgroundColor": MID_BG_1,
             "spacing": "md",
             "contents": [
-                {"type": "separator", "color": MAG_STEEL},
+                {"type": "separator", "color": MID_BROWN},
                 {
                     "type": "box",
                     "layout": "vertical",
@@ -128,33 +130,33 @@ def get_menu_carousel():
                     "contents": [
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "🪄 學籍驗證（主選單）", "text": "驗證資訊"},
+                            "action": {"type": "message", "label": "🐇 玉兔報到（驗證）", "text": "驗證資訊"},
                             "style": "primary",
-                            "color": MAG_PURPLE
+                            "color": MID_PINK
                         },
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "🎁 入學抽獎", "text": "每日抽獎"},
+                            "action": {"type": "message", "label": "🥮 月餅抽獎", "text": "每日抽獎"},
                             "style": "primary",
-                            "color": MAG_GOLD
+                            "color": MID_BROWN
                         },
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "📜 學員介紹", "text": "廣告專區"},
+                            "action": {"type": "message", "label": "🎑 賞月活動", "text": "廣告專區"},
                             "style": "primary",
-                            "color": MAG_EMER
+                            "color": MID_BLUE
                         },
                         {
                             "type": "button",
-                            "action": {"type": "uri", "label": "🗓️ 班表占卜室", "uri": "https://t.me/+svlFjBpb4hxkYjFl"},
+                            "action": {"type": "uri", "label": "� 柚子聊天室", "uri": "https://t.me/+svlFjBpb4hxkYjFl"},
                             "style": "secondary",
-                            "color": MAG_PARCH     # secondary 會深色字，羊皮紙較適合
+                            "color": MID_GREEN
                         },
                         {
                             "type": "button",
-                            "action": {"type": "uri", "label": "🔮 預約水晶球（總機）", "uri": choose_link()},
+                            "action": {"type": "uri", "label": "🏮 燈謎總機", "uri": choose_link()},
                             "style": "secondary",
-                            "color": MAG_BURG
+                            "color": MID_MOON
                         }
                     ]
                 }
@@ -162,31 +164,32 @@ def get_menu_carousel():
         }
     }
 
-    # 第二頁 - 午夜藍/羊皮紙/金色
+
+    # 第二頁 - 中秋主題
     page2 = {
         "type": "bubble",
         "size": "mega",
         "header": {
             "type": "box",
             "layout": "vertical",
-            "backgroundColor": MAG_BG_2,
+            "backgroundColor": MID_BG_2,
             "paddingAll": "16px",
             "contents": [{
                 "type": "text",
-                "text": "📚 魔法學院選單 2/2",
+                "text": "🍂 中秋月圓選單 2/2",
                 "weight": "bold",
                 "align": "center",
                 "size": "lg",
-                "color": MAG_GOLD
+                "color": MID_MOON
             }]
         },
         "body": {
             "type": "box",
             "layout": "vertical",
-            "backgroundColor": MAG_BG_2,
+            "backgroundColor": MID_BG_2,
             "spacing": "md",
             "contents": [
-                {"type": "separator", "color": MAG_STEEL},
+                {"type": "separator", "color": MID_BROWN},
                 {
                     "type": "box",
                     "layout": "vertical",
@@ -197,35 +200,35 @@ def get_menu_carousel():
                             "type": "button",
                             "action": {
                                 "type": "uri",
-                                "label": "🏛️ 學院討論大廳",
+                                "label": "� 賞月大廳",
                                 "uri": "https://line.me/ti/g2/mq8VqBIVupL1lsIXuAulnqZNz5vw7VKrVYjNDg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default"
                             },
                             "style": "primary",
-                            "color": MAG_EMER
+                            "color": MID_BLUE
                         },
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "📝 任務回報（暫停）", "text": "回報文"},
+                            "action": {"type": "message", "label": "📝 中秋投稿（暫停）", "text": "回報文"},
                             "style": "primary",
-                            "color": MAG_PURPLE
+                            "color": MID_PINK
                         },
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "💰 折價卷魔法袋", "text": "折價券管理"},
+                            "action": {"type": "message", "label": "🍊 柚子兌換袋", "text": "折價券管理"},
                             "style": "primary",
-                            "color": MAG_INDIGO
+                            "color": MID_GREEN
                         },
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "🧙 召喚魔法師（管理員）", "text": "呼叫管理員"},
+                            "action": {"type": "message", "label": "👩‍🚀 召喚嫦娥（管理員）", "text": "呼叫管理員"},
                             "style": "secondary",
-                            "color": MAG_STEEL
+                            "color": MID_RABBIT
                         },
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "🌟 最新魔法快訊！限時開啟！", "text": "活動快訊"},
+                            "action": {"type": "message", "label": "🌟 最新中秋快訊！限時開啟！", "text": "活動快訊"},
                             "style": "primary",
-                            "color": MAG_BURG
+                            "color": MID_MOON
                         }
                     ]
                 }
@@ -234,7 +237,7 @@ def get_menu_carousel():
     }
 
     return FlexSendMessage(
-        alt_text="魔法學院主功能選單",
+        alt_text="中秋節主功能選單",
         contents={"type": "carousel", "contents": [page1, page2]}
     )
 
