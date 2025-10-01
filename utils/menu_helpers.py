@@ -108,36 +108,30 @@ def get_menu_carousel():
             "paddingAll": "16px",
             "contents": [{
                 "type": "text",
-                "text": "� 萬聖節選單 1/2",
+                "text": "🎃 萬聖節選單 1/2",
                 "weight": "bold",
                 "align": "center",
                 "size": "lg",
                 "color": HAL_ORANGE
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "👻 島民身分證（個人資訊）", "text": "驗證資訊"},
-                            "style": "primary",
-                            "color": HAL_WHITE,
-                            "action": {"type": "message", "label": "👻 島民身分證（個人資訊）", "text": "驗證資訊"},
-                            "height": "sm",
-                            "style": "primary",
-                            "color": HAL_WHITE,
-                            "gravity": "center",
-                            "textColor": HAL_BLACK
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "👻 島民身分證（個人資訊）", "text": "驗證資訊"},
-                            "style": "secondary",
-                            "color": HAL_WHITE
-                        },
+            }]
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "backgroundColor": HAL_BG_1,
+            "spacing": "md",
+            "contents": [
+                {"type": "separator", "color": HAL_ORANGE},
+                {
+                    "type": "box",
                     "layout": "vertical",
                     "margin": "lg",
                     "spacing": "sm",
                     "contents": [
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "� 島民身分證（個人資訊）", "text": "驗證資訊"},
-                            "style": "primary",
+                            "action": {"type": "message", "label": "👻 島民身分證（個人資訊）", "text": "驗證資訊"},
+                            "style": "secondary",
                             "color": HAL_WHITE
                         },
                         {
