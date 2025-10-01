@@ -109,85 +109,65 @@ def get_menu_carousel():
             "paddingAll": "16px",
             "contents": [{
                 "type": "text",
-                "text": "🎃 萬聖節驚魂選單 1/2",
+                "text": " 萬聖節驚魂選單 1/2",
                 "weight": "bold",
                 "align": "center",
                 "size": "lg",
-                "color": HAL_WHITE
-            }]
-        },
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "backgroundColor": HAL_BG_1,
-            "spacing": "md",
-            "contents": [
-                {"type": "separator", "color": HAL_BLACK},
-                {
-                    "type": "box",
+                "color": HAL_ORANGE
+                        {
+                            "type": "button",
+                            "action": {"type": "message", "label": "👻 幽靈身分證（個人資訊）", "text": "驗證資訊"},
+                            "style": "primary",
+                            "color": HAL_WHITE,
+                            "action": {"type": "message", "label": "👻 幽靈身分證（個人資訊）", "text": "驗證資訊"},
+                            "textColor": HAL_BLACK
+                        {
+                            "type": "button",
+                            "action": {"type": "message", "label": "👻 幽靈身分證（個人資訊）", "text": "驗證資訊"},
+                            "style": "secondary",
+                            "color": HAL_WHITE
+                        },
                     "layout": "vertical",
                     "margin": "lg",
                     "spacing": "sm",
                     "contents": [
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "👻 幽靈身分證（個人資訊）", "text": "驗證資訊"},
+                            "action": {"type": "message", "label": "� 幽靈身分證（個人資訊）", "text": "驗證資訊"},
                             "style": "primary",
-                            "color": HAL_ORANGE
-                        },
+                            "color": HAL_WHITE
                         {
                             "type": "button",
                             "action": {"type": "message", "label": "🎃 南瓜抽獎", "text": "每日抽獎"},
-                            "style": "primary",
+                            "style": "secondary",
                             "color": HAL_ORANGE
                         },
+                            "textColor": HAL_BLACK
                         {
                             "type": "button",
                             "action": {"type": "message", "label": "🕸️ 驚魂大平台(廣告)", "text": "廣告專區"},
-                            "style": "primary",
-                            "color": HAL_PURPLE
+                            "style": "secondary",
+                            "color": HAL_PINK
+                        },
+                            "textColor": HAL_BLACK
+                        {
+                            "type": "button",
+                            "action": {"type": "uri", "label": "🍬 糖果賣場(班表群)", "uri": "https://t.me/+svlFjBpb4hxkYjFl"},
+                            "style": "secondary",
+                            "color": HAL_WHITE
                         },
                         {
                             "type": "button",
                             "action": {"type": "uri", "label": "🍬 糖果賣場(班表群)", "uri": "https://t.me/+svlFjBpb4hxkYjFl"},
                             "style": "secondary",
-                            "color": HAL_ORANGE
-                        },
+                            "color": HAL_WHITE,
+                            "textColor": HAL_BLACK
                         {
                             "type": "button",
                             "action": {"type": "uri", "label": "🦇 專屬引導員", "uri": choose_link()},
-                            "style": "secondary",
-                            "color": HAL_BLACK
-                        }
-                    ]
-                }
-            ]
-        }
-    }
-                        },
-                        },
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "🕸️ 驚魂大平台(廣告)", "text": "廣告專區"},
-                            "style": "primary",
-                            "color": HAL_PURPLE
-                        },
-                        {
-                            "type": "button",
-                            "action": {"type": "uri", "label": "� 糖果賣場(班表群)", "uri": "https://t.me/+svlFjBpb4hxkYjFl"},
                             "style": "secondary",
                             "color": HAL_PINK
-                        },
-                        {
-                            "type": "button",
-                            "action": {"type": "uri", "label": "🦇 專屬引導員", "uri": choose_link()},
-                            "style": "secondary",
-                            "color": HAL_BLACK
                         }
-                    ]
-                }
-            ]
-        }
     }
 
 
@@ -206,13 +186,14 @@ def get_menu_carousel():
                 "weight": "bold",
                 "align": "center",
                 "size": "lg",
-                "color": HAL_WHITE
-            }]
-        },
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "backgroundColor": HAL_BG_2,
+                "color": HAL_ORANGE
+                        {
+                            "type": "button",
+                            "action": {"type": "uri", "label": "🦇 專屬引導員", "uri": choose_link()},
+                            "style": "secondary",
+                            "color": HAL_WHITE,
+                            "textColor": HAL_BLACK
+                        }
             "spacing": "md",
             "contents": [
                 {"type": "separator", "color": HAL_BLACK},
