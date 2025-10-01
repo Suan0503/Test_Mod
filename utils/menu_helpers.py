@@ -111,76 +111,75 @@ def get_menu_carousel():
                 "type": "text",
                 "text": " 萬聖節驚魂選單 1/2",
                 "weight": "bold",
-                "align": "center",
-                "size": "lg",
-                "color": HAL_ORANGE
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "👻 幽靈身分證（個人資訊）", "text": "驗證資訊"},
-                            "style": "primary",
-                            "color": HAL_WHITE,
-                            "action": {"type": "message", "label": "👻 幽靈身分證（個人資訊）", "text": "驗證資訊"},
-                            "textColor": HAL_BLACK
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "👻 幽靈身分證（個人資訊）", "text": "驗證資訊"},
-                            "style": "secondary",
+                page2 = {
+                    "type": "bubble",
+                    "size": "mega",
+                    "header": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": HAL_BG_2,
+                        "paddingAll": "16px",
+                        "contents": [{
+                            "type": "text",
+                            "text": "🦇 萬聖節驚魂選單 2/2",
+                            "weight": "bold",
+                            "align": "center",
+                            "size": "lg",
                             "color": HAL_WHITE
-                        },
-                    "layout": "vertical",
-                    "margin": "lg",
-                    "spacing": "sm",
-                    "contents": [
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "� 幽靈身分證（個人資訊）", "text": "驗證資訊"},
-                            "style": "primary",
-                            "color": HAL_WHITE
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "🎃 南瓜抽獎", "text": "每日抽獎"},
-                            "style": "secondary",
-                            "color": HAL_ORANGE
-                        },
-                            "textColor": HAL_BLACK
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "🕸️ 驚魂大平台(廣告)", "text": "廣告專區"},
-                            "style": "secondary",
-                            "color": HAL_PINK
-                        },
-                            "textColor": HAL_BLACK
-                        {
-                            "type": "button",
-                            "action": {"type": "uri", "label": "🍬 糖果賣場(班表群)", "uri": "https://t.me/+svlFjBpb4hxkYjFl"},
-                            "style": "secondary",
-                            "color": HAL_WHITE
-                        },
-                        {
-                            "type": "button",
-                            "action": {"type": "uri", "label": "🍬 糖果賣場(班表群)", "uri": "https://t.me/+svlFjBpb4hxkYjFl"},
-                            "style": "secondary",
-                            "color": HAL_WHITE,
-                            "textColor": HAL_BLACK
-                        {
-                            "type": "button",
-                            "action": {"type": "uri", "label": "🦇 專屬引導員", "uri": choose_link()},
-                            "style": "secondary",
-                            "color": HAL_PINK
-                        }
-    }
-
-
-    # 第二頁 - 中秋主題
-    page2 = {
-        "type": "bubble",
-        "size": "mega",
-        "header": {
-            "type": "box",
-            "layout": "vertical",
-            "backgroundColor": HAL_BG_2,
-            "paddingAll": "16px",
-            "contents": [{
+                        }]
+                    },
+                    "body": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "backgroundColor": HAL_BG_2,
+                        "spacing": "md",
+                        "contents": [
+                            {"type": "separator", "color": HAL_BLACK},
+                            {
+                                "type": "box",
+                                "layout": "vertical",
+                                "margin": "lg",
+                                "spacing": "sm",
+                                "contents": [
+                                    {
+                                        "type": "button",
+                                        "action": {
+                                            "type": "uri",
+                                            "label": "🎃 南瓜大廳(社群)",
+                                            "uri": "https://line.me/ti/g2/mq8VqBIVupL1lsIXuAulnqZNz5vw7VKrVYjNDg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default"
+                                        },
+                                        "style": "secondary",
+                                        "color": HAL_ORANGE
+                                    },
+                                    {
+                                        "type": "button",
+                                        "action": {"type": "message", "label": "� 萬聖投稿（暫停）", "text": "回報文"},
+                                        "style": "secondary",
+                                        "color": HAL_PINK
+                                    },
+                                    {
+                                        "type": "button",
+                                        "action": {"type": "message", "label": "🍬 糖果兌換袋(折價券)", "text": "折價券管理"},
+                                        "style": "secondary",
+                                        "color": HAL_WHITE
+                                    },
+                                    {
+                                        "type": "button",
+                                        "action": {"type": "message", "label": "🧙‍♂️ 召喚南瓜巫師（管理員）", "text": "呼叫管理員"},
+                                        "style": "secondary",
+                                        "color": HAL_ORANGE
+                                    },
+                                    {
+                                        "type": "button",
+                                        "action": {"type": "message", "label": "🌟 最新萬聖快訊！限時開啟！", "text": "活動快訊"},
+                                        "style": "secondary",
+                                        "color": HAL_PINK
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
                 "type": "text",
                 "text": "🦇 萬聖節驚魂選單 2/2",
                 "weight": "bold",
