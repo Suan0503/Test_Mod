@@ -113,17 +113,23 @@ def get_menu_carousel():
                 "align": "center",
                 "size": "lg",
                 "color": HAL_ORANGE
-            }]
-        },
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "backgroundColor": HAL_BG_1,
-            "spacing": "md",
-            "contents": [
-                {"type": "separator", "color": HAL_ORANGE},
-                {
-                    "type": "box",
+                        {
+                            "type": "button",
+                            "action": {"type": "message", "label": "👻 島民身分證（個人資訊）", "text": "驗證資訊"},
+                            "style": "primary",
+                            "color": HAL_WHITE,
+                            "action": {"type": "message", "label": "👻 島民身分證（個人資訊）", "text": "驗證資訊"},
+                            "height": "sm",
+                            "style": "primary",
+                            "color": HAL_WHITE,
+                            "gravity": "center",
+                            "textColor": HAL_BLACK
+                        {
+                            "type": "button",
+                            "action": {"type": "message", "label": "👻 島民身分證（個人資訊）", "text": "驗證資訊"},
+                            "style": "secondary",
+                            "color": HAL_WHITE
+                        },
                     "layout": "vertical",
                     "margin": "lg",
                     "spacing": "sm",
