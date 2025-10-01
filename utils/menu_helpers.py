@@ -115,12 +115,12 @@ def get_menu_carousel():
                 "size": "lg",
                 "color": HAL_WHITE
             }]
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "👻 幽靈身分證（個人資訊）", "text": "驗證資訊"},
-                            "style": "primary",
-                            "color": HAL_ORANGE
-                        },
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "backgroundColor": HAL_BG_1,
+            "spacing": "md",
             "contents": [
                 {"type": "separator", "color": HAL_BLACK},
                 {
@@ -131,14 +131,39 @@ def get_menu_carousel():
                     "contents": [
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "� 幽靈身分證（個人資訊）", "text": "驗證資訊"},
+                            "action": {"type": "message", "label": "👻 幽靈身分證（個人資訊）", "text": "驗證資訊"},
                             "style": "primary",
-                            "color": HAL_WHITE
+                            "color": HAL_ORANGE
+                        },
                         {
                             "type": "button",
-                            "action": {"type": "uri", "label": "� 糖果賣場(班表群)", "uri": "https://t.me/+svlFjBpb4hxkYjFl"},
+                            "action": {"type": "message", "label": "🎃 南瓜抽獎", "text": "每日抽獎"},
+                            "style": "primary",
+                            "color": HAL_ORANGE
+                        },
+                        {
+                            "type": "button",
+                            "action": {"type": "message", "label": "🕸️ 驚魂大平台(廣告)", "text": "廣告專區"},
+                            "style": "primary",
+                            "color": HAL_PURPLE
+                        },
+                        {
+                            "type": "button",
+                            "action": {"type": "uri", "label": "🍬 糖果賣場(班表群)", "uri": "https://t.me/+svlFjBpb4hxkYjFl"},
                             "style": "secondary",
                             "color": HAL_ORANGE
+                        },
+                        {
+                            "type": "button",
+                            "action": {"type": "uri", "label": "🦇 專屬引導員", "uri": choose_link()},
+                            "style": "secondary",
+                            "color": HAL_BLACK
+                        }
+                    ]
+                }
+            ]
+        }
+    }
                         },
                         },
                         {
