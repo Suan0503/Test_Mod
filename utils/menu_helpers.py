@@ -109,18 +109,18 @@ def get_menu_carousel():
             "paddingAll": "16px",
             "contents": [{
                 "type": "text",
-                "text": "� 萬聖節驚魂選單 1/2",
+                "text": "🎃 萬聖節驚魂選單 1/2",
                 "weight": "bold",
                 "align": "center",
                 "size": "lg",
-                "color": HAL_ORANGE
+                "color": HAL_WHITE
             }]
-        },
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "backgroundColor": HAL_BG_1,
-            "spacing": "md",
+                        {
+                            "type": "button",
+                            "action": {"type": "message", "label": "👻 幽靈身分證（個人資訊）", "text": "驗證資訊"},
+                            "style": "primary",
+                            "color": HAL_ORANGE
+                        },
             "contents": [
                 {"type": "separator", "color": HAL_BLACK},
                 {
@@ -134,12 +134,12 @@ def get_menu_carousel():
                             "action": {"type": "message", "label": "� 幽靈身分證（個人資訊）", "text": "驗證資訊"},
                             "style": "primary",
                             "color": HAL_WHITE
-                        },
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "🎃 南瓜抽獎", "text": "每日抽獎"},
-                            "style": "primary",
+                            "action": {"type": "uri", "label": "� 糖果賣場(班表群)", "uri": "https://t.me/+svlFjBpb4hxkYjFl"},
+                            "style": "secondary",
                             "color": HAL_ORANGE
+                        },
                         },
                         {
                             "type": "button",
@@ -181,7 +181,7 @@ def get_menu_carousel():
                 "weight": "bold",
                 "align": "center",
                 "size": "lg",
-                "color": HAL_ORANGE
+                "color": HAL_WHITE
             }]
         },
         "body": {
