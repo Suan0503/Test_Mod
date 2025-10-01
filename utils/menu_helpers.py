@@ -113,12 +113,12 @@ def get_menu_carousel():
                 "align": "center",
                 "size": "lg",
                 "color": HAL_ORANGE
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "🍬 糖果兌換袋(折價券)", "text": "折價券管理"},
-                            "style": "primary",
-                            "color": HAL_GREEN
-                        },
+            }]
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "backgroundColor": HAL_BG_1,
             "spacing": "md",
             "contents": [
                 {"type": "separator", "color": HAL_ORANGE},
