@@ -5,16 +5,17 @@ from storage import ADMIN_IDS  # 管理員清單
 from secrets import choice as secrets_choice
 
 
-# ================= 中秋節配色 =================
-# 主題：月亮黃、玉兔白、天青藍、柚子綠、嫦娥粉
-MID_BG_1   = "#FFF7D6"  # 月光米黃（頁1底）
-MID_BG_2   = "#E6F0FF"  # 天青藍（頁2底）
-MID_MOON   = "#FFD700"  # 金月亮
-MID_RABBIT = "#F8F8F8"  # 玉兔白
-MID_GREEN  = "#B7E4C7"  # 柚子綠
-MID_PINK   = "#FFD1DC"  # 嫦娥粉
-MID_BROWN  = "#B08968"  # 月餅棕
-MID_BLUE   = "#A5C8E1"  # 天青藍
+
+# ================= 萬聖節配色 =================
+# 主題：南瓜橘、幽靈白、紫夜、糖果粉、蝙蝠黑
+HAL_BG_1   = "#2D1436"  # 紫夜（頁1底）
+HAL_BG_2   = "#1B0B1F"  # 深紫黑（頁2底）
+HAL_ORANGE = "#FF7518"  # 南瓜橘
+HAL_WHITE  = "#F8F8F8"  # 幽靈白
+HAL_PINK   = "#FFB6B9"  # 糖果粉
+HAL_BLACK  = "#231F20"  # 蝙蝠黑
+HAL_PURPLE = "#7C3AED"  # 萬聖紫
+
 
 
 # ====== 共用：隨機客服/預約群連結 ======
@@ -42,8 +43,8 @@ JKF_LINKS = [
 
 # ====== 廣告專區（魔法學院主題）======
 def get_ad_menu():
-    btn_primary   = MID_BROWN   # 月餅棕
-    btn_secondary = MID_GREEN   # 柚子綠
+    btn_primary   = HAL_ORANGE   # 南瓜橘
+    btn_secondary = HAL_PURPLE   # 萬聖紫
 
     buttons = []
     for i, link in enumerate(JKF_LINKS):
@@ -69,24 +70,24 @@ def get_ad_menu():
             "header": {
                 "type": "box",
                 "layout": "vertical",
-                "backgroundColor": MID_BG_2,
+                "backgroundColor": HAL_BG_2,
                 "paddingAll": "16px",
                 "contents": [{
                     "type": "text",
-                    "text": "🏮 中秋廣告專區",
+                    "text": "🦇 萬聖廣告專區",
                     "weight": "bold",
                     "size": "lg",
                     "align": "center",
-                    "color": MID_MOON
+                    "color": HAL_ORANGE
                 }]
             },
             "body": {
                 "type": "box",
                 "layout": "vertical",
-                "backgroundColor": MID_BG_2,
+                "backgroundColor": HAL_BG_2,
                 "spacing": "md",
                 "contents": [
-                    {"type": "separator", "color": MID_BROWN},
+                    {"type": "separator", "color": HAL_BLACK},
                     {"type": "box", "layout": "vertical", "spacing": "sm", "margin": "lg", "contents": buttons}
                 ]
             },
@@ -104,24 +105,24 @@ def get_menu_carousel():
         "header": {
             "type": "box",
             "layout": "vertical",
-            "backgroundColor": MID_BG_1,
+            "backgroundColor": HAL_BG_1,
             "paddingAll": "16px",
             "contents": [{
                 "type": "text",
-                "text": "🌕 中秋月圓選單 1/2",
+                "text": "� 萬聖節驚魂選單 1/2",
                 "weight": "bold",
                 "align": "center",
                 "size": "lg",
-                "color": MID_MOON
+                "color": HAL_ORANGE
             }]
         },
         "body": {
             "type": "box",
             "layout": "vertical",
-            "backgroundColor": MID_BG_1,
+            "backgroundColor": HAL_BG_1,
             "spacing": "md",
             "contents": [
-                {"type": "separator", "color": MID_BROWN},
+                {"type": "separator", "color": HAL_BLACK},
                 {
                     "type": "box",
                     "layout": "vertical",
@@ -130,33 +131,33 @@ def get_menu_carousel():
                     "contents": [
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "🐇 島民身分證（個人資訊）", "text": "驗證資訊"},
+                            "action": {"type": "message", "label": "� 幽靈身分證（個人資訊）", "text": "驗證資訊"},
                             "style": "primary",
-                            "color": MID_PINK
+                            "color": HAL_WHITE
                         },
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "🥮 月餅抽獎", "text": "每日抽獎"},
+                            "action": {"type": "message", "label": "🎃 南瓜抽獎", "text": "每日抽獎"},
                             "style": "primary",
-                            "color": MID_BROWN
+                            "color": HAL_ORANGE
                         },
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "🎑 賞月大平台(廣告)", "text": "廣告專區"},
+                            "action": {"type": "message", "label": "🕸️ 驚魂大平台(廣告)", "text": "廣告專區"},
                             "style": "primary",
-                            "color": MID_BLUE
+                            "color": HAL_PURPLE
                         },
                         {
                             "type": "button",
-                            "action": {"type": "uri", "label": "🍊 高級食材賣場(班表群)", "uri": "https://t.me/+svlFjBpb4hxkYjFl"},
+                            "action": {"type": "uri", "label": "� 糖果賣場(班表群)", "uri": "https://t.me/+svlFjBpb4hxkYjFl"},
                             "style": "secondary",
-                            "color": MID_GREEN
+                            "color": HAL_PINK
                         },
                         {
                             "type": "button",
-                            "action": {"type": "uri", "label": "🏮 專屬引導員", "uri": choose_link()},
+                            "action": {"type": "uri", "label": "🦇 專屬引導員", "uri": choose_link()},
                             "style": "secondary",
-                            "color": MID_MOON
+                            "color": HAL_BLACK
                         }
                     ]
                 }
@@ -172,24 +173,24 @@ def get_menu_carousel():
         "header": {
             "type": "box",
             "layout": "vertical",
-            "backgroundColor": MID_BG_2,
+            "backgroundColor": HAL_BG_2,
             "paddingAll": "16px",
             "contents": [{
                 "type": "text",
-                "text": "🍂 中秋月圓選單 2/2",
+                "text": "🦇 萬聖節驚魂選單 2/2",
                 "weight": "bold",
                 "align": "center",
                 "size": "lg",
-                "color": MID_MOON
+                "color": HAL_ORANGE
             }]
         },
         "body": {
             "type": "box",
             "layout": "vertical",
-            "backgroundColor": MID_BG_2,
+            "backgroundColor": HAL_BG_2,
             "spacing": "md",
             "contents": [
-                {"type": "separator", "color": MID_BROWN},
+                {"type": "separator", "color": HAL_BLACK},
                 {
                     "type": "box",
                     "layout": "vertical",
@@ -200,35 +201,35 @@ def get_menu_carousel():
                             "type": "button",
                             "action": {
                                 "type": "uri",
-                                "label": "🌕 賞月大廳(社群)",
+                                "label": "� 南瓜大廳(社群)",
                                 "uri": "https://line.me/ti/g2/mq8VqBIVupL1lsIXuAulnqZNz5vw7VKrVYjNDg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default"
                             },
                             "style": "primary",
-                            "color": MID_BLUE
+                            "color": HAL_ORANGE
                         },
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "📝 中秋投稿（暫停）", "text": "回報文"},
+                            "action": {"type": "message", "label": "📝 萬聖投稿（暫停）", "text": "回報文"},
                             "style": "primary",
-                            "color": MID_PINK
+                            "color": HAL_PINK
                         },
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "🍊 柚子兌換袋(折價券)", "text": "折價券管理"},
+                            "action": {"type": "message", "label": "� 糖果兌換袋(折價券)", "text": "折價券管理"},
                             "style": "primary",
-                            "color": MID_GREEN
+                            "color": HAL_PINK
                         },
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "👩‍🎤 召喚嫦娥（管理員）", "text": "呼叫管理員"},
+                            "action": {"type": "message", "label": "🧙‍♂️ 召喚南瓜巫師（管理員）", "text": "呼叫管理員"},
                             "style": "secondary",
-                            "color": MID_RABBIT
+                            "color": HAL_WHITE
                         },
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "🌟 最新中秋快訊！限時開啟！", "text": "活動快訊"},
+                            "action": {"type": "message", "label": "🌟 最新萬聖快訊！限時開啟！", "text": "活動快訊"},
                             "style": "primary",
-                            "color": MID_MOON
+                            "color": HAL_ORANGE
                         }
                     ]
                 }
