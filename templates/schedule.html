@@ -10,26 +10,42 @@
   .time-select, .duration-select { width: 90px; }
   .remove-time-btn { background: #f04747; color: #fff; border: none; border-radius: 6px; padding: 2px 8px; cursor: pointer; }
   .add-time-btn, .sort-time-btn { margin: 8px 4px; padding: 4px 12px; border-radius: 6px; border: none; background: #4f8cff; color: #fff; cursor: pointer; }
+</style>
 <div style="display:flex;">
   <!-- 左半邊表單 -->
   <div style="width:40%;padding:2em;">
-    <form action="/schedule/add" method="post" style="background:rgba(44,34,68,0.85);border-radius:12px;padding:1.5em;box-shadow:0 4px 24px #1a2337;">
-      <h4 style="color:#ffe082;">新增班表</h4>
-      <label for="sister">選擇妹妹：</label>
-      <select name="sister" id="sister" onchange="document.getElementById('new_sister').style.display = this.value === '新增' ? 'block' : 'none';" required>
-        {% for name in sisters %}
+    <form action="/schedule" method="post" style="background:rgba(44,34,68,0.85);border-radius:12px;padding:1.5em;box-shadow:0 4px 24px #1a2337;">
+      <h4 style="color:#ffe082;">新增排班</h4>
+      <label for="new_girl">新增妹妹：</label>
+      <input type="text" name="new_girl" id="new_girl" placeholder="請輸入妹妹名稱">
+      <br><br>
+      <label for="time">時間：</label>
+      <select name="time" id="time" required>
+        {% for h in range(0,24) %}
+        <option value="{{ '%02d' % h }}:00">{{ '%02d' % h }}:00</option>
+        <option value="{{ '%02d' % h }}:30">{{ '%02d' % h }}:30</option>
+        {% endfor %}
+      </select>
+      <br><br>
+      <label for="girl">選擇妹妹：</label>
+      <select name="girl" id="girl" required>
+        {% for name in girls %}
         <option value="{{ name }}">{{ name }}</option>
         {% endfor %}
-        <option value="新增">＋ 新增妹妹</option>
       </select>
-      <input type="text" name="new_sister" id="new_sister" placeholder="請輸入新妹妹名稱" style="display:none;margin-top:8px;">
       <br><br>
-      <label for="hour">時段：</label>
-      <select name="hour" id="hour" required>
-        {% for h in range(0,24) %}
-        <option value="{{ '%02d' % h }}">{{ '%02d' % h }}</option>
-        {% endfor %}
+      <label for="amount">金額：</label>
+      <input type="number" name="amount" id="amount" required>
+      <br><br>
+      <label for="plan">方案：</label>
+      <select name="plan" id="plan" required>
+        <option value="40">40</option>
+        <option value="60">60</option>
+        <option value="90">90</option>
       </select>
+      <br><br>
+      <button type="submit" style="background:#4f8cff;color:#fff;padding:8px 24px;border:none;border-radius:6px;">送出</button>
+    </form>
       ：
       <select name="minute" id="minute" required>
         <option value="00">00</option>

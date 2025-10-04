@@ -10,12 +10,18 @@ from sqlalchemy import text
 load_dotenv()
 
 from extensions import db
-from routes.message import message_bp
 
+from routes.message import message_bp
+from routes.schedule import schedule_bp
+
+# ...existing code...
 app = Flask(__name__)
 # 設定 secret_key，支援 session/flash
 import secrets
 app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
+
+# 註冊排班路由
+app.register_blueprint(schedule_bp)
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))  # ✅ 確保 handler 可被 import
