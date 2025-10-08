@@ -1,4 +1,7 @@
+
+from extensions import db
 from flask_login import UserMixin
+from datetime import datetime
 
 # 登入用 User 模型
 class User(db.Model, UserMixin):
@@ -10,9 +13,6 @@ class User(db.Model, UserMixin):
 
     def __repr__(self):
         return f'<User {self.username}>'
-
-from extensions import db
-from datetime import datetime
 
 class ManualVerifyCode(db.Model):
     __tablename__ = "manual_verify_code"
