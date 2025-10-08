@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask_login import login_required, current_user
 
 schedule_bp = Blueprint('schedule', __name__)
 
@@ -11,6 +12,7 @@ SCHEDULE = []
 
 
 @schedule_bp.route('/schedule', methods=['GET', 'POST'])
+@login_required
 def schedule():
 	if request.method == 'POST':
 		new_girl = request.form.get('new_girl')
@@ -32,4 +34,4 @@ def schedule():
 		})
 		flash(f'已提交：妹妹={girl}, 時間={time}, 金額={amount}, 方案={plan}', 'success')
 		return redirect(url_for('schedule.schedule'))
-	return render_template('schedule.html', girls=GIRLS, schedule=SCHEDULE)
+	return render_template('schedule.html', girls=GIRLS, schedule=SCHEDULE, user=current_user)

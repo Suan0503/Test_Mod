@@ -8,8 +8,12 @@ from dotenv import load_dotenv
 from sqlalchemy import text
 load_dotenv()
 from extensions import db
+
 from routes.message import message_bp
 from routes.schedule import schedule_bp
+from routes.auth import auth_bp
+from flask_login import LoginManager
+from models import User
 
 app = Flask(__name__)
 import secrets
@@ -29,6 +33,16 @@ app.register_blueprint(message_bp)
 from routes.pending_verify import pending_bp
 app.register_blueprint(pending_bp)
 app.register_blueprint(schedule_bp)
+app.register_blueprint(auth_bp)
+
+# 初始化 Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'auth.login'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 
 # 初始化 admin panel，確保 /admin 路徑可用

@@ -28,6 +28,12 @@
           <li class="nav-item mx-2"><a class="btn btn-success" href="/admin/whitelist/new/"><i class="fa fa-user-plus"></i> 新增白名單</a></li>
           <li class="nav-item mx-2"><a class="btn btn-secondary" href="/admin/blacklist/new/"><i class="fa fa-user"></i> 新增黑名單</a></li>
           <li class="nav-item mx-2"><a class="btn btn-dark" href="/schedule"><i class="fa fa-calendar"></i> 排班表</a></li>
+          {% if current_user.is_authenticated %}
+          <li class="nav-item mx-2"><span class="navbar-text">👤 {{ current_user.username }} ({{ current_user.role }})</span></li>
+          <li class="nav-item mx-2"><a class="btn btn-outline-secondary" href="/logout">登出</a></li>
+          {% else %}
+          <li class="nav-item mx-2"><a class="btn btn-outline-primary" href="/login">登入</a></li>
+          {% endif %}
         </ul>
       </div>
     </nav>
