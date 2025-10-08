@@ -51,14 +51,12 @@ with app.app_context():
     db.create_all()
     init_admin(app)
 
+
+# 首頁自動導向登入頁
+from flask import redirect, url_for
 @app.route("/")
 def home():
-    try:
-        db.session.execute(text("SELECT 1"))
-        db_status = "資料庫連線正常"
-    except Exception as e:
-        db_status = "資料庫連線異常: " + str(e)
-    return f"LINE Bot 正常運作中～🍵\n{db_status}"
+    return redirect(url_for('auth.login'))
 
 
 # 搜尋功能
