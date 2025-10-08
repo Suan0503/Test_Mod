@@ -2,23 +2,15 @@
 <html lang="zh-TW">
 <head>
   <meta charset="utf-8">
-  <title>茗-後檯管理系統</title>
+  <title>茗-後檯管理系統登入</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="/static/royal_academy.css">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap" rel="stylesheet">
 </head>
-<body>
-  <nav class="royal-navbar">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.7em 2em;">
-      <span class="royal-logo">茗-後檯管理系統</span>
-      <div style="display:flex;align-items:center;gap:0.5em;">
-        {% if current_user.is_authenticated %}
-          <span style="color:#ffe082;font-size:1.1em;">{{ current_user.username }} ({{ current_user.role }})</span>
-          <a href="/logout" class="royal-btn" style="margin-left:1em;">登出</a>
-        {% endif %}
-      </div>
-    </div>
-  </nav>
+<body style="background: linear-gradient(135deg, #23243a 0%, #3a2c5e 100%);">
+  <div style="text-align:center;margin-top:60px;">
+    <span class="royal-logo" style="font-size:2.5rem;">茗-後檯管理系統</span>
+  </div>
   <div class="container">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}

@@ -1,0 +1,14 @@
+{% extends 'royal_base.html' %}
+{% block body %}
+<div class="royal-card" style="max-width:700px;margin:2em auto;text-align:center;">
+  <div class="royal-title">主頁</div>
+  <div style="display:flex;flex-wrap:wrap;gap:1em;justify-content:center;">
+    <a class="royal-btn" href="/admin/whitelist/">白名單列表</a>
+    <a class="royal-btn" href="/admin/blacklist/">黑名單列表</a>
+    <a class="royal-btn" href="/admin/coupon/">抽獎券列表</a>
+    <a class="royal-btn" href="/admin/pending_verify/">暫存驗證名單</a>
+    <a class="royal-btn" href="/admin/whitelist/new/">新增白名單</a>
+    <a class="royal-btn" href="/admin/blacklist/new/">新增黑名單</a>
+  </div>
+</div>
+{% endblock %}

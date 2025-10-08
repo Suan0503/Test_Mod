@@ -1,80 +1,59 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="utf-8">
-    <title>暫存驗證名單</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
-</head>
-<body style="background:#f7f8fa;">
-<!-- 食物語風格選單 -->
-<nav class="food-menu">
-  <ul>
-    <li><span class="food-icon">🍚</span> 主頁</li>
-    <li><span class="food-icon">🥟</span> 暫存驗證</li>
-    <li><span class="food-icon">🍵</span> 手動審核</li>
-    <li><span class="food-icon">🍡</span> 排程管理</li>
-    <li><span class="food-icon">🍲</span> 管理員專區</li>
-  </ul>
-</nav>
-<div class="container mt-5">
-    <h2 class="mb-4 font-weight-bold" style="color:#222;">暫存驗證名單</h2>
+{% extends 'royal_base.html' %}
+{% block body %}
+<div class="royal-card" style="max-width:900px;margin:2em auto 0 auto;padding:2.5em 2em 2em 2em;background:rgba(44,34,68,0.97);border-radius:18px;box-shadow:0 4px 24px #1a2337;">
+    <h2 class="royal-title mb-4" style="text-align:center;">暫存驗證名單</h2>
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
-        <div class="mt-3">
+        <div style="max-width:600px;margin:1em auto;">
           {% for category, message in messages %}
-            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-              {{ message }}
-              <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-              </button>
-            </div>
-            <script>
-              setTimeout(function(){
-                window.location.href = window.location.pathname;
-              }, 1200);
-            </script>
+            <div class="royal-card" style="background:#3a2c5e;">{{ message }}</div>
           {% endfor %}
         </div>
       {% endif %}
     {% endwith %}
-  {% if users %}
-  <table class="table table-bordered bg-white">
-    <thead class="thead-dark">
-      <tr>
-        <th>暱稱</th>
-        <th>手機</th>
-        <th>LINE ID</th>
-        <th>LINE用戶ID</th>
-        <th>操作</th>
-      </tr>
-    </thead>
-    <tbody>
-    {% for u in users %}
-      <tr>
-    <td>{{ u.nickname }}</td>
-    <td>{{ u.phone }}</td>
-    <td>{{ u.line_id }}</td>
-    <td>{{ u.line_user_id if u.line_user_id else '（缺少）' }}</td>
-    <td>
-      {% if u.line_user_id %}
-      <form method="post" style="display:inline;">
-      <input type="hidden" name="user_id" value="{{ u.user_id }}">
-      <button type="submit" class="btn btn-success btn-sm">通過驗證</button>
-      </form>
-      {% else %}
-      <button class="btn btn-secondary btn-sm" disabled>缺少 LINE用戶ID</button>
-      {% endif %}
-    </td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  <a href="/admin/" class="btn btn-outline-primary mt-3">返回主選單</a>
-  <a href="/admin/pending_verify/" class="btn btn-outline-secondary mt-3 ml-2">手動刷新</a>
-  {% else %}
-  <div class="alert alert-info">目前沒有卡住的暫存驗證用戶。</div>
-  <a href="/admin/" class="btn btn-outline-primary mt-3">返回主選單</a>
-  {% endif %}
+    {% if users %}
+    <div style="overflow-x:auto;">
+      <table class="royal-table" style="width:100%;margin-top:1.5em;">
+        <thead>
+          <tr>
+            <th>暱稱</th>
+            <th>手機</th>
+            <th>LINE ID</th>
+            <th>LINE用戶ID</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for u in users %}
+          <tr>
+            <td>{{ u.nickname }}</td>
+            <td>{{ u.phone }}</td>
+            <td>{{ u.line_id }}</td>
+            <td>{{ u.line_user_id if u.line_user_id else '（缺少）' }}</td>
+            <td>
+              {% if u.line_user_id %}
+              <form method="post" style="display:inline;">
+                <input type="hidden" name="user_id" value="{{ u.user_id }}">
+                <button type="submit" class="royal-btn royal-effect" style="padding:0.3em 1.2em;font-size:1em;">通過驗證</button>
+              </form>
+              {% else %}
+              <button class="royal-btn" style="background:#888;cursor:not-allowed;" disabled>缺少 LINE用戶ID</button>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div style="text-align:center;margin-top:2em;">
+      <a href="/admin/" class="royal-btn royal-effect" style="margin-right:1em;">返回主選單</a>
+      <a href="/admin/pending_verify/" class="royal-btn royal-effect" style="background:#3a2c5e;">手動刷新</a>
+    </div>
+    {% else %}
+    <div class="royal-card" style="background:#2e1e4d;text-align:center;">目前沒有卡住的暫存驗證用戶。</div>
+    <div style="text-align:center;margin-top:2em;">
+      <a href="/admin/" class="royal-btn royal-effect">返回主選單</a>
+    </div>
+    {% endif %}
 </div>
-</body>
-</html>
+{% endblock %}

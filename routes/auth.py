@@ -16,7 +16,7 @@ def login():
         if user and bcrypt.check_password_hash(user.password_hash, password):
             login_user(user)
             flash('登入成功', 'success')
-            return redirect(url_for('schedule.schedule'))
+            return redirect(url_for('home'))
         else:
             flash('帳號或密碼錯誤', 'danger')
     return render_template('royal_login.html')
