@@ -52,59 +52,10 @@
         <td>{{ row.girl }}</td>
         <td>{{ row.time }}</td>
         <td>{{ row.amount }}</td>
-        <td>{{ row.plan }}</td>
-      </tr>
-      {% endfor %}
-    </table>
-  </div>
-</div>
-
-<script>
-const timeOptions = [
-  '11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00','23:00','00:00','01:00'
-];
-const durationOptions = ['40','60','90'];
-
-function addTimeRow(btn) {
-  const timesList = btn.parentNode.querySelector('.times-list');
-  const div = document.createElement('div');
-  div.className = 'time-row';
-  div.innerHTML = `
-    <select class="time-select">
-      ${timeOptions.map(t=>`<option value="${t}">${t}</option>`).join('')}
-    </select>
-    <select class="duration-select">
-      <option value="">--</option>
-      ${durationOptions.map(d=>`<option value="${d}">${d}</option>`).join('')}
-    </select>
-    <button class="remove-time-btn" onclick="removeTimeRow(this)">刪除</button>
-  `;
-  timesList.appendChild(div);
-  getScheduleResult();
-}
-function removeTimeRow(btn) {
-  btn.parentNode.remove();
-  getScheduleResult();
-}
-function addGirlRow() {
-  const tbody = document.getElementById('girl-rows');
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td>
-      <input type="text" class="girl-name" placeholder="名稱">
-      <input type="text" class="room-input" placeholder="房號">
-    </td>
-    <td>
-      <label><input type="checkbox" class="lang-check" value="zh">中</label>
-      <label><input type="checkbox" class="lang-check" value="en">英</label>
-    </td>
-    <td>
-      <select class="nation-select" style="width:90px;">
-        <option value="tw">🇹🇼 台灣</option>
-        <option value="vn">🇻🇳 越南</option>
-        <option value="th">🇹🇭 泰國</option>
-        <option value="id">🇮🇩 印尼</option>
-      </select>
+          <div class="royal-card" style="max-width:600px;text-align:center;">
+            <div class="royal-title">排班功能已關閉</div>
+            <div style="color:#ffe082;">如需恢復請聯絡管理員。</div>
+          </div>
     </td>
     <td>
       <div class="times-list"></div>
