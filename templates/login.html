@@ -2,17 +2,16 @@
 {% block body %}
 <div class="container" style="max-width:400px;margin-top:60px;">
   <h3>登入</h3>
-  <form method="post">
-    <div class="form-group">
-      <label>帳號</label>
-      <input type="text" name="username" class="form-control" required>
-    </div>
-    <div class="form-group">
-      <label>密碼</label>
-      <input type="password" name="password" class="form-control" required>
-    </div>
-  <button type="submit" class="btn btn-primary">登入</button>
-  <a href="/register" class="btn btn-success" style="margin-left:10px;">註冊帳號</a>
+{% extends 'royal_login_base.html' %}
+{% block body %}
+<div class="royal-card" style="max-width:400px;">
+  <div class="royal-title">登入</div>
+  <form method="post" action="/login">
+    <input type="text" name="username" class="royal-input" placeholder="帳號" required>
+    <input type="password" name="password" class="royal-input" placeholder="密碼" required>
+    <button type="submit" class="royal-btn royal-effect" style="width:100%;">登入</button>
   </form>
+</div>
+{% endblock %}
 </div>
 {% endblock %}

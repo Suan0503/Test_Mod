@@ -4,12 +4,13 @@
     <div class="royal-title">搜尋結果</div>
     <form method="get" action="/search" style="margin-bottom:1em;">
         <input type="text" name="q" value="{{ q }}" placeholder="請輸入關鍵字" class="royal-input" style="width:300px;display:inline-block;">
-        <button type="submit" class="royal-btn">搜尋</button>
+        <button type="submit" class="royal-btn royal-effect">搜尋</button>
     </form>
     <hr style="border-color:#e3c77b;">
     {% if results %}
-    <table style="width:100%;color:#ffe082;">
-        <thead><tr style="background:#2d2350;"><th>類型</th><th>手機/帳號/編號</th><th>姓名/暱稱</th><th>LINE ID/抽獎券編號/金額</th></tr></thead>
+    <div style="overflow-x:auto;">
+    <table class="royal-table" style="width:100%;color:#ffe082;">
+        <thead><tr><th>類型</th><th>手機/帳號/編號</th><th>姓名/暱稱</th><th>LINE ID/抽獎券編號/金額</th></tr></thead>
         <tbody>
         {% for r in results %}
             <tr>
@@ -21,11 +22,9 @@
         {% endfor %}
         </tbody>
     </table>
+    </div>
     {% else %}
         <div style="color:#ffe082;">查無資料</div>
     {% endif %}
 </div>
 {% endblock %}
-</div>
-</body>
-</html>

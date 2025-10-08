@@ -1,3 +1,60 @@
+body {
+    background: linear-gradient(135deg, #23243a 0%, #3a2c5e 100%);
+    font-family: 'Cinzel', 'Noto Sans TC', 'Microsoft JhengHei', serif;
+}
+.navbar, .royal-navbar {
+    background: #2e1e4d;
+    color: #ffe082;
+}
+.royal-logo {
+    font-family: 'Cinzel', serif;
+    font-size: 2rem;
+    color: #ffe082;
+}
+.container {
+    margin-top: 2em;
+}
+.btn, .royal-btn {
+    background: #3a2c5e;
+    color: #ffe082;
+    border-radius: 8px;
+    border: none;
+    padding: 0.5em 1.5em;
+    margin: 0.2em;
+    transition: background 0.2s;
+}
+.btn:hover, .royal-btn:hover {
+    background: #5e3a8c;
+    color: #fff;
+}
+.table, .royal-table {
+    background: #2e1e4d;
+    color: #ffe082;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.table th, .royal-table th {
+    background: #3a2c5e;
+    color: #ffe082;
+}
+.table td, .royal-table td {
+    background: #2e1e4d;
+    color: #ffe082;
+}
+.royal-card {
+    background: #2e1e4d;
+    color: #ffe082;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px #1a2337;
+    padding: 2em;
+    margin-bottom: 2em;
+}
+.royal-title {
+    font-size: 2em;
+    color: #ffe082;
+    margin-bottom: 1em;
+    font-family: 'Cinzel', serif;
+}
 /* 食物語風格選單 */
 .food-menu {
     background: url('https://i.imgur.com/6QKQ7Qp.png'), linear-gradient(90deg, #fffbe6 0%, #f7e4c2 100%);

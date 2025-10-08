@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/static/royal_academy.css">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap" rel="stylesheet">
 </head>
-<body>
+<body style="background: linear-gradient(135deg, #23243a 0%, #3a2c5e 100%);min-height:100vh;">
   <nav class="royal-navbar">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:0.7em 2em;">
       <span class="royal-logo">茗-後檯管理系統</span>
@@ -17,6 +17,15 @@
           <a href="/logout" class="royal-btn" style="margin-left:1em;">登出</a>
         {% endif %}
       </div>
+    </div>
+    <div style="display:flex;gap:1em;justify-content:center;background:#2e1e4d;">
+      <a class="royal-btn" href="/">主頁</a>
+      <a class="royal-btn" href="/whitelist">白名單</a>
+      <a class="royal-btn" href="/admin/blacklist/">黑名單</a>
+      <a class="royal-btn" href="/admin/coupon/">抽獎券</a>
+      <a class="royal-btn" href="/admin/pending_verify/">暫存驗證</a>
+      <a class="royal-btn" href="/manual_verify">手動驗證</a>
+      <a class="royal-btn" href="/search">查詢</a>
     </div>
   </nav>
   <div class="container">
