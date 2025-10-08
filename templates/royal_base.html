@@ -11,7 +11,13 @@
   <nav class="royal-navbar">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:0.7em 2em;">
       <span class="royal-logo">茗-後檯管理系統</span>
-      <div>
+      <div style="display:flex;align-items:center;gap:0.5em;">
+        <a class="royal-btn" href="/admin/whitelist/">白名單列表</a>
+        <a class="royal-btn" href="/admin/blacklist/">黑名單列表</a>
+        <a class="royal-btn" href="/admin/coupon/">抽獎券列表</a>
+        <a class="royal-btn" href="/admin/pending_verify/">暫存驗證名單</a>
+        <a class="royal-btn" href="/admin/whitelist/new/">新增白名單</a>
+        <a class="royal-btn" href="/admin/blacklist/new/">新增黑名單</a>
         {% if current_user.is_authenticated %}
           <span style="color:#ffe082;font-size:1.1em;">{{ current_user.username }} ({{ current_user.role }})</span>
           <a href="/logout" class="royal-btn" style="margin-left:1em;">登出</a>
