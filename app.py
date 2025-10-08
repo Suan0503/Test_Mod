@@ -52,11 +52,14 @@ with app.app_context():
     init_admin(app)
 
 
-# 首頁自動導向登入頁
-from flask import redirect, url_for
+
+# 首頁顯示主頁，未登入自動導向登入頁
+from flask import render_template
+from flask_login import login_required
 @app.route("/")
+@login_required
 def home():
-    return redirect(url_for('auth.login'))
+    return render_template("home.html")
 
 
 # 搜尋功能
