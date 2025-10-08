@@ -40,66 +40,13 @@
         <th>金額</th>
         <th>方案</th>
       </tr>
-      {% for row in schedule %}
-      <tr>
-        <td>{{ row.girl }}</td>
-        <td>{{ row.time }}</td>
-        <td>{{ row.amount }}</td>
-          <div class="royal-card" style="max-width:600px;text-align:center;">
-            <div class="royal-title">排班功能已關閉</div>
-            <div style="color:#ffe082;">如需恢復請聯絡管理員。</div>
-          </div>
-    </td>
-    <td>
-      <div class="times-list"></div>
-    </td>
-  `;
-  tbody.appendChild(tr);
-  getScheduleResult();
-}
-function sortAllTimes() {
-  const tbody = document.getElementById('girl-rows');
-  for(const tr of tbody.children) {
-    const timesList = tr.querySelector('.times-list');
-    if(!timesList) continue;
-    const rows = Array.from(timesList.children);
-      const ta = a.querySelector('.time-select').value;
-      const tb = b.querySelector('.time-select').value;
-      return timeOptions.indexOf(ta) - timeOptions.indexOf(tb);
-    });
-    rows.forEach(r=>timesList.appendChild(r));
-  }
-  getScheduleResult();
-}
-function getNationInfo(nation, langs) {
-  let emoji = '', lang = '';
-  if (nation === 'tw') emoji = '🇹🇼';
-  if (nation === 'vn') emoji = '🇻🇳';
-  if (nation === 'th') emoji = '🇹🇭';
-  if (nation === 'id') emoji = '🇮🇩';
-
-  if (langs.includes('zh') && nation === 'vn') lang = '中越文溝通';
-  else if (langs.includes('zh') && nation === 'th') lang = '中泰文溝通';
-  else if (langs.includes('zh') && nation === 'tw') lang = '中文溝通';
-  else if (langs.includes('en') && nation === 'vn') lang = '英越文溝通';
-  else if (langs.includes('en') && nation === 'th') lang = '英泰文溝通';
-  else if (nation === 'vn') lang = '越文溝通';
-  else if (nation === 'th') lang = '泰文溝通';
-  else if (nation === 'id') lang = '印尼文溝通';
-  else lang = '';
-  return { emoji, lang };
-}
-function getScheduleResult() {
-  const tbody = document.getElementById('girl-rows');
-  let result = '';
-  for (const tr of tbody.children) {
-    const name = tr.querySelector('.girl-name').value.trim();
-    const room = tr.querySelector('.room-input').value.trim();
-    const langChecks = tr.querySelectorAll('.lang-check');
-    const langs = Array.from(langChecks).filter(c => c.checked).map(c => c.value);
-    const nation = tr.querySelector('.nation-select').value;
-    const nationInfo = getNationInfo(nation, langs);
-    if (!name) continue;
+      {% extends 'royal_base.html' %}
+      {% block body %}
+      <div class="royal-card" style="max-width:600px;text-align:center;">
+        <div class="royal-title">排班功能已關閉</div>
+        <div style="color:#ffe082;">如需恢復請聯絡管理員。</div>
+      </div>
+      {% endblock %}
     let line = `💗${name} ${nationInfo.emoji} ${nationInfo.lang}${room ? ' ('+room+')' : ''}`;
     let slots = [];
     const timesList = tr.querySelector('.times-list');
