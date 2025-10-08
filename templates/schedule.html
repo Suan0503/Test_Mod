@@ -22,17 +22,10 @@
         <option value="{{ name }}">{{ name }}</option>
         {% endfor %}
       </select>
-      <br><br>
-      <label for="amount">金額：</label>
-  <input type="number" name="amount" id="amount" required class="royal-input">
-      <br><br>
       <label for="plan">方案：</label>
   <select name="plan" id="plan" required class="royal-input">
         <option value="40">40</option>
         <option value="60">60</option>
-        <option value="90">90</option>
-      </select>
-      <br><br>
 
   <button type="submit" class="royal-btn" style="width:100%;margin-top:1em;">送出</button>
     </form>
@@ -59,7 +52,6 @@
     </td>
     <td>
       <div class="times-list"></div>
-      <button class="add-time-btn" onclick="addTimeRow(this)">新增時段</button>
     </td>
   `;
   tbody.appendChild(tr);
@@ -71,7 +63,6 @@ function sortAllTimes() {
     const timesList = tr.querySelector('.times-list');
     if(!timesList) continue;
     const rows = Array.from(timesList.children);
-    rows.sort((a,b)=>{
       const ta = a.querySelector('.time-select').value;
       const tb = b.querySelector('.time-select').value;
       return timeOptions.indexOf(ta) - timeOptions.indexOf(tb);
