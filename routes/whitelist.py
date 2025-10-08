@@ -3,7 +3,7 @@ from flask_login import login_required
 from models import Whitelist
 from extensions import db
 
-whitelist_bp = Blueprint('whitelist', __name__)
+whitelist_bp = Blueprint('whitelist_page', __name__)
 
 @whitelist_bp.route('/whitelist', methods=['GET'])
 @login_required
@@ -22,4 +22,4 @@ def whitelist_delete():
         flash('已移除白名單', 'success')
     else:
         flash('找不到該白名單', 'danger')
-    return redirect(url_for('whitelist.whitelist_list'))
+    return redirect(url_for('whitelist_page.whitelist_list'))

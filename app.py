@@ -34,8 +34,8 @@ from routes.pending_verify import pending_bp
 app.register_blueprint(pending_bp)
 app.register_blueprint(schedule_bp)
 app.register_blueprint(auth_bp)
-from routes.whitelist import whitelist_bp
-app.register_blueprint(whitelist_bp)
+from routes.whitelist import whitelist_bp as whitelist_page_bp
+app.register_blueprint(whitelist_page_bp)
 
 # 初始化 Flask-Login
 login_manager = LoginManager()
