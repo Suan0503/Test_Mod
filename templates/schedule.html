@@ -1,72 +1,7 @@
 {% extends 'royal_base.html' %}
 {% block body %}
-<div style="display:flex;gap:2em;">
-  <!-- 左半邊表單 -->
-  <div style="width:40%;padding:2em;">
-    <form action="/schedule" method="post" class="royal-card" style="min-width:320px;max-width:400px;">
-      <div class="royal-title">新增排班</div>
-      <label for="new_girl">新增妹妹：</label>
-  <input type="text" name="new_girl" id="new_girl" placeholder="請輸入妹妹名稱" class="royal-input">
-      <br><br>
-      <label for="time">時間：</label>
-  <select name="time" id="time" required class="royal-input">
-        {% for h in range(0,24) %}
-        <option value="{{ '%02d' % h }}:00">{{ '%02d' % h }}:00</option>
-        <option value="{{ '%02d' % h }}:30">{{ '%02d' % h }}:30</option>
-        {% endfor %}
-      </select>
-      <br><br>
-      <label for="girl">選擇妹妹：</label>
-  <select name="girl" id="girl" required class="royal-input">
-        {% for name in girls %}
-        <option value="{{ name }}">{{ name }}</option>
-        {% endfor %}
-      </select>
-      <label for="plan">方案：</label>
-  <select name="plan" id="plan" required class="royal-input">
-        <option value="40">40</option>
-        <option value="60">60</option>
-
-  <button type="submit" class="royal-btn" style="width:100%;margin-top:1em;">送出</button>
-    </form>
-  </div>
-  <!-- 右半邊班表 -->
-  <div class="royal-card" style="flex:1;min-width:320px;">
-    <div class="royal-title">排班表</div>
-    <table style="width:100%;border-radius:12px;color:#ffe082;">
-      <tr style="background:#2d2350;">
-        <th>妹妹</th>
-        <th>時間</th>
-        <th>金額</th>
-        <th>方案</th>
-      </tr>
-      {% extends 'royal_base.html' %}
-      {% block body %}
-      <div class="royal-card" style="max-width:600px;text-align:center;">
-        <div class="royal-title">排班功能已關閉</div>
-        <div style="color:#ffe082;">如需恢復請聯絡管理員。</div>
-      </div>
-      {% endblock %}
-    let line = `💗${name} ${nationInfo.emoji} ${nationInfo.lang}${room ? ' ('+room+')' : ''}`;
-    let slots = [];
-    const timesList = tr.querySelector('.times-list');
-    if(timesList) {
-      for(const timeRow of timesList.children) {
-        const time = timeRow.querySelector('.time-select').value;
-        const dur = timeRow.querySelector('.duration-select').value;
-        if(time && dur) {
-          slots.push(`${time}/${dur}`);
-        }
-      }
-    }
-    if (slots.length) {
-      line += '\n' + slots.join('\n');
-      result += line + '\n\n';
-    }
-  }
-  document.getElementById('output-area').innerText = result.trim();
-}
-document.getElementById('schedule-table').addEventListener('input', getScheduleResult);
-document.getElementById('schedule-table').addEventListener('change', getScheduleResult);
-</script>
+<div class="royal-card" style="max-width:600px;text-align:center;">
+  <div class="royal-title">排班功能已關閉</div>
+  <div style="color:#ffe082;">如需恢復請聯絡管理員。</div>
+</div>
 {% endblock %}
