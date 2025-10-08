@@ -1,0 +1,37 @@
+{% extends 'royal_base.html' %}
+{% block body %}
+<div class="royal-card" style="max-width:400px;">
+  <div style="text-align:center;">
+    <div class="royal-title">皇家學院入口</div>
+    <div id="switcher" style="margin-bottom:1.5em;">
+      <button class="royal-btn" onclick="showLogin()" id="loginTab">登入</button>
+      <button class="royal-btn" onclick="showRegister()" id="registerTab">註冊</button>
+    </div>
+  </div>
+  <form id="loginForm" method="post" action="/login" style="display:block;">
+    <input type="text" name="username" class="royal-input" placeholder="帳號" required>
+    <input type="password" name="password" class="royal-input" placeholder="密碼" required>
+    <button type="submit" class="royal-btn" style="width:100%;">登入</button>
+  </form>
+  <form id="registerForm" method="post" action="/register" style="display:none;">
+    <input type="text" name="username" class="royal-input" placeholder="帳號" required>
+    <input type="password" name="password" class="royal-input" placeholder="密碼" required>
+    <button type="submit" class="royal-btn" style="width:100%;">註冊</button>
+    <div style="color:#ffe082;font-size:0.95em;margin-top:0.5em;">註冊後預設為新進人員</div>
+  </form>
+</div>
+<script>
+function showLogin() {
+  document.getElementById('loginForm').style.display = 'block';
+  document.getElementById('registerForm').style.display = 'none';
+  document.getElementById('loginTab').classList.add('royal-btn');
+  document.getElementById('registerTab').classList.remove('royal-btn');
+}
+function showRegister() {
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('registerForm').style.display = 'block';
+  document.getElementById('registerTab').classList.add('royal-btn');
+  document.getElementById('loginTab').classList.remove('royal-btn');
+}
+</script>
+{% endblock %}

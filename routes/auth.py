@@ -19,7 +19,7 @@ def login():
             return redirect(url_for('schedule.schedule'))
         else:
             flash('帳號或密碼錯誤', 'danger')
-    return render_template('login.html')
+    return render_template('royal_login.html')
 
 @auth_bp.route('/logout')
 @login_required
@@ -33,7 +33,7 @@ def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        role = request.form.get('role', 'user')
+        role = 'new'  # 註冊預設為新進人員
         if User.query.filter_by(username=username).first():
             flash('帳號已存在', 'danger')
         else:
@@ -43,4 +43,4 @@ def register():
             db.session.commit()
             flash('註冊成功，請登入', 'success')
             return redirect(url_for('auth.login'))
-    return render_template('register.html')
+    return render_template('royal_login.html')
