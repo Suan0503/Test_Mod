@@ -6,6 +6,16 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
 </head>
 <body style="background:#f7f8fa;">
+<!-- 食物語風格選單 -->
+<nav class="food-menu">
+  <ul>
+    <li><span class="food-icon">🍚</span> 主頁</li>
+    <li><span class="food-icon">🥟</span> 暫存驗證</li>
+    <li><span class="food-icon">🍵</span> 手動審核</li>
+    <li><span class="food-icon">🍡</span> 排程管理</li>
+    <li><span class="food-icon">🍲</span> 管理員專區</li>
+  </ul>
+</nav>
 <div class="container mt-5">
     <h2 class="mb-4 font-weight-bold" style="color:#222;">暫存驗證名單</h2>
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -60,6 +70,7 @@
     </tbody>
   </table>
   <a href="/admin/" class="btn btn-outline-primary mt-3">返回主選單</a>
+  <a href="/admin/pending_verify/" class="btn btn-outline-secondary mt-3 ml-2">手動刷新</a>
   {% else %}
   <div class="alert alert-info">目前沒有卡住的暫存驗證用戶。</div>
   <a href="/admin/" class="btn btn-outline-primary mt-3">返回主選單</a>

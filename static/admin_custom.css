@@ -1,3 +1,53 @@
+/* 食物語風格選單 */
+.food-menu {
+    background: url('https://i.imgur.com/6QKQ7Qp.png'), linear-gradient(90deg, #fffbe6 0%, #f7e4c2 100%);
+    background-size: cover;
+    border: 4px double #b85c38;
+    border-radius: 24px;
+    margin: 24px auto 32px auto;
+    max-width: 900px;
+    box-shadow: 0 4px 24px rgba(184,92,56,0.10);
+    padding: 0.5em 0 0.5em 0;
+    font-family: 'Noto Serif TC', 'DFKai-SB', 'STKaiti', KaiTi, serif;
+    font-size: 1.2rem;
+}
+.food-menu ul {
+    list-style: none;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+}
+.food-menu li {
+    padding: 0.5em 1.5em;
+    color: #b85c38;
+    font-weight: bold;
+    letter-spacing: 2px;
+    border-radius: 16px;
+    transition: background 0.2s, color 0.2s;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+}
+.food-menu li:hover {
+    background: #fbeee0;
+    color: #a13c1e;
+}
+.food-icon {
+    font-size: 1.5em;
+    margin-right: 0.2em;
+}
+@media (max-width: 600px) {
+    .food-menu ul {
+        flex-direction: column;
+    }
+    .food-menu li {
+        padding: 0.5em 0.8em;
+        font-size: 1em;
+    }
+}
 .top-nav-bar {
     display: flex;
     flex-direction: row;
@@ -159,15 +209,6 @@ table {
     margin-bottom: 32px;
     width: 100%;
     table-layout: fixed;
-}
-    align-items: center;
-    gap: 16px;
-    background: linear-gradient(90deg, #e3f2fd 0%, #f8fcff 100%);
-    padding: 12px 0 12px 24px;
-    box-shadow: 0 2px 8px rgba(79,140,255,0.08);
-    border-bottom: 1px solid #d0e6ff;
-    margin-bottom: 12px;
-    z-index: 10;
 }
 
 /* 導航按鈕 */
