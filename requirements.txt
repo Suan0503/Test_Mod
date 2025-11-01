@@ -1,6 +1,5 @@
 Flask
 flask_sqlalchemy
-flask_admin
 python-dotenv
 psycopg2-binary
 python-dotenv
@@ -13,6 +12,7 @@ opencv-python-headless
 numpy
 gunicorn
 wtforms==2.3.3
+flask-admin
 
 redis
 gspread
