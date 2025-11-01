@@ -31,12 +31,5 @@ def pending_verify():
             flash("找不到該暫存用戶資料。", 'danger')
             return redirect(url_for('pending_verify.pending_verify'))
     # 顯示所有暫存用戶
-    # 自動隱藏已通過驗證者
-    users = []
-    for uid, data in temp_users.items():
-        # 以 line_user_id 為主，若已在白名單則不顯示
-        line_user_id = data.get('line_user_id') or uid
-        if Whitelist.query.filter_by(line_user_id=line_user_id).first():
-            continue
-        users.append({'user_id': uid, **data})
+    users = [ {'user_id': uid, **data} for uid, data in temp_users.items() ]
     return render_template('pending_verify.html', users=users)

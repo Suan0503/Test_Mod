@@ -1,24 +1,38 @@
 
-
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))  # ✅ 確保 handler 可被 import
+
 from flask import Flask, render_template, request
 from dotenv import load_dotenv
 from sqlalchemy import text
-load_dotenv()
-from extensions import db
 
+load_dotenv()
+
+from extensions import db
 from routes.message import message_bp
-from routes.schedule import schedule_bp
-from routes.auth import auth_bp
-from flask_login import LoginManager
-from models import User
 
 app = Flask(__name__)
+# 設定 secret_key，支援 session/flash
 import secrets
 app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))  # ✅ 確保 handler 可被 import
 
+from flask import Flask
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from extensions import db
+from routes.message import message_bp
+
+
+app = Flask(__name__)
+# 設定 secret_key，支援 session/flash
+import secrets
+app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
 
 # 資料庫連線字串轉換（Heroku/Railway 相容性處理）
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -26,26 +40,20 @@ if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
 db.init_app(app)
 
 # Blueprint 註冊
+
+
 app.register_blueprint(message_bp)
 from routes.pending_verify import pending_bp
 app.register_blueprint(pending_bp)
-app.register_blueprint(schedule_bp)
-app.register_blueprint(auth_bp)
-from routes.whitelist import whitelist_bp as whitelist_page_bp
-app.register_blueprint(whitelist_page_bp)
 
-# 初始化 Flask-Login
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'auth.login'
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
-
+# 即時班表更新頁面
+@app.route("/admin/schedule/")
+def admin_schedule():
+    return render_template("schedule.html")
 
 # 初始化 admin panel，確保 /admin 路徑可用
 from hander.admin_panel import init_admin
@@ -53,15 +61,14 @@ with app.app_context():
     db.create_all()
     init_admin(app)
 
-
-
-# 首頁顯示主頁，未登入自動導向登入頁
-from flask import render_template
-from flask_login import login_required
 @app.route("/")
-@login_required
 def home():
-    return render_template("home.html")
+    try:
+        db.session.execute(text("SELECT 1"))
+        db_status = "資料庫連線正常"
+    except Exception as e:
+        db_status = "資料庫連線異常: " + str(e)
+    return f"LINE Bot 正常運作中～🍵\n{db_status}"
 
 
 # 搜尋功能

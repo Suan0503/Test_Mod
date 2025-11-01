@@ -405,22 +405,24 @@ def handle_text(event):
         tu["step"] = "waiting_screenshot"
         tu["user_id"] = user_id
         set_temp_user(user_id, tu)
-        from linebot.models import ImageSendMessage
-        line_bot_api.reply_message(
-            event.reply_token,
-            [
-                TextSendMessage(
-                    text="📸 請上傳您的 LINE 個人頁面截圖\n"
-                         "👉 路徑：LINE主頁 > 右上角設定 > 個人檔案 > 點進去後截圖\n"
-                         "需清楚顯示 LINE 名稱與（若有）ID，作為驗證依據\n\n"
-                         "範例："
-                ),
+        reply_basic(
+            event,
+            "📸 請上傳您的 LINE 個人頁面截圖\n"
+            "👉 路徑：LINE主頁 > 右上角設定 > 個人檔案 > 點進去後截圖\n"
+            "需清楚顯示 LINE 名稱與（若有）ID，作為驗證依據\n\n"
+            "範例："
+        )
+        try:
+            from linebot.models import ImageSendMessage
+            line_bot_api.push_message(
+                user_id,
                 ImageSendMessage(
                     original_content_url="https://github.com/Suan0503/Test_Mod/blob/main/static/example_line_screenshot.jpg?raw=true",
                     preview_image_url="https://github.com/Suan0503/Test_Mod/blob/main/static/example_line_screenshot.jpg?raw=true"
                 )
-            ]
-        )
+            )
+        except Exception:
+            pass
         return
 
     if not get_temp_user(user_id):

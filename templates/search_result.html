@@ -1,16 +1,29 @@
-{% extends 'royal_base.html' %}
-{% block body %}
-<div class="royal-card" style="max-width:900px;">
-    <div class="royal-title">搜尋結果</div>
-    <form method="get" action="/search" style="margin-bottom:1em;">
-        <input type="text" name="q" value="{{ q }}" placeholder="請輸入關鍵字" class="royal-input" style="width:300px;display:inline-block;">
-        <button type="submit" class="royal-btn royal-effect">搜尋</button>
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="utf-8">
+    <title>搜尋結果</title>
+    <link rel="stylesheet" href="/static/admin_custom.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+</head>
+<body>
+    <a href="https://web-production-9351.up.railway.app/admin/" style="position: absolute; left: 20px; top: 20px; z-index: 999; font-size: 18px; background: #fff3; padding: 6px 16px; border-radius: 8px; text-decoration: none; color: #333;">回主頁</a>
+<div class="container mt-4">
+    <h2>搜尋結果</h2>
+    <form class="form-inline mb-3" action="/search" method="get">
+        <input class="form-control mr-2" type="search" name="q" value="{{ q }}" placeholder="搜尋...">
+        <button class="btn btn-primary" type="submit">搜尋</button>
     </form>
-    <hr style="border-color:#e3c77b;">
     {% if results %}
-    <div style="overflow-x:auto;">
-    <table class="royal-table" style="width:100%;color:#ffe082;">
-        <thead><tr><th>類型</th><th>手機/帳號/編號</th><th>姓名/暱稱</th><th>LINE ID/抽獎券編號/金額</th></tr></thead>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>類型</th>
+                <th>手機/帳號/編號</th>
+                <th>姓名/暱稱</th>
+                <th>LINE ID/抽獎券編號/金額</th>
+            </tr>
+        </thead>
         <tbody>
         {% for r in results %}
             <tr>
@@ -22,9 +35,9 @@
         {% endfor %}
         </tbody>
     </table>
-    </div>
     {% else %}
-        <div style="color:#ffe082;">查無資料</div>
+    <p>查無資料</p>
     {% endif %}
 </div>
-{% endblock %}
+</body>
+</html>

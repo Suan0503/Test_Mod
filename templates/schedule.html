@@ -1,7 +1,226 @@
-{% extends 'royal_base.html' %}
+{% extends 'admin_custom_master.html' %}
 {% block body %}
-<div class="royal-card" style="max-width:600px;text-align:center;">
-  <div class="royal-title">排班功能已關閉</div>
-  <div style="color:#ffe082;">如需恢復請聯絡管理員。</div>
+<style>
+  .schedule-table { border-collapse: collapse; width:100%; }
+  .schedule-table th, .schedule-table td { border:1px solid #b6d6ff; padding:8px; text-align:center; }
+  .schedule-table th { background:#e3f2fd; }
+  .girl-name, .room-input { width:80px; display:block; margin:2px auto; }
+  .lang-check { margin:0 4px; }
+  .time-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .time-select, .duration-select { width: 90px; }
+  .remove-time-btn { background: #f04747; color: #fff; border: none; border-radius: 6px; padding: 2px 8px; cursor: pointer; }
+  .add-time-btn, .sort-time-btn { margin: 8px 4px; padding: 4px 12px; border-radius: 6px; border: none; background: #4f8cff; color: #fff; cursor: pointer; }
+<div style="display:flex;">
+  <!-- 左半邊表單 -->
+  <div style="width:40%;padding:2em;">
+    <form action="/schedule/add" method="post" style="background:rgba(44,34,68,0.85);border-radius:12px;padding:1.5em;box-shadow:0 4px 24px #1a2337;">
+      <h4 style="color:#ffe082;">新增班表</h4>
+      <label for="sister">選擇妹妹：</label>
+      <select name="sister" id="sister" onchange="document.getElementById('new_sister').style.display = this.value === '新增' ? 'block' : 'none';" required>
+        {% for name in sisters %}
+        <option value="{{ name }}">{{ name }}</option>
+        {% endfor %}
+        <option value="新增">＋ 新增妹妹</option>
+      </select>
+      <input type="text" name="new_sister" id="new_sister" placeholder="請輸入新妹妹名稱" style="display:none;margin-top:8px;">
+      <br><br>
+      <label for="hour">時段：</label>
+      <select name="hour" id="hour" required>
+        {% for h in range(0,24) %}
+        <option value="{{ '%02d' % h }}">{{ '%02d' % h }}</option>
+        {% endfor %}
+      </select>
+      ：
+      <select name="minute" id="minute" required>
+        <option value="00">00</option>
+        <option value="30">30</option>
+      </select>
+      <br><br>
+      <label for="plan">方案：</label>
+      <select name="plan" id="plan" required>
+        <option value="40">40</option>
+        <option value="60">60</option>
+        <option value="90">90</option>
+      </select>
+      <br><br>
+      <button type="submit" class="btn magic-effect">新增班表</button>
+    </form>
+  </div>
+  <!-- 右半邊班表 -->
+  <div style="width:60%;padding:2em;">
+    <table style="width:100%;background:rgba(44,34,68,0.85);border-radius:12px;color:#ffe082;">
+      <tr>
+        <th>妹妹</th>
+        <th>時段</th>
+        <th>方案</th>
+      </tr>
+      {% for row in schedule %}
+      <tr>
+        <td>{{ row['妹妹'] }}</td>
+        <td>{{ row['時段'] }}</td>
+        <td>{{ row['方案'] }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
 </div>
+        </tr>
+      </thead>
+      <tbody id="girl-rows">
+        {% for girl in ['多多', '莎莎'] %}
+        <tr>
+          <td>
+            <input type="text" class="girl-name" value="{{ girl }}" placeholder="名稱">
+            <input type="text" class="room-input" placeholder="房號">
+          </td>
+          <td>
+            <label><input type="checkbox" class="lang-check" value="zh">中</label>
+            <label><input type="checkbox" class="lang-check" value="en">英</label>
+          </td>
+          <td>
+            <select class="nation-select" style="width:90px;">
+              <option value="tw">🇹🇼 台灣</option>
+              <option value="vn">🇻🇳 越南</option>
+              <option value="th">🇹🇭 泰國</option>
+              <option value="id">🇮🇩 印尼</option>
+            </select>
+          </td>
+          <td>
+            <div class="times-list"></div>
+            <button class="add-time-btn" onclick="addTimeRow(this)">新增時段</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <button class="add-girl-btn" onclick="addGirlRow()" style="margin-top:12px;">新增妹妹</button>
+  </div>
+
+  <div style="flex:1;">
+    <h3>即時排班結果</h3>
+    <div id="output-area" style="background:#f7f9fe;border-radius:8px;min-height:400px;padding:16px;font-size:16px;white-space:pre-line;"></div>
+  </div>
+</div>
+
+<script>
+const timeOptions = [
+  '11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00','23:00','00:00','01:00'
+];
+const durationOptions = ['40','60','90'];
+
+function addTimeRow(btn) {
+  const timesList = btn.parentNode.querySelector('.times-list');
+  const div = document.createElement('div');
+  div.className = 'time-row';
+  div.innerHTML = `
+    <select class="time-select">
+      ${timeOptions.map(t=>`<option value="${t}">${t}</option>`).join('')}
+    </select>
+    <select class="duration-select">
+      <option value="">--</option>
+      ${durationOptions.map(d=>`<option value="${d}">${d}</option>`).join('')}
+    </select>
+    <button class="remove-time-btn" onclick="removeTimeRow(this)">刪除</button>
+  `;
+  timesList.appendChild(div);
+  getScheduleResult();
+}
+function removeTimeRow(btn) {
+  btn.parentNode.remove();
+  getScheduleResult();
+}
+function addGirlRow() {
+  const tbody = document.getElementById('girl-rows');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>
+      <input type="text" class="girl-name" placeholder="名稱">
+      <input type="text" class="room-input" placeholder="房號">
+    </td>
+    <td>
+      <label><input type="checkbox" class="lang-check" value="zh">中</label>
+      <label><input type="checkbox" class="lang-check" value="en">英</label>
+    </td>
+    <td>
+      <select class="nation-select" style="width:90px;">
+        <option value="tw">🇹🇼 台灣</option>
+        <option value="vn">🇻🇳 越南</option>
+        <option value="th">🇹🇭 泰國</option>
+        <option value="id">🇮🇩 印尼</option>
+      </select>
+    </td>
+    <td>
+      <div class="times-list"></div>
+      <button class="add-time-btn" onclick="addTimeRow(this)">新增時段</button>
+    </td>
+  `;
+  tbody.appendChild(tr);
+  getScheduleResult();
+}
+function sortAllTimes() {
+  const tbody = document.getElementById('girl-rows');
+  for(const tr of tbody.children) {
+    const timesList = tr.querySelector('.times-list');
+    if(!timesList) continue;
+    const rows = Array.from(timesList.children);
+    rows.sort((a,b)=>{
+      const ta = a.querySelector('.time-select').value;
+      const tb = b.querySelector('.time-select').value;
+      return timeOptions.indexOf(ta) - timeOptions.indexOf(tb);
+    });
+    rows.forEach(r=>timesList.appendChild(r));
+  }
+  getScheduleResult();
+}
+function getNationInfo(nation, langs) {
+  let emoji = '', lang = '';
+  if (nation === 'tw') emoji = '🇹🇼';
+  if (nation === 'vn') emoji = '🇻🇳';
+  if (nation === 'th') emoji = '🇹🇭';
+  if (nation === 'id') emoji = '🇮🇩';
+
+  if (langs.includes('zh') && nation === 'vn') lang = '中越文溝通';
+  else if (langs.includes('zh') && nation === 'th') lang = '中泰文溝通';
+  else if (langs.includes('zh') && nation === 'tw') lang = '中文溝通';
+  else if (langs.includes('en') && nation === 'vn') lang = '英越文溝通';
+  else if (langs.includes('en') && nation === 'th') lang = '英泰文溝通';
+  else if (nation === 'vn') lang = '越文溝通';
+  else if (nation === 'th') lang = '泰文溝通';
+  else if (nation === 'id') lang = '印尼文溝通';
+  else lang = '';
+  return { emoji, lang };
+}
+function getScheduleResult() {
+  const tbody = document.getElementById('girl-rows');
+  let result = '';
+  for (const tr of tbody.children) {
+    const name = tr.querySelector('.girl-name').value.trim();
+    const room = tr.querySelector('.room-input').value.trim();
+    const langChecks = tr.querySelectorAll('.lang-check');
+    const langs = Array.from(langChecks).filter(c => c.checked).map(c => c.value);
+    const nation = tr.querySelector('.nation-select').value;
+    const nationInfo = getNationInfo(nation, langs);
+    if (!name) continue;
+    let line = `💗${name} ${nationInfo.emoji} ${nationInfo.lang}${room ? ' ('+room+')' : ''}`;
+    let slots = [];
+    const timesList = tr.querySelector('.times-list');
+    if(timesList) {
+      for(const timeRow of timesList.children) {
+        const time = timeRow.querySelector('.time-select').value;
+        const dur = timeRow.querySelector('.duration-select').value;
+        if(time && dur) {
+          slots.push(`${time}/${dur}`);
+        }
+      }
+    }
+    if (slots.length) {
+      line += '\n' + slots.join('\n');
+      result += line + '\n\n';
+    }
+  }
+  document.getElementById('output-area').innerText = result.trim();
+}
+document.getElementById('schedule-table').addEventListener('input', getScheduleResult);
+document.getElementById('schedule-table').addEventListener('change', getScheduleResult);
+</script>
 {% endblock %}

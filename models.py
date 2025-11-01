@@ -1,20 +1,6 @@
 
 from extensions import db
-from flask_login import UserMixin
 from datetime import datetime
-
-# 登入用 User 模型
-
-class User(db.Model, UserMixin):
-    __tablename__ = 'user'
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
-    # 角色: superadmin, admin, operator, new
-    role = db.Column(db.String(20), nullable=False, default='new')
-
-    def __repr__(self):
-        return f'<User {self.username}>'
 
 class ManualVerifyCode(db.Model):
     __tablename__ = "manual_verify_code"
