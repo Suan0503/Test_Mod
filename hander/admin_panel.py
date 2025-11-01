@@ -88,7 +88,7 @@ class CouponModelView(ModernModelView):
         return super().render(template, **kwargs)
 
 def init_admin(app):
-    admin = Admin(app, name='後台管理', base_template='admin_custom_master.html')
+    admin = Admin(app, name='後台管理')
     admin.add_view(WhitelistModelView(Whitelist, db.session, name='<i class="fa fa-list"></i> 白名單', endpoint='whitelist'))
     admin.add_view(BlacklistModelView(Blacklist, db.session, name='<i class="fa fa-ban"></i> 黑名單', endpoint='blacklist'))
     admin.add_view(CouponModelView(Coupon, db.session, name='<i class="fa fa-ticket"></i> 抽獎券', endpoint='coupon'))
