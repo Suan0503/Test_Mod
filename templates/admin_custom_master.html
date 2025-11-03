@@ -1,42 +1,29 @@
 
 <!DOCTYPE html>
 <html lang="zh-TW">
+<!DOCTYPE html>
+<html lang="zh-TW">
 <head>
     <meta charset="utf-8">
-    <title>後台管理</title>
+    <title>後台管理系統</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/admin_custom.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
-</head>
-<body style="background:#f7f8fa;">
-  <div class="d-flex" style="min-height:100vh;">
-    <aside id="sidebar" class="bg-white shadow" style="width:90px;display:flex;flex-direction:column;align-items:center;padding-top:40px;">
-  <a href="/home" class="sidebar-item mb-4" title="後台管理" style="font-size:2rem;color:#2d3a4b;font-weight:bold;transition:transform 0.2s;">
-        <i class="fa fa-cogs"></i>
-      </a>
-      <a href="/admin/whitelist/" class="sidebar-item mb-4" title="白名單" style="font-size:2rem;color:#28a745;transition:transform 0.2s;">
-        <i class="fa fa-list"></i>
-      </a>
-      <a href="/admin/blacklist/" class="sidebar-item mb-4" title="黑名單" style="font-size:2rem;color:#dc3545;transition:transform 0.2s;">
-        <i class="fa fa-ban"></i>
-      </a>
-      <a href="/admin/coupon/" class="sidebar-item mb-4" title="抽獎券" style="font-size:2rem;color:#ffc107;transition:transform 0.2s;">
-        <i class="fa fa-ticket"></i>
-      </a>
-      <a href="/admin/pending_verify/" class="sidebar-item mb-4" title="暫存驗證名單" style="font-size:2rem;color:#17a2b8;transition:transform 0.2s;">
-        <i class="fa fa-clock"></i>
-      </a>
-      <a href="/admin/whitelist/new/" class="sidebar-item mb-4" title="新增白名單" style="font-size:2rem;color:#28a745;transition:transform 0.2s;">
-        <i class="fa fa-user-plus"></i>
-      </a>
-      <a href="/admin/blacklist/new/" class="sidebar-item mb-4" title="新增黑名單" style="font-size:2rem;color:#6c757d;transition:transform 0.2s;">
-        <i class="fa fa-user"></i>
-      </a>
-    </aside>
-    <div class="flex-grow-1 container">
     <style>
-      #sidebar .sidebar-item {
+      body {
+        background: #f7f8fa;
+      }
+      #sidebar {
+        width: 100px;
+        min-height: 100vh;
+        background: #fff;
+        box-shadow: 2px 0 8px rgba(0,0,0,0.04);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding-top: 40px;
+      }
+      .sidebar-item {
         display: flex;
         align-items: center;
         justify-content: center;
@@ -48,39 +35,97 @@
         box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         transition: transform 0.2s, box-shadow 0.2s;
         cursor: pointer;
+        font-size: 2rem;
       }
-      #sidebar .sidebar-item:hover {
+      .sidebar-item:hover {
         transform: scale(1.25);
         box-shadow: 0 4px 16px rgba(0,0,0,0.12);
         z-index: 2;
       }
-      #sidebar .sidebar-item i {
+      .sidebar-item i {
         pointer-events: none;
       }
+      .main-content {
+        flex-grow: 1;
+        padding: 40px 32px;
+      }
+      .card {
+        border-radius: 18px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      }
+      .feature-title {
+        font-size: 1.3rem;
+        font-weight: bold;
+        color: #2d3a4b;
+      }
+      .feature-desc {
+        color: #555;
+        font-size: 1rem;
+      }
     </style>
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          <div class="mt-3">
-            {% for category, message in messages %}
-              <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                  <span aria-hidden="true">&times;</span>
-                </button>
+</head>
+<body>
+  <div class="d-flex">
+    <aside id="sidebar">
+      <a href="/home" class="sidebar-item" title="主頁" style="color:#2d3a4b;"><i class="fa fa-home"></i></a>
+      <a href="/admin/whitelist/" class="sidebar-item" title="白名單" style="color:#28a745;"><i class="fa fa-list"></i></a>
+      <a href="/admin/blacklist/" class="sidebar-item" title="黑名單" style="color:#dc3545;"><i class="fa fa-ban"></i></a>
+      <a href="/admin/coupon/" class="sidebar-item" title="抽獎券" style="color:#ffc107;"><i class="fa fa-ticket"></i></a>
+      <a href="/admin/pending_verify/" class="sidebar-item" title="暫存驗證名單" style="color:#17a2b8;"><i class="fa fa-clock"></i></a>
+      <a href="/admin/whitelist/new/" class="sidebar-item" title="新增白名單" style="color:#28a745;"><i class="fa fa-user-plus"></i></a>
+      <a href="/admin/blacklist/new/" class="sidebar-item" title="新增黑名單" style="color:#6c757d;"><i class="fa fa-user"></i></a>
+    </aside>
+    <div class="main-content w-100">
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-md-10">
+            <div class="card p-4 mb-4">
+              <h2 class="mb-3 font-weight-bold text-center" style="color:#2d3a4b;"><i class="fa fa-cogs"></i> 歡迎使用後台管理系統</h2>
+              <p class="lead mb-4 text-center" style="color:#555;">快速管理白名單、黑名單、抽獎券與即時班表。<br>所有操作都將記錄於系統，請謹慎使用！</p>
+              <div class="row text-center">
+                <div class="col-md-4 mb-3">
+                  <a href="/admin/whitelist/" class="btn btn-outline-success btn-lg w-100"><i class="fa fa-list"></i> 白名單管理</a>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <a href="/admin/blacklist/" class="btn btn-outline-danger btn-lg w-100"><i class="fa fa-ban"></i> 黑名單管理</a>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <a href="/admin/coupon/" class="btn btn-outline-warning btn-lg w-100"><i class="fa fa-ticket"></i> 抽獎券管理</a>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <a href="/admin/pending_verify/" class="btn btn-outline-info btn-lg w-100"><i class="fa fa-clock"></i> 暫存驗證名單</a>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <a href="/admin/whitelist/new/" class="btn btn-outline-success btn-lg w-100"><i class="fa fa-user-plus"></i> 新增白名單</a>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <a href="/admin/blacklist/new/" class="btn btn-outline-secondary btn-lg w-100"><i class="fa fa-user"></i> 新增黑名單</a>
+                </div>
               </div>
-            {% endfor %}
+            </div>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                <div class="mt-3">
+                  {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                      {{ message }}
+                      <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                      </button>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            {% endwith %}
+            {% block body %}{% endblock %}
           </div>
-        {% endif %}
-      {% endwith %}
-
-      <div class="row justify-content-center mt-5">
-        <div class="col-md-8">
-          <div class="card shadow border-0">
-            <div class="card-body text-center">
-              <h2 class="mb-3 font-weight-bold" style="color:#2d3a4b;"><i class="fa fa-cogs"></i> 歡迎使用後台管理系統</h2>
-              <p class="lead mb-4" style="color:#555;">快速管理白名單、黑名單、抽獎券與即時班表。<br>所有操作都將記錄於系統，請謹慎使用！</p>
-              <div class="row mt-4">
-                <div class="col-md-3 mb-3">
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
                   <a href="/admin/whitelist/" class="btn btn-lg btn-outline-success w-100"><i class="fa fa-list"></i> 白名單列表</a>
                 </div>
                 <div class="col-md-3 mb-3">
