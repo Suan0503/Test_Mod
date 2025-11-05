@@ -140,17 +140,17 @@ def get_menu_carousel():
                             "style": "primary",
                             "color": COLOR_PRIMARY
                         },
-                        # 2. 今日好康
+                        # 2. 每日抽獎
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "� 今日好康", "text": "今日好康"},
+                            "action": {"type": "message", "label": "🎁 每日抽獎", "text": "每日抽獎"},
                             "style": "primary",
                             "color": COLOR_ACCENT
                         },
                         # 3. 廣告專區
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "� 廣告專區", "text": "廣告專區"},
+                            "action": {"type": "message", "label": "📢 廣告專區", "text": "廣告專區"},
                             "style": "primary",
                             "color": COLOR_SECONDARY
                         },
@@ -164,7 +164,7 @@ def get_menu_carousel():
                         # 5. 預約專線
                         {
                             "type": "button",
-                            "action": {"type": "uri", "label": "� 預約專線", "uri": choose_link()},
+                            "action": {"type": "uri", "label": "📲 預約專線", "uri": choose_link()},
                             "style": "secondary",
                             "color": COLOR_ALERT
                         }
@@ -219,7 +219,7 @@ def get_menu_carousel():
                         # 2. 優惠券專區
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "� 優惠券專區", "text": "折價券管理"},
+                            "action": {"type": "message", "label": "💸 優惠券專區", "text": "折價券管理"},
                             "style": "primary",
                             "color": COLOR_PRIMARY
                         },
@@ -240,13 +240,6 @@ def get_menu_carousel():
                             "action": {"type": "message", "label": "🌟 最新活動", "text": "活動快訊"},
                             "style": "primary",
                             "color": COLOR_SECONDARY
-                        },
-                        # 5. 功能建議
-                        {
-                            "type": "button",
-                            "action": {"type": "message", "label": "� 功能建議", "text": "功能建議"},
-                            "style": "secondary",
-                            "color": COLOR_GRAY
                         }
                     ]
                 }
