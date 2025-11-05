@@ -95,13 +95,14 @@ def get_ad_menu():
 
 # ====== 魔法學院主選單（兩頁 Carousel）- **更新版** ======
 def get_menu_carousel():
-    # 按鈕顏色配置 (現代風格)
-    COLOR_PRIMARY = MAG_INDIGO  # 亮藍色
-    COLOR_SECONDARY = MAG_PURPLE # 紫色
-    COLOR_ACTION = MAG_EMER     # 亮綠色
-    COLOR_TELEGRAM = MAG_PARCH  # 輔助灰
+    # 新現代主題配色
+    COLOR_PRIMARY = MAG_INDIGO
+    COLOR_ACCENT = MAG_EMER
+    COLOR_SECONDARY = MAG_PURPLE
+    COLOR_GRAY = MAG_PARCH
+    COLOR_ALERT = MAG_BURG
 
-    # 第一頁 - 現代深色主題
+    # 第一頁 - 主功能
     page1 = {
         "type": "bubble",
         "size": "mega",
@@ -112,7 +113,7 @@ def get_menu_carousel():
             "paddingAll": "16px",
             "contents": [{
                 "type": "text",
-                "text": "🧭 學院導航選單 1/2",
+                "text": "✨ 茗殿現代主選單 1/2",
                 "weight": "bold",
                 "align": "center",
                 "size": "lg",
@@ -132,40 +133,40 @@ def get_menu_carousel():
                     "margin": "lg",
                     "spacing": "sm",
                     "contents": [
-                        # 1. 驗證資訊
+                        # 1. 我的驗證
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "🔑 驗證資訊 (主選單)", "text": "驗證資訊"},
+                            "action": {"type": "message", "label": "🔑 我的驗證", "text": "驗證資訊"},
                             "style": "primary",
                             "color": COLOR_PRIMARY
                         },
-                        # 2. 每日抽獎 (已改成待開放)
+                        # 2. 今日好康
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "🎲 每日抽獎 (待開放)", "text": "每日抽獎-待開放"},
+                            "action": {"type": "message", "label": "� 今日好康", "text": "今日好康"},
                             "style": "primary",
-                            "color": COLOR_ACTION
+                            "color": COLOR_ACCENT
                         },
                         # 3. 廣告專區
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "📜 廣告專區", "text": "廣告專區"},
+                            "action": {"type": "message", "label": "� 廣告專區", "text": "廣告專區"},
                             "style": "primary",
                             "color": COLOR_SECONDARY
                         },
-                        # 4. TG每日班表
+                        # 4. 班表查詢
                         {
                             "type": "button",
-                            "action": {"type": "uri", "label": "🗓️ TG每日班表", "uri": "https://t.me/+svlFjBpb4hxkYjFl"},
+                            "action": {"type": "uri", "label": "🗓️ 班表查詢", "uri": "https://t.me/+svlFjBpb4hxkYjFl"},
                             "style": "secondary",
-                            "color": COLOR_TELEGRAM
+                            "color": COLOR_GRAY
                         },
-                        # 5. 總機(只能透過這裡預約)
+                        # 5. 預約專線
                         {
                             "type": "button",
-                            "action": {"type": "uri", "label": "🔮 預約水晶球 (總機)", "uri": choose_link()},
+                            "action": {"type": "uri", "label": "� 預約專線", "uri": choose_link()},
                             "style": "secondary",
-                            "color": MAG_BURG # 紅色警示
+                            "color": COLOR_ALERT
                         }
                     ]
                 }
@@ -173,7 +174,7 @@ def get_menu_carousel():
         }
     }
 
-    # 第二頁 - 現代深色主題
+    # 第二頁 - 互動與服務
     page2 = {
         "type": "bubble",
         "size": "mega",
@@ -184,7 +185,7 @@ def get_menu_carousel():
             "paddingAll": "16px",
             "contents": [{
                 "type": "text",
-                "text": "🔧 學院工具箱 2/2",
+                "text": "🔧 茗殿互動服務 2/2",
                 "weight": "bold",
                 "align": "center",
                 "size": "lg",
@@ -213,39 +214,39 @@ def get_menu_carousel():
                                 "uri": "https://line.me/ti/g2/mq8VqBIVupL1lsIXuAulnqZNz5vw7VKrVYjNDg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default"
                             },
                             "style": "primary",
-                            "color": COLOR_ACTION
+                            "color": COLOR_ACCENT
                         },
-                        # 2. 折價卷魔法袋
+                        # 2. 優惠券專區
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "💰 折價卷魔法袋", "text": "折價券管理"},
+                            "action": {"type": "message", "label": "� 優惠券專區", "text": "折價券管理"},
                             "style": "primary",
                             "color": COLOR_PRIMARY
                         },
-                        # 3. 呼叫管理員 (顯示驗證訊息)
+                        # 3. 電話姬專線
                         {
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "📞 聯繫管理員 (電話)",
-                                "text": "⚠️ 已驗證，若要查看資訊請輸入您當時驗證的手機號碼。"
-                            }, 
+                                "label": "☎️ 電話姬專線",
+                                "text": "📞 茗殿電話姬：0987-346-208\n歡迎來電洽詢，專人即時服務！"
+                            },
                             "style": "primary",
-                            "color": MAG_BURG # 紅色警示
+                            "color": COLOR_ALERT
                         },
-                        # 4. 最新魔法快訊！
+                        # 4. 最新活動
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "🌟 當月活動", "text": "活動快訊"},
+                            "action": {"type": "message", "label": "🌟 最新活動", "text": "活動快訊"},
                             "style": "primary",
                             "color": COLOR_SECONDARY
                         },
-                        # 5. 學院資訊查詢 (已改成待新增)
+                        # 5. 功能建議
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "🔮 待新增功能", "text": "待新增功能"},
+                            "action": {"type": "message", "label": "� 功能建議", "text": "功能建議"},
                             "style": "secondary",
-                            "color": COLOR_TELEGRAM
+                            "color": COLOR_GRAY
                         }
                     ]
                 }
@@ -254,7 +255,7 @@ def get_menu_carousel():
     }
 
     return FlexSendMessage(
-        alt_text="魔法學院主功能選單",
+        alt_text="茗殿現代主選單",
         contents={"type": "carousel", "contents": [page1, page2]}
     )
 
