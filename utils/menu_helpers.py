@@ -132,35 +132,35 @@ def get_menu_carousel():
                     "margin": "lg",
                     "spacing": "sm",
                     "contents": [
-                        # 1. 學籍驗證
+                        # 1. 驗證資訊
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "🔑 學籍驗證 (主選單)", "text": "驗證資訊"},
+                            "action": {"type": "message", "label": "🔑 驗證資訊 (主選單)", "text": "驗證資訊"},
                             "style": "primary",
                             "color": COLOR_PRIMARY
                         },
-                        # 2. 入學抽獎
+                        # 2. 每日抽獎 (已改成待開放)
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "🎲 每日抽獎", "text": "每日抽獎"},
+                            "action": {"type": "message", "label": "🎲 每日抽獎 (待開放)", "text": "每日抽獎-待開放"},
                             "style": "primary",
                             "color": COLOR_ACTION
                         },
-                        # 3. 學員介紹 (廣告專區)
+                        # 3. 廣告專區
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "📜 學員介紹 (廣告)", "text": "廣告專區"},
+                            "action": {"type": "message", "label": "📜 廣告專區", "text": "廣告專區"},
                             "style": "primary",
                             "color": COLOR_SECONDARY
                         },
-                        # 4. 班表占卜室 (URI)
+                        # 4. TG每日班表
                         {
                             "type": "button",
-                            "action": {"type": "uri", "label": "🗓️ 班表占卜室", "uri": "https://t.me/+svlFjBpb4hxkYjFl"},
+                            "action": {"type": "uri", "label": "🗓️ TG每日班表", "uri": "https://t.me/+svlFjBpb4hxkYjFl"},
                             "style": "secondary",
                             "color": COLOR_TELEGRAM
                         },
-                        # 5. 預約水晶球（總機）(URI)
+                        # 5. 總機(只能透過這裡預約)
                         {
                             "type": "button",
                             "action": {"type": "uri", "label": "🔮 預約水晶球 (總機)", "uri": choose_link()},
@@ -204,44 +204,46 @@ def get_menu_carousel():
                     "margin": "lg",
                     "spacing": "sm",
                     "contents": [
-                        # 1. 學院討論大廳 (URI)
+                        # 1. 聊天社群
                         {
                             "type": "button",
                             "action": {
                                 "type": "uri",
-                                "label": "💬 學院討論大廳",
+                                "label": "💬 聊天社群",
                                 "uri": "https://line.me/ti/g2/mq8VqBIVupL1lsIXuAulnqZNz5vw7VKrVYjNDg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default"
                             },
                             "style": "primary",
                             "color": COLOR_ACTION
                         },
-                        # 2. 折價卷魔法袋 (Message) -> 原回報文位置替補
+                        # 2. 折價卷魔法袋
                         {
                             "type": "button",
                             "action": {"type": "message", "label": "💰 折價卷魔法袋", "text": "折價券管理"},
                             "style": "primary",
                             "color": COLOR_PRIMARY
                         },
-                        # 3. 呼叫管理員 (Message) -> **電話號碼顯示**
+                        # 3. 呼叫管理員 (顯示驗證訊息)
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "📞 聯繫管理員 (電話)", "text": "管理員電話"}, # 預設傳送 "管理員電話" 讓後端處理
+                            "action": {
+                                "type": "message",
+                                "label": "📞 聯繫管理員 (電話)",
+                                "text": "⚠️ 已驗證，若要查看資訊請輸入您當時驗證的手機號碼。"
+                            }, 
                             "style": "primary",
                             "color": MAG_BURG # 紅色警示
                         },
-                        # 4. 最新魔法快訊！ (Message)
+                        # 4. 最新魔法快訊！
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "🌟 最新魔法快訊", "text": "活動快訊"},
+                            "action": {"type": "message", "label": "🌟 當月活動", "text": "活動快訊"},
                             "style": "primary",
                             "color": COLOR_SECONDARY
                         },
-                        # 5. (移除原回報文) 預留一個空間或調整
-                        # 此處直接使用剩餘的按鈕空間，或者如果需要固定五個按鈕，可以增加一個功能。
-                        # 這裡我將第四個按鈕移到這裡，讓總數保持在五個（原系統五個+一個回主選單）
+                        # 5. 學院資訊查詢 (已改成待新增)
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "🔮 學院資訊查詢", "text": "學院資訊"},
+                            "action": {"type": "message", "label": "🔮 待新增功能", "text": "待新增功能"},
                             "style": "secondary",
                             "color": COLOR_TELEGRAM
                         }
@@ -268,7 +270,6 @@ def reply_with_ad_menu(reply_token):
     line_bot_api.reply_message(reply_token, [get_ad_menu()])
 
 # ====== 呼叫管理員推播 =======
-# **此函式保持不變，因為它用於推播給管理員，而非使用者介面**
 def notify_admins(user_id, display_name=None):
     # 避免硬性相依：在使用時才 import
     from models import Whitelist
@@ -297,14 +298,3 @@ def notify_admins(user_id, display_name=None):
             line_bot_api.push_message(admin_id, TextSendMessage(text=msg))
         except Exception as e:
             print(f"通知管理員失敗：{admin_id}，錯誤：{e}")
-
-# **新增一個函式來處理使用者傳送 "管理員電話" 的情況 (需要後端配合)**
-def reply_admin_phone(reply_token):
-    PHONE_NUMBER = "0987346208"
-    msg = (
-        "📞 **管理員緊急聯絡電話**\n"
-        f"請撥打：**{PHONE_NUMBER}**\n\n"
-        "> 請注意，電話聯絡僅限緊急情況。\n"
-        "> 一般問題請多利用選單功能。"
-    )
-    line_bot_api.reply_message(reply_token, [TextSendMessage(text=msg)])
