@@ -113,7 +113,7 @@ def get_menu_carousel():
             "paddingAll": "16px",
             "contents": [{
                 "type": "text",
-                "text": "✨ 茗殿現代主選單 1/2",
+                "text": "✨ 茗殿選單 1/2",
                 "weight": "bold",
                 "align": "center",
                 "size": "lg",
@@ -164,7 +164,7 @@ def get_menu_carousel():
                         # 5. 預約專線
                         {
                             "type": "button",
-                            "action": {"type": "uri", "label": "📲 預約專線", "uri": choose_link()},
+                            "action": {"type": "uri", "label": "📲 預約諮詢", "uri": choose_link()},
                             "style": "secondary",
                             "color": COLOR_ALERT
                         }
@@ -185,7 +185,7 @@ def get_menu_carousel():
             "paddingAll": "16px",
             "contents": [{
                 "type": "text",
-                "text": "🔧 茗殿互動服務 2/2",
+                "text": "🔧 茗殿選單 2/2",
                 "weight": "bold",
                 "align": "center",
                 "size": "lg",
@@ -223,13 +223,13 @@ def get_menu_carousel():
                             "style": "primary",
                             "color": COLOR_PRIMARY
                         },
-                        # 3. 電話姬專線
+                        # 3. 呼叫管理員
                         {
                             "type": "button",
                             "action": {
                                 "type": "message",
-                                "label": "☎️ 電話姬專線",
-                                "text": "📞 茗殿電話姬：0987-346-208\n歡迎來電洽詢，專人即時服務！"
+                                "label": "☎️ 服務專線",
+                                "text": "📞 茗殿熱線：0987-346-208\n歡迎來電洽詢，專人即時服務！"
                             },
                             "style": "primary",
                             "color": COLOR_ALERT
