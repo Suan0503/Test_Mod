@@ -1,3 +1,6 @@
+from extensions import db
+from datetime import datetime
+
 class TempVerify(db.Model):
     __tablename__ = "temp_verify"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -7,8 +10,6 @@ class TempVerify(db.Model):
     status = db.Column(db.String(20), default="pending")  # pending/verified/failed
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
-from extensions import db
-from datetime import datetime
 
 class ManualVerifyCode(db.Model):
     __tablename__ = "manual_verify_code"
