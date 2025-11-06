@@ -1,3 +1,11 @@
+class TempVerify(db.Model):
+    __tablename__ = "temp_verify"
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    phone = db.Column(db.String(20))
+    line_id = db.Column(db.String(100))
+    nickname = db.Column(db.String(255))
+    status = db.Column(db.String(20), default="pending")  # pending/verified/failed
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
 from extensions import db
 from datetime import datetime

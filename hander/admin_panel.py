@@ -1,10 +1,9 @@
-
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
-from models import Whitelist, Blacklist, Coupon
+from models import Whitelist, Blacklist, Coupon, TempVerify
 from extensions import db
 
 
@@ -87,11 +86,41 @@ class CouponModelView(ModernModelView):
             ]
         return super().render(template, **kwargs)
 
+class TempVerifyModelView(ModernModelView):
+    column_searchable_list = ['phone', 'line_id', 'nickname']
+    column_labels = {
+        'id': '編號',
+        'phone': '手機',
+        'line_id': 'LINE ID',
+        'nickname': '暱稱',
+        'status': '狀態',
+        'created_at': '建立時間'
+    }
+    column_choices = {
+        'status': [
+            ('pending', '待驗證'),
+            ('verified', '已通過'),
+            ('failed', '失敗')
+        ]
+    }
+    can_create = False
+    can_edit = True
+    can_delete = True
+    page_size = 20
+    def on_model_change(self, form, model, is_created):
+        from flask import flash
+        super().on_model_change(form, model, is_created)
+        if model.status == 'verified':
+            flash('已通過驗證，請同步至白名單！', 'success')
+        elif model.status == 'failed':
+            flash('已標記為失敗。', 'warning')
+
 def init_admin(app):
     admin = Admin(app, name='後台管理')
     admin.add_view(WhitelistModelView(Whitelist, db.session, name='<i class="fa fa-list"></i> 白名單', endpoint='whitelist'))
     admin.add_view(BlacklistModelView(Blacklist, db.session, name='<i class="fa fa-ban"></i> 黑名單', endpoint='blacklist'))
     admin.add_view(CouponModelView(Coupon, db.session, name='<i class="fa fa-ticket"></i> 抽獎券', endpoint='coupon'))
+    admin.add_view(TempVerifyModelView(TempVerify, db.session, name='<i class="fa fa-clock"></i> 暫存名單驗證', endpoint='tempverify'))
     # 確保自訂 CSS 被載入
     @app.context_processor
     def override_admin_css():

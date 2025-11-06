@@ -1,4 +1,3 @@
-
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))  # ✅ 確保 handler 可被 import
@@ -99,6 +98,20 @@ def search():
         for c in cp:
             results.append({"type": "抽獎券", "line_user_id": c.line_user_id, "report_no": c.report_no, "amount": c.amount})
     return render_template("search_result.html", q=q, results=results)
+
+from models import Whitelist, Blacklist, TempVerify
+
+@app.route('/admin/dashboard')
+def admin_dashboard():
+    whitelists = Whitelist.query.order_by(Whitelist.created_at.desc()).limit(100).all()
+    blacklists = Blacklist.query.order_by(Blacklist.created_at.desc()).limit(100).all()
+    tempverifies = TempVerify.query.order_by(TempVerify.created_at.desc()).limit(100).all()
+    return render_template(
+        'admin_dashboard.html',
+        whitelists=whitelists,
+        blacklists=blacklists,
+        tempverifies=tempverifies
+    )
 
 if __name__ == "__main__":
     # 初始化 admin panel
