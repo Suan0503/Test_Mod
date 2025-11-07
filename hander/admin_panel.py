@@ -81,8 +81,8 @@ class CouponModelView(ModernModelView):
         # 注入自訂按鈕
         if 'extra_actions' not in kwargs:
             kwargs['extra_actions'] = [
-                {'label': '新增白名單', 'url': '/admin/whitelist/new', 'icon': 'fa fa-user-plus'},
-                {'label': '新增黑名單', 'url': '/admin/blacklist/new', 'icon': 'fa fa-user-times'},
+                {'label': '新增白名單', 'url': '/admin_panel/fa_whitelist/new', 'icon': 'fa fa-user-plus'},
+                {'label': '新增黑名單', 'url': '/admin_panel/fa_blacklist/new', 'icon': 'fa fa-user-times'},
             ]
         return super().render(template, **kwargs)
 
@@ -116,12 +116,12 @@ class TempVerifyModelView(ModernModelView):
             flash('已標記為失敗。', 'warning')
 
 def init_admin(app):
-    # 將 Flask-Admin 掛在 /admin_panel，避免與自訂 /admin Blueprint 衝突
-    admin = Admin(app, name='後台管理', url='/admin_panel')
-    admin.add_view(WhitelistModelView(Whitelist, db.session, name='<i class="fa fa-list"></i> 白名單', endpoint='whitelist'))
-    admin.add_view(BlacklistModelView(Blacklist, db.session, name='<i class="fa fa-ban"></i> 黑名單', endpoint='blacklist'))
-    admin.add_view(CouponModelView(Coupon, db.session, name='<i class="fa fa-ticket"></i> 抽獎券', endpoint='coupon'))
-    admin.add_view(TempVerifyModelView(TempVerify, db.session, name='<i class="fa fa-clock"></i> 暫存名單驗證', endpoint='tempverify'))
+    # 將 Flask-Admin 掛在 /admin_panel，並指定 endpoint 名稱避免與自訂 'admin' 藍圖衝突
+    admin = Admin(app, name='後台管理', url='/admin_panel', endpoint='admin_panel')
+    admin.add_view(WhitelistModelView(Whitelist, db.session, name='<i class="fa fa-list"></i> 白名單', endpoint='fa_whitelist'))
+    admin.add_view(BlacklistModelView(Blacklist, db.session, name='<i class="fa fa-ban"></i> 黑名單', endpoint='fa_blacklist'))
+    admin.add_view(CouponModelView(Coupon, db.session, name='<i class="fa fa-ticket"></i> 抽獎券', endpoint='fa_coupon'))
+    admin.add_view(TempVerifyModelView(TempVerify, db.session, name='<i class="fa fa-clock"></i> 暫存名單驗證', endpoint='fa_tempverify'))
     # 確保自訂 CSS 被載入
     @app.context_processor
     def override_admin_css():
