@@ -1,3 +1,9 @@
+# 新增 /admin/ 路由，導向日系主題頁面
+from flask import redirect
+
+@app.route('/admin/')
+def admin_root():
+    return redirect('/admin/dashboard')
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))  # ✅ 確保 handler 可被 import
