@@ -116,7 +116,8 @@ class TempVerifyModelView(ModernModelView):
             flash('已標記為失敗。', 'warning')
 
 def init_admin(app):
-    admin = Admin(app, name='後台管理')
+    # 將 Flask-Admin 掛在 /admin_panel，避免與自訂 /admin Blueprint 衝突
+    admin = Admin(app, name='後台管理', url='/admin_panel')
     admin.add_view(WhitelistModelView(Whitelist, db.session, name='<i class="fa fa-list"></i> 白名單', endpoint='whitelist'))
     admin.add_view(BlacklistModelView(Blacklist, db.session, name='<i class="fa fa-ban"></i> 黑名單', endpoint='blacklist'))
     admin.add_view(CouponModelView(Coupon, db.session, name='<i class="fa fa-ticket"></i> 抽獎券', endpoint='coupon'))
@@ -125,4 +126,17 @@ def init_admin(app):
     @app.context_processor
     def override_admin_css():
         return dict(admin_custom_css='/static/admin_custom.css')
+    # 若應用有啟用 CSRFProtect，豁免 Flask-Admin 內建的 POST 視圖，避免 400 錯誤
+    try:
+        csrf = app.extensions.get('csrf')
+        if csrf:
+            for view in admin._views:
+                for method_name in ('create_view', 'edit_view', 'delete_view'):
+                    if hasattr(view, method_name):
+                        try:
+                            csrf.exempt(getattr(view, method_name))
+                        except Exception:
+                            pass
+    except Exception:
+        pass
     return admin

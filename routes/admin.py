@@ -9,19 +9,41 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 DASHBOARD_LIMIT = int(os.getenv('DASHBOARD_LIMIT', '20'))
 
 
+def load_dashboard_data():
+    whitelists = Whitelist.query.order_by(Whitelist.created_at.desc()).limit(DASHBOARD_LIMIT).all()
+    blacklists = Blacklist.query.order_by(Blacklist.created_at.desc()).limit(DASHBOARD_LIMIT).all()
+    tempverifies = (TempVerify.query
+            .filter(TempVerify.status == 'pending',
+                TempVerify.phone.isnot(None), TempVerify.phone != '',
+                TempVerify.line_id.isnot(None), TempVerify.line_id != '')
+            .order_by(TempVerify.created_at.desc())
+            .limit(DASHBOARD_LIMIT).all())
+    return whitelists, blacklists, tempverifies
+
 def render_dashboard(whitelists=None, blacklists=None, tempverifies=None):
     if whitelists is None:
         whitelists = Whitelist.query.order_by(Whitelist.created_at.desc()).limit(DASHBOARD_LIMIT).all()
     if blacklists is None:
         blacklists = Blacklist.query.order_by(Blacklist.created_at.desc()).limit(DASHBOARD_LIMIT).all()
     if tempverifies is None:
-        tempverifies = TempVerify.query.order_by(TempVerify.created_at.desc()).limit(DASHBOARD_LIMIT).all()
+        # 僅顯示「待驗證」且有輸入手機與 LINE ID 的資料
+        tempverifies = (TempVerify.query
+                        .filter(TempVerify.status == 'pending',
+                                TempVerify.phone.isnot(None), TempVerify.phone != '',
+                                TempVerify.line_id.isnot(None), TempVerify.line_id != '')
+                        .order_by(TempVerify.created_at.desc())
+                        .limit(DASHBOARD_LIMIT).all())
     return render_template('admin_dashboard.html', whitelists=whitelists, blacklists=blacklists, tempverifies=tempverifies)
 
 
 @admin_bp.route('/')
 def admin_root():
-    return redirect(url_for('admin.admin_dashboard'))
+    return redirect(url_for('admin.home'))
+
+@admin_bp.route('/home')
+def home():
+    whitelists, blacklists, tempverifies = load_dashboard_data()
+    return render_template('admin_home.html', whitelists=whitelists, blacklists=blacklists, tempverifies=tempverifies, limit=DASHBOARD_LIMIT)
 
 
 @admin_bp.route('/dashboard')
