@@ -1,103 +1,114 @@
+
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>茗殿管理後台</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='admin_custom.css') }}">
+    <title>管理者ダッシュボード</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Zen+Maru+Gothic:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f8f6f1 0%, #fce4ec 100%);
+            font-family: 'Zen Maru Gothic', 'Noto Sans JP', '微軟正黑體', sans-serif;
+            color: #444;
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            background: #fff0f6;
+            padding: 32px 0 16px 0;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(220, 180, 200, 0.08);
+        }
+        .header h1 {
+            font-size: 2.4rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: #e57399;
+            margin: 0;
+        }
+        .dashboard {
+            max-width: 900px;
+            margin: 40px auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 32px;
+            justify-content: center;
+        }
+        .card {
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 4px 16px rgba(220, 180, 200, 0.12);
+            padding: 32px 28px;
+            min-width: 220px;
+            max-width: 260px;
+            text-align: center;
+            transition: box-shadow 0.2s;
+        }
+        .card:hover {
+            box-shadow: 0 8px 24px rgba(220, 180, 200, 0.18);
+        }
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #ba68c8;
+            margin-bottom: 18px;
+        }
+        .card-btn {
+            display: inline-block;
+            background: linear-gradient(90deg, #f8bbd0 0%, #b2ebf2 100%);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 12px;
+            padding: 10px 32px;
+            margin-top: 8px;
+            box-shadow: 0 2px 8px rgba(220, 180, 200, 0.10);
+            cursor: pointer;
+            transition: background 0.2s;
+            text-decoration: none;
+        }
+        .card-btn:hover {
+            background: linear-gradient(90deg, #f48fb1 0%, #80deea 100%);
+        }
+        .footer {
+            text-align: center;
+            color: #aaa;
+            font-size: 0.95rem;
+            margin: 48px 0 16px 0;
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <h1><i class="fa-solid fa-shield-halved"></i> 茗殿管理後台</h1>
-        <nav>
-            <a href="#whitelist" class="active">白名單</a>
-            <a href="#blacklist">黑名單</a>
-            <a href="#search">資料庫查詢</a>
-            <a href="#tempverify">暫存名單驗證</a>
-        </nav>
-    </header>
-    <main>
-        <div class="card" id="whitelist">
-            <h2>白名單</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>手機</th>
-                        <th>暱稱</th>
-                        <th>LINE ID</th>
-                        <th>加入時間</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for w in whitelists %}
-                    <tr>
-                        <td>{{ w.phone }}</td>
-                        <td>{{ w.name }}</td>
-                        <td>{{ w.line_id }}</td>
-                        <td>{{ w.created_at.strftime('%Y/%m/%d %H:%M') }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <div class="header">
+        <h1>管理者ダッシュボード</h1>
+        <div style="font-size:1.1rem;color:#888;margin-top:8px;">ようこそ、管理者さま</div>
+    </div>
+    <div class="dashboard">
+        <div class="card">
+            <div class="card-title">手動審核</div>
+            <a href="/manual_verify" class="card-btn">進入</a>
         </div>
-        <div class="card" id="blacklist">
-            <h2>黑名單</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>手機</th>
-                        <th>暱稱</th>
-                        <th>加入時間</th>
-                        <th>原因</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for b in blacklists %}
-                    <tr>
-                        <td>{{ b.phone }}</td>
-                        <td>{{ b.name }}</td>
-                        <td>{{ b.created_at.strftime('%Y/%m/%d %H:%M') }}</td>
-                        <td>{{ b.reason }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="card">
+            <div class="card-title">待審核</div>
+            <a href="/pending_verify" class="card-btn">進入</a>
         </div>
-        <div class="card" id="search">
-            <h2>資料庫查詢</h2>
-            <form class="search-bar" action="/search" method="get">
-                <input type="text" name="q" placeholder="請輸入手機號碼或LINE ID...">
-                <button type="submit"><i class="fa fa-search"></i> 查詢</button>
-            </form>
-            <div id="search-result">
-                <!-- 查詢結果顯示區 -->
-            </div>
+        <div class="card">
+            <div class="card-title">排程管理</div>
+            <a href="/schedule" class="card-btn">進入</a>
         </div>
-        <div class="card" id="tempverify">
-            <h2>暫存名單驗證</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>手機</th>
-                        <th>LINE ID</th>
-                        <th>暱稱</th>
-                        <th>狀態</th>
-                        <th>建立時間</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for t in tempverifies %}
-                    <tr>
-                        <td>{{ t.phone }}</td>
-                        <td>{{ t.line_id }}</td>
-                        <td>{{ t.nickname }}</td>
-                        <td class="status-{{ t.status }}">{{ t.status }}</td>
-                        <td>{{ t.created_at.strftime('%Y/%m/%d %H:%M') }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="card">
+            <div class="card-title">檢舉管理</div>
+            <a href="/report" class="card-btn">進入</a>
         </div>
-    </main>
+        <div class="card">
+            <div class="card-title">管理面板</div>
+            <a href="/admin_panel" class="card-btn">進入</a>
+        </div>
+    </div>
+    <div class="footer">
+        &copy; 2025 管理者ダッシュボード | 日系主題設計
+    </div>
 </body>
 </html>
