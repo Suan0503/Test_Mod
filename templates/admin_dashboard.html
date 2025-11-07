@@ -86,23 +86,95 @@
         <div style="font-size:1.1rem;color:#888;margin-top:8px;">ようこそ、管理者さま</div>
     </div>
     <div class="dashboard">
-        <div class="card">
+        <div class="card" style="flex:1;min-width:320px;max-width:600px;text-align:left;">
+            <div class="card-title">白名單</div>
+            <table style="width:100%;border-collapse:collapse;font-size:1rem;">
+                <thead>
+                    <tr style="background:#fce4ec;color:#ba68c8;">
+                        <th>手機</th>
+                        <th>暱稱</th>
+                        <th>LINE ID</th>
+                        <th>加入時間</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for w in whitelists %}
+                    <tr>
+                        <td>{{ w.phone }}</td>
+                        <td>{{ w.name }}</td>
+                        <td>{{ w.line_id }}</td>
+                        <td>{{ w.created_at.strftime('%Y/%m/%d %H:%M') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="card" style="flex:1;min-width:320px;max-width:600px;text-align:left;">
+            <div class="card-title">黑名單</div>
+            <table style="width:100%;border-collapse:collapse;font-size:1rem;">
+                <thead>
+                    <tr style="background:#fce4ec;color:#ba68c8;">
+                        <th>手機</th>
+                        <th>暱稱</th>
+                        <th>加入時間</th>
+                        <th>原因</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in blacklists %}
+                    <tr>
+                        <td>{{ b.phone }}</td>
+                        <td>{{ b.name }}</td>
+                        <td>{{ b.created_at.strftime('%Y/%m/%d %H:%M') }}</td>
+                        <td>{{ b.reason }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="card" style="flex:1;min-width:320px;max-width:600px;text-align:left;">
+            <div class="card-title">暫存名單驗證</div>
+            <table style="width:100%;border-collapse:collapse;font-size:1rem;">
+                <thead>
+                    <tr style="background:#fce4ec;color:#ba68c8;">
+                        <th>手機</th>
+                        <th>LINE ID</th>
+                        <th>暱稱</th>
+                        <th>狀態</th>
+                        <th>建立時間</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in tempverifies %}
+                    <tr>
+                        <td>{{ t.phone }}</td>
+                        <td>{{ t.line_id }}</td>
+                        <td>{{ t.nickname }}</td>
+                        <td class="status-{{ t.status }}">{{ t.status }}</td>
+                        <td>{{ t.created_at.strftime('%Y/%m/%d %H:%M') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <!-- 功能按鈕區塊 -->
+        <div class="card" style="min-width:220px;max-width:260px;text-align:center;">
             <div class="card-title">手動審核</div>
             <a href="/manual_verify" class="card-btn">進入</a>
         </div>
-        <div class="card">
+        <div class="card" style="min-width:220px;max-width:260px;text-align:center;">
             <div class="card-title">待審核</div>
             <a href="/pending_verify" class="card-btn">進入</a>
         </div>
-        <div class="card">
+        <div class="card" style="min-width:220px;max-width:260px;text-align:center;">
             <div class="card-title">排程管理</div>
             <a href="/schedule" class="card-btn">進入</a>
         </div>
-        <div class="card">
+        <div class="card" style="min-width:220px;max-width:260px;text-align:center;">
             <div class="card-title">檢舉管理</div>
             <a href="/report" class="card-btn">進入</a>
         </div>
-        <div class="card">
+        <div class="card" style="min-width:220px;max-width:260px;text-align:center;">
             <div class="card-title">管理面板</div>
             <a href="/admin_panel" class="card-btn">進入</a>
         </div>
