@@ -79,10 +79,16 @@ def inject_csrf_token():
 
 # 啟動前初始化（優先遷移，失敗則 create_all）
 with app.app_context():
-    try:
-        from flask_migrate import upgrade as _upgrade
-        _upgrade()
-    except Exception:
+    migrations_path = os.path.join(os.path.dirname(__file__), 'migrations')
+    if os.path.isdir(migrations_path):
+        try:
+            from flask_migrate import upgrade as _upgrade
+            _upgrade()
+        except Exception as e:
+            # 若 upgrade 失敗，退回 create_all，避免容器啟動失敗
+            db.create_all()
+    else:
+        # 尚未建立 migrations 目錄，先確保表存在
         db.create_all()
 
 if __name__ == '__main__':
