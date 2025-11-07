@@ -39,6 +39,7 @@ migrate = Migrate(app, db)
 
 """Blueprint 註冊"""
 app.register_blueprint(message_bp)
+csrf.exempt(message_bp)  # 豁免 LINE Webhook /callback 不使用 CSRF Token
 app.register_blueprint(pending_bp)
 app.register_blueprint(admin_bp)
 init_admin(app)
