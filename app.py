@@ -1,8 +1,22 @@
-...existing code...
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))  # ✅ 確保 handler 可被 import
+
+from flask import Flask, render_template, request, redirect
+from dotenv import load_dotenv
+from sqlalchemy import text
+
+load_dotenv()
+
+from extensions import db
+from routes.message import message_bp
+
+app = Flask(__name__)
+# 設定 secret_key，支援 session/flash
+import secrets
+app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
 
 # 新增 /admin/ 路由，導向日系主題頁面
-from flask import redirect
-
 @app.route('/admin/')
 def admin_root():
     return redirect('/admin/dashboard')

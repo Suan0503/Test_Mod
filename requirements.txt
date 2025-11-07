@@ -17,4 +17,3 @@ wtforms==2.3.3
 redis
 gspread
 oauth2client
-dotenv
