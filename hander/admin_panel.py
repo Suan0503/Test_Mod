@@ -123,7 +123,7 @@ def init_admin(app):
         url='/admin_panel',
         endpoint='admin_panel',
         template_mode='bootstrap4',
-        base_template='admin/master.html'
+        base_template='admin/custom_master.html'
     )
     admin.add_view(WhitelistModelView(Whitelist, db.session, name='<i class="fa fa-list"></i> 白名單', endpoint='fa_whitelist'))
     admin.add_view(BlacklistModelView(Blacklist, db.session, name='<i class="fa fa-ban"></i> 黑名單', endpoint='fa_blacklist'))

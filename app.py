@@ -31,11 +31,14 @@ csrf = CSRFProtect(app)
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+if not DATABASE_URL:
+    # Local fallback to SQLite for stability in dev environments
+    DATABASE_URL = f"sqlite:///{os.path.join(os.path.dirname(__file__), 'app.db')}"
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)
-migrate = Migrate(app, db)
+migrate = Migrate(app, db, directory=os.path.join(os.path.dirname(__file__), 'migrations'))
 
 """Blueprint 註冊"""
 app.register_blueprint(message_bp)
@@ -101,16 +104,28 @@ def inject_csrf_token():
 # 啟動前初始化（優先遷移，失敗則 create_all）
 with app.app_context():
     migrations_path = os.path.join(os.path.dirname(__file__), 'migrations')
+    used_create_all = False
     if os.path.isdir(migrations_path):
         try:
-            from flask_migrate import upgrade as _upgrade
-            _upgrade()
+            from flask_migrate import upgrade as _upgrade, stamp as _stamp
+            _upgrade(migrations_path)
         except Exception as e:
-            # 若 upgrade 失敗，退回 create_all，避免容器啟動失敗
+            # upgrade 失敗則退回 create_all，之後 stamp head 讓未來 upgrade 可以接續
             db.create_all()
+            used_create_all = True
+            try:
+                # stamp to latest known revision to align DB with migrations state
+                _stamp(migrations_path, '0001_add_tempverify_line_user_id')
+            except Exception:
+                pass
     else:
-        # 尚未建立 migrations 目錄，先確保表存在
         db.create_all()
+        used_create_all = True
+        try:
+            from flask_migrate import stamp as _stamp
+            _stamp(migrations_path, '0001_add_tempverify_line_user_id')
+        except Exception:
+            pass
 
     # 兼容補丁：確保 temp_verify 有 line_user_id 欄位（PostgreSQL 支援 IF NOT EXISTS）
     try:
