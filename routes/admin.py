@@ -35,7 +35,7 @@ def render_dashboard(whitelists=None, blacklists=None, tempverifies=None):
                         .limit(DASHBOARD_LIMIT).all())
     return render_template('admin_dashboard.html', whitelists=whitelists, blacklists=blacklists, tempverifies=tempverifies)
 
-def render_home(whitelists=None, blacklists=None, tempverifies=None):
+def render_home(whitelists=None, blacklists=None, tempverifies=None, active_tab=None):
     if whitelists is None or blacklists is None or tempverifies is None:
         base_wl, base_bl, base_tv = load_dashboard_data()
         if whitelists is None:
@@ -44,7 +44,7 @@ def render_home(whitelists=None, blacklists=None, tempverifies=None):
             blacklists = base_bl
         if tempverifies is None:
             tempverifies = base_tv
-    return render_template('admin_home.html', whitelists=whitelists, blacklists=blacklists, tempverifies=tempverifies, limit=DASHBOARD_LIMIT)
+    return render_template('admin_home.html', whitelists=whitelists, blacklists=blacklists, tempverifies=tempverifies, limit=DASHBOARD_LIMIT, active_tab=active_tab)
 
 
 @admin_bp.route('/')
@@ -54,7 +54,8 @@ def admin_root():
 @admin_bp.route('/home')
 def home():
     whitelists, blacklists, tempverifies = load_dashboard_data()
-    return render_template('admin_home.html', whitelists=whitelists, blacklists=blacklists, tempverifies=tempverifies, limit=DASHBOARD_LIMIT)
+    active_tab = request.args.get('tab') or request.args.get('active_tab')
+    return render_template('admin_home.html', whitelists=whitelists, blacklists=blacklists, tempverifies=tempverifies, limit=DASHBOARD_LIMIT, active_tab=active_tab)
 
 
 @admin_bp.route('/dashboard')
@@ -76,7 +77,7 @@ def whitelist_search():
     else:
         whitelists = None
     if view == 'home':
-        return render_home(whitelists=whitelists)
+        return render_home(whitelists=whitelists, active_tab='whitelist')
     return render_dashboard(whitelists=whitelists)
 
 
@@ -95,7 +96,7 @@ def whitelist_add():
     db.session.add(w)
     db.session.commit()
     flash('白名單新增成功','success')
-    return redirect(url_for('admin.admin_dashboard'))
+    return redirect(url_for('admin.home', tab='whitelist'))
 
 
 @admin_bp.route('/whitelist/delete', methods=['POST'])
@@ -108,7 +109,7 @@ def whitelist_delete():
     db.session.delete(w)
     db.session.commit()
     flash('白名單刪除成功','info')
-    return redirect(url_for('admin.admin_dashboard'))
+    return redirect(url_for('admin.home', tab='whitelist'))
 
 
 # 黑名單
@@ -124,7 +125,7 @@ def blacklist_search():
     else:
         blacklists = None
     if view == 'home':
-        return render_home(blacklists=blacklists)
+        return render_home(blacklists=blacklists, active_tab='blacklist')
     return render_dashboard(blacklists=blacklists)
 
 
@@ -143,7 +144,7 @@ def blacklist_add():
     db.session.add(b)
     db.session.commit()
     flash('黑名單新增成功','success')
-    return redirect(url_for('admin.admin_dashboard'))
+    return redirect(url_for('admin.home', tab='blacklist'))
 
 
 @admin_bp.route('/blacklist/delete', methods=['POST'])
@@ -156,7 +157,7 @@ def blacklist_delete():
     db.session.delete(b)
     db.session.commit()
     flash('黑名單刪除成功','info')
-    return redirect(url_for('admin.admin_dashboard'))
+    return redirect(url_for('admin.home', tab='blacklist'))
 
 
 # 暫存名單（待驗證）
@@ -170,7 +171,7 @@ def tempverify_verify():
     tv.status = 'verified'
     db.session.commit()
     flash('暫存名單標記為通過，請視需要同步至白名單','success')
-    return redirect(url_for('admin.admin_dashboard'))
+    return redirect(url_for('admin.home', tab='pending'))
 
 
 @admin_bp.route('/tempverify/delete', methods=['POST'])
@@ -183,7 +184,7 @@ def tempverify_delete():
     db.session.delete(tv)
     db.session.commit()
     flash('暫存名單刪除成功','info')
-    return redirect(url_for('admin.admin_dashboard'))
+    return redirect(url_for('admin.home', tab='pending'))
 
 
 @admin_bp.route('/schedule/')

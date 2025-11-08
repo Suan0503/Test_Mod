@@ -62,105 +62,184 @@
     </div>
     {% endif %}
   {% endwith %}
-  <div class="grid">
-    <!-- 待驗證名單（放最上方） -->
-    <div class="card stack-top" id="pending">
-      <h2>待驗證名單</h2>
-      <table style="margin-top:0;">
-        <thead><tr><th>手機</th><th>LINE ID</th><th>暱稱</th><th>狀態</th><th>建立</th><th>操作</th></tr></thead>
-        <tbody>
-          {% for t in tempverifies %}
-          <tr>
-            <td>{{ t.phone }}</td><td>{{ t.line_id }}</td><td>{{ t.nickname }}</td>
-            <td class="status-{{ t.status }}">{{ t.status }}</td>
-            <td>{{ t.created_at.strftime('%Y/%m/%d') }}</td>
-            <td style="white-space:nowrap;">
-              <form method="post" action="/admin/tempverify/verify" style="display:inline-block;margin-right:4px;">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="id" value="{{ t.id }}">
-                <button type="submit" style="padding:4px 10px;font-size:.75rem;">通過</button>
-              </form>
-              <form method="post" action="/admin/tempverify/delete" style="display:inline-block;">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="id" value="{{ t.id }}">
-                <button type="submit" class="remove-btn" style="padding:4px 10px;font-size:.75rem;">刪除</button>
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+  <div id="sections" style="max-width:1200px;margin:30px auto 60px;min-height:480px;padding:0 24px;">
+    <div id="placeholder" style="text-align:center;color:#999;padding:140px 20px;font-size:1rem;letter-spacing:.05em;">請點選上方功能鍵開始管理。</div>
 
-    <!-- 白名單 -->
-    <div class="card stack-top" id="whitelist">
-      <h2>白名單</h2>
-      <table class="table-compact" style="margin-top:0;">
-        <thead><tr><th>手機</th><th>暱稱</th><th>LINE ID</th><th>加入</th></tr></thead>
-        <tbody>
-          {% for w in whitelists %}
-          <tr>
-            <td>{{ w.phone }}</td><td>{{ w.name }}</td><td>{{ w.line_id }}</td><td>{{ w.created_at.strftime('%Y/%m/%d') }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      <div class="desc" style="margin-top:8px;">新增或移除信任用戶。手機與 LINE ID 必填。</div>
-      <form method="get" action="/admin/whitelist/search" style="display:flex;gap:8px;margin:8px 0 10px;">
-        <input type="text" name="q" placeholder="查詢手機 / LINE ID / 暱稱" style="flex:1;padding:6px 10px;border-radius:10px;border:1px solid #e0c7d4;">
+    <!-- 白名單 Section -->
+    <section id="sec-whitelist" class="tab-section" style="display:none;">
+      <h2 style="color:#ba68c8;margin-top:0;">白名單管理</h2>
+      <form method="get" action="/admin/whitelist/search" style="display:flex;gap:10px;margin:6px 0 14px;">
+        <input type="text" name="q" placeholder="搜尋手機 / LINE ID / 暱稱" style="flex:1;padding:10px 14px;border-radius:14px;border:1px solid #e0c7d4;font-size:1rem;">
         <input type="hidden" name="view" value="home">
-        <button type="submit" class="actions" style="padding:8px 14px;border-radius:10px;background:#ba68c8;color:#fff;border:none;font-weight:700;">查詢</button>
+        <button type="submit" style="padding:10px 20px;border-radius:14px;background:#ba68c8;color:#fff;border:none;font-weight:700;font-size:1rem;">搜尋</button>
       </form>
-      <div class="actions">
-        <form method="post" action="/admin/whitelist/add">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="text" name="phone" placeholder="手機 (09xxxxxxxx)" maxlength="10" required>
-          <input type="text" name="name" placeholder="暱稱" maxlength="30" required>
-          <input type="text" name="line_id" placeholder="LINE ID" maxlength="50" required>
-          <button type="submit">新增白名單</button>
-        </form>
-        <form method="post" action="/admin/whitelist/delete">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="text" name="phone" placeholder="欲刪除的手機" maxlength="10" required>
-          <button type="submit" class="remove-btn">移除白名單</button>
-        </form>
+      <div style="display:flex;flex-wrap:wrap;gap:30px;align-items:flex-start;">
+        <div style="flex:1;min-width:280px;">
+          <form method="post" action="/admin/whitelist/add" style="display:flex;flex-direction:column;gap:10px;background:#fff;padding:18px 20px;border-radius:18px;box-shadow:0 4px 14px rgba(0,0,0,0.08);">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="text" name="phone" placeholder="手機 (09xxxxxxxx)" maxlength="10" required style="padding:10px 14px;border:1px solid #e0c7d4;border-radius:12px;font-size:.95rem;">
+            <input type="text" name="name" placeholder="暱稱" maxlength="30" required style="padding:10px 14px;border:1px solid #e0c7d4;border-radius:12px;font-size:.95rem;">
+            <input type="text" name="line_id" placeholder="LINE ID" maxlength="50" required style="padding:10px 14px;border:1px solid #e0c7d4;border-radius:12px;font-size:.95rem;">
+            <button type="submit" style="background:#81c784;color:#fff;padding:12px 0;border:none;border-radius:14px;font-weight:700;letter-spacing:.05em;font-size:1rem;">新增白名單</button>
+          </form>
+          <form method="post" action="/admin/whitelist/delete" style="display:flex;flex-direction:column;gap:10px;background:#fff;padding:18px 20px;border-radius:18px;box-shadow:0 4px 14px rgba(0,0,0,0.08);margin-top:18px;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="text" name="phone" placeholder="欲刪除的手機" maxlength="10" required style="padding:10px 14px;border:1px solid #e0c7d4;border-radius:12px;font-size:.95rem;">
+            <button type="submit" class="remove-btn" style="background:#e57373;color:#fff;padding:12px 0;border:none;border-radius:14px;font-weight:700;letter-spacing:.05em;font-size:1rem;">移除白名單</button>
+          </form>
+        </div>
+        <div style="flex:2;min-width:420px;">
+          <div style="font-size:.85rem;color:#666;margin:0 0 6px 4px;">最近 {{ limit }} 筆</div>
+          <div style="background:#fff;padding:10px 16px;border-radius:18px;box-shadow:0 4px 14px rgba(0,0,0,0.08);overflow:auto;max-height:520px;">
+            <table style="width:100%;border-collapse:collapse;font-size:.95rem;">
+              <thead>
+                <tr style="background:#f8e1ef;">
+                  <th style="padding:10px 8px;">手機</th>
+                  <th style="padding:10px 8px;">暱稱</th>
+                  <th style="padding:10px 8px;">LINE ID</th>
+                  <th style="padding:10px 8px;">加入</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for w in whitelists %}
+                <tr style="border-bottom:1px solid #f1dde6;">
+                  <td style="padding:8px 8px;white-space:nowrap;">{{ w.phone }}</td>
+                  <td style="padding:8px 8px;">{{ w.name }}</td>
+                  <td style="padding:8px 8px;">{{ w.line_id }}</td>
+                  <td style="padding:8px 8px;white-space:nowrap;">{{ w.created_at.strftime('%Y/%m/%d') }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-    </div>
-    <!-- 黑名單 -->
-    <div class="card stack-top" id="blacklist">
-      <h2>黑名單</h2>
-      <table class="table-compact" style="margin-top:0;">
-        <thead><tr><th>手機</th><th>暱稱</th><th>原因</th><th>加入</th></tr></thead>
-        <tbody>
-          {% for b in blacklists %}
-          <tr>
-            <td>{{ b.phone }}</td><td>{{ b.name }}</td><td>{{ b.reason }}</td><td>{{ b.created_at.strftime('%Y/%m/%d') }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      <div class="desc" style="margin-top:8px;">封鎖或解除問題用戶。需提供封鎖原因。</div>
-      <form method="get" action="/admin/blacklist/search" style="display:flex;gap:8px;margin:8px 0 10px;">
-        <input type="text" name="q" placeholder="查詢手機 / 暱稱" style="flex:1;padding:6px 10px;border-radius:10px;border:1px solid #e0c7d4;">
+    </section>
+
+    <!-- 黑名單 Section -->
+    <section id="sec-blacklist" class="tab-section" style="display:none;">
+      <h2 style="color:#ba68c8;margin-top:0;">黑名單管理</h2>
+      <form method="get" action="/admin/blacklist/search" style="display:flex;gap:10px;margin:6px 0 14px;">
+        <input type="text" name="q" placeholder="搜尋手機 / 暱稱" style="flex:1;padding:10px 14px;border-radius:14px;border:1px solid #e0c7d4;font-size:1rem;">
         <input type="hidden" name="view" value="home">
-        <button type="submit" class="actions" style="padding:8px 14px;border-radius:10px;background:#ba68c8;color:#fff;border:none;font-weight:700;">查詢</button>
+        <button type="submit" style="padding:10px 20px;border-radius:14px;background:#ba68c8;color:#fff;border:none;font-weight:700;font-size:1rem;">搜尋</button>
       </form>
-      <div class="actions">
-        <form method="post" action="/admin/blacklist/add">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="text" name="phone" placeholder="手機" maxlength="10" required>
-          <input type="text" name="name" placeholder="暱稱" maxlength="30" required>
-          <input type="text" name="reason" placeholder="原因" maxlength="50" required>
-          <button type="submit">新增黑名單</button>
-        </form>
-        <form method="post" action="/admin/blacklist/delete">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="text" name="phone" placeholder="欲刪除的手機" maxlength="10" required>
-          <button type="submit" class="remove-btn">移除黑名單</button>
-        </form>
+      <div style="display:flex;flex-wrap:wrap;gap:30px;align-items:flex-start;">
+        <div style="flex:1;min-width:280px;">
+          <form method="post" action="/admin/blacklist/add" style="display:flex;flex-direction:column;gap:10px;background:#fff;padding:18px 20px;border-radius:18px;box-shadow:0 4px 14px rgba(0,0,0,0.08);">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="text" name="phone" placeholder="手機" maxlength="10" required style="padding:10px 14px;border:1px solid #e0c7d4;border-radius:12px;font-size:.95rem;">
+            <input type="text" name="name" placeholder="暱稱" maxlength="30" required style="padding:10px 14px;border:1px solid #e0c7d4;border-radius:12px;font-size:.95rem;">
+            <input type="text" name="reason" placeholder="原因" maxlength="50" required style="padding:10px 14px;border:1px solid #e0c7d4;border-radius:12px;font-size:.95rem;">
+            <button type="submit" style="background:#e57373;color:#fff;padding:12px 0;border:none;border-radius:14px;font-weight:700;letter-spacing:.05em;font-size:1rem;">新增黑名單</button>
+          </form>
+          <form method="post" action="/admin/blacklist/delete" style="display:flex;flex-direction:column;gap:10px;background:#fff;padding:18px 20px;border-radius:18px;box-shadow:0 4px 14px rgba(0,0,0,0.08);margin-top:18px;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="text" name="phone" placeholder="欲刪除的手機" maxlength="10" required style="padding:10px 14px;border:1px solid #e0c7d4;border-radius:12px;font-size:.95rem;">
+            <button type="submit" class="remove-btn" style="background:#e57373;color:#fff;padding:12px 0;border:none;border-radius:14px;font-weight:700;letter-spacing:.05em;font-size:1rem;">移除黑名單</button>
+          </form>
+        </div>
+        <div style="flex:2;min-width:420px;">
+          <div style="font-size:.85rem;color:#666;margin:0 0 6px 4px;">最近 {{ limit }} 筆</div>
+          <div style="background:#fff;padding:10px 16px;border-radius:18px;box-shadow:0 4px 14px rgba(0,0,0,0.08);overflow:auto;max-height:520px;">
+            <table style="width:100%;border-collapse:collapse;font-size:.95rem;">
+              <thead>
+                <tr style="background:#f8e1ef;">
+                  <th style="padding:10px 8px;">手機</th>
+                  <th style="padding:10px 8px;">暱稱</th>
+                  <th style="padding:10px 8px;">原因</th>
+                  <th style="padding:10px 8px;">加入</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for b in blacklists %}
+                <tr style="border-bottom:1px solid #f1dde6;">
+                  <td style="padding:8px 8px;white-space:nowrap;">{{ b.phone }}</td>
+                  <td style="padding:8px 8px;">{{ b.name }}</td>
+                  <td style="padding:8px 8px;">{{ b.reason }}</td>
+                  <td style="padding:8px 8px;white-space:nowrap;">{{ b.created_at.strftime('%Y/%m/%d') }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-    </div>
+    </section>
+
+    <!-- 待驗證 Section -->
+    <section id="sec-pending" class="tab-section" style="display:none;">
+      <h2 style="color:#ba68c8;margin-top:0;">待驗證名單</h2>
+      <div style="background:#fff;padding:10px 16px;border-radius:18px;box-shadow:0 4px 14px rgba(0,0,0,0.08);overflow:auto;max-height:560px;">
+        <table style="width:100%;border-collapse:collapse;font-size:.95rem;">
+          <thead>
+            <tr style="background:#f8e1ef;">
+              <th style="padding:10px 8px;">手機</th>
+              <th style="padding:10px 8px;">LINE ID</th>
+              <th style="padding:10px 8px;">暱稱</th>
+              <th style="padding:10px 8px;">狀態</th>
+              <th style="padding:10px 8px;">建立</th>
+              <th style="padding:10px 8px;">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in tempverifies %}
+            <tr style="border-bottom:1px solid #f1dde6;">
+              <td style="padding:8px 8px;white-space:nowrap;">{{ t.phone }}</td>
+              <td style="padding:8px 8px;">{{ t.line_id }}</td>
+              <td style="padding:8px 8px;">{{ t.nickname }}</td>
+              <td style="padding:8px 8px;" class="status-{{ t.status }}">{{ t.status }}</td>
+              <td style="padding:8px 8px;white-space:nowrap;">{{ t.created_at.strftime('%Y/%m/%d') }}</td>
+              <td style="padding:6px 8px;white-space:nowrap;">
+                <form method="post" action="/admin/tempverify/verify" style="display:inline-block;margin-right:6px;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="id" value="{{ t.id }}">
+                  <button type="submit" style="padding:6px 12px;font-size:.75rem;border:none;border-radius:10px;background:#81c784;color:#fff;">通過</button>
+                </form>
+                <form method="post" action="/admin/tempverify/delete" style="display:inline-block;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="id" value="{{ t.id }}">
+                  <button type="submit" class="remove-btn" style="padding:6px 12px;font-size:.75rem;border:none;border-radius:10px;">刪除</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
   </div>
   <div class="footer">&copy; 2025 後台管理 | 主頁快速操作</div>
+  <script>
+    const map = {
+      'whitelist':'sec-whitelist',
+      'blacklist':'sec-blacklist',
+      'pending':'sec-pending'
+    };
+    function showSection(key){
+      Object.values(map).forEach(id=>{document.getElementById(id).style.display='none'});
+      const el = document.getElementById(map[key]);
+      if(el){
+        document.getElementById('placeholder').style.display='none';
+        el.style.display='block';
+        location.hash = key;
+      }
+    }
+    document.querySelectorAll('.header-actions a[href^="#"]').forEach(a=>{
+      a.addEventListener('click',e=>{
+        const hash = a.getAttribute('href').replace('#','');
+        showSection(hash);
+      });
+    });
+    window.addEventListener('load',()=>{
+      const serverTab = '{{ active_tab or "" }}'.trim();
+      if(serverTab && map[serverTab]){
+        showSection(serverTab);
+        return;
+      }
+      const h = location.hash.replace('#','');
+      if(map[h]) showSection(h);
+    });
+  </script>
 </body>
 </html>
