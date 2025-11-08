@@ -1,6 +1,7 @@
 import os
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from models import Whitelist, Blacklist, TempVerify
+from utils.db_utils import update_or_create_whitelist_from_data
 from extensions import db
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
@@ -168,9 +169,21 @@ def tempverify_verify():
     if not tv:
         flash('找不到暫存名單','danger')
         return redirect(url_for('admin.admin_dashboard'))
-    tv.status = 'verified'
-    db.session.commit()
-    flash('暫存名單標記為通過，請視需要同步至白名單','success')
+    # 將暫存資料寫入白名單（快速通關）
+    try:
+        data = {
+            'phone': tv.phone,
+            'name': tv.nickname,
+            'line_id': tv.line_id,
+        }
+        record, _ = update_or_create_whitelist_from_data(data, user_id=None, reverify=True)
+        # 寫入完成後刪除暫存（或可改為標記 verified）
+        db.session.delete(tv)
+        db.session.commit()
+        flash(f'已通過並寫入白名單：{record.phone}','success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'寫入白名單時發生錯誤：{e}','danger')
     return redirect(url_for('admin.home', tab='pending'))
 
 
