@@ -12,7 +12,8 @@
   .header-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:10px}
   .header-btn{display:inline-block;background:#ba68c8;color:#fff;padding:8px 14px;border-radius:10px;text-decoration:none;font-weight:700}
     .grid {max-width:1000px;margin:40px auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:28px;padding:0 20px;}
-    .card {background:#fff;border-radius:18px;padding:26px 24px;box-shadow:0 4px 14px rgba(0,0,0,0.08);display:flex;flex-direction:column;justify-content:space-between;transition:.2s;}
+  .card {background:#fff;border-radius:18px;padding:26px 24px;box-shadow:0 4px 14px rgba(0,0,0,0.08);display:flex;flex-direction:column;transition:.2s;}
+  .card.stack-top{justify-content:flex-start;}
     .card:hover {box-shadow:0 8px 24px rgba(0,0,0,0.12);} 
     .card h2 {margin:0 0 14px;font-size:1.3rem;color:#ba68c8;}
   .desc {font-size:.9rem;line-height:1.45;color:#666;margin-bottom:8px;}
@@ -63,10 +64,9 @@
   {% endwith %}
   <div class="grid">
     <!-- 待驗證名單（放最上方） -->
-    <div class="card" id="pending">
+    <div class="card stack-top" id="pending">
       <h2>待驗證名單</h2>
-      <div class="desc">尚未完成官方驗證，具手機與 LINE ID 的暫存資料。</div>
-      <table>
+      <table style="margin-top:0;">
         <thead><tr><th>手機</th><th>LINE ID</th><th>暱稱</th><th>狀態</th><th>建立</th><th>操作</th></tr></thead>
         <tbody>
           {% for t in tempverifies %}
@@ -93,10 +93,20 @@
     </div>
 
     <!-- 白名單 -->
-    <div class="card" id="whitelist">
+    <div class="card stack-top" id="whitelist">
       <h2>白名單</h2>
-      <div class="desc">新增或移除信任用戶。手機與 LINE ID 必填。</div>
-      <form method="get" action="/admin/whitelist/search" style="display:flex;gap:8px;margin-bottom:10px;">
+      <table class="table-compact" style="margin-top:0;">
+        <thead><tr><th>手機</th><th>暱稱</th><th>LINE ID</th><th>加入</th></tr></thead>
+        <tbody>
+          {% for w in whitelists %}
+          <tr>
+            <td>{{ w.phone }}</td><td>{{ w.name }}</td><td>{{ w.line_id }}</td><td>{{ w.created_at.strftime('%Y/%m/%d') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="desc" style="margin-top:8px;">新增或移除信任用戶。手機與 LINE ID 必填。</div>
+      <form method="get" action="/admin/whitelist/search" style="display:flex;gap:8px;margin:8px 0 10px;">
         <input type="text" name="q" placeholder="查詢手機 / LINE ID / 暱稱" style="flex:1;padding:6px 10px;border-radius:10px;border:1px solid #e0c7d4;">
         <input type="hidden" name="view" value="home">
         <button type="submit" class="actions" style="padding:8px 14px;border-radius:10px;background:#ba68c8;color:#fff;border:none;font-weight:700;">查詢</button>
@@ -115,22 +125,22 @@
           <button type="submit" class="remove-btn">移除白名單</button>
         </form>
       </div>
-      <table class="table-compact">
-        <thead><tr><th>手機</th><th>暱稱</th><th>LINE ID</th><th>加入</th></tr></thead>
+    </div>
+    <!-- 黑名單 -->
+    <div class="card stack-top" id="blacklist">
+      <h2>黑名單</h2>
+      <table class="table-compact" style="margin-top:0;">
+        <thead><tr><th>手機</th><th>暱稱</th><th>原因</th><th>加入</th></tr></thead>
         <tbody>
-          {% for w in whitelists %}
+          {% for b in blacklists %}
           <tr>
-            <td>{{ w.phone }}</td><td>{{ w.name }}</td><td>{{ w.line_id }}</td><td>{{ w.created_at.strftime('%Y/%m/%d') }}</td>
+            <td>{{ b.phone }}</td><td>{{ b.name }}</td><td>{{ b.reason }}</td><td>{{ b.created_at.strftime('%Y/%m/%d') }}</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
-    </div>
-    <!-- 黑名單 -->
-    <div class="card" id="blacklist">
-      <h2>黑名單</h2>
-      <div class="desc">封鎖或解除問題用戶。需提供封鎖原因。</div>
-      <form method="get" action="/admin/blacklist/search" style="display:flex;gap:8px;margin-bottom:10px;">
+      <div class="desc" style="margin-top:8px;">封鎖或解除問題用戶。需提供封鎖原因。</div>
+      <form method="get" action="/admin/blacklist/search" style="display:flex;gap:8px;margin:8px 0 10px;">
         <input type="text" name="q" placeholder="查詢手機 / 暱稱" style="flex:1;padding:6px 10px;border-radius:10px;border:1px solid #e0c7d4;">
         <input type="hidden" name="view" value="home">
         <button type="submit" class="actions" style="padding:8px 14px;border-radius:10px;background:#ba68c8;color:#fff;border:none;font-weight:700;">查詢</button>
@@ -149,16 +159,6 @@
           <button type="submit" class="remove-btn">移除黑名單</button>
         </form>
       </div>
-      <table class="table-compact">
-        <thead><tr><th>手機</th><th>暱稱</th><th>原因</th><th>加入</th></tr></thead>
-        <tbody>
-          {% for b in blacklists %}
-          <tr>
-            <td>{{ b.phone }}</td><td>{{ b.name }}</td><td>{{ b.reason }}</td><td>{{ b.created_at.strftime('%Y/%m/%d') }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
     </div>
   </div>
   <div class="footer">&copy; 2025 後台管理 | 主頁快速操作</div>
