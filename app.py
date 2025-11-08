@@ -112,5 +112,12 @@ with app.app_context():
         # 尚未建立 migrations 目錄，先確保表存在
         db.create_all()
 
+    # 兼容補丁：確保 temp_verify 有 line_user_id 欄位（PostgreSQL 支援 IF NOT EXISTS）
+    try:
+        db.session.execute(text("ALTER TABLE temp_verify ADD COLUMN IF NOT EXISTS line_user_id VARCHAR(255)"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
