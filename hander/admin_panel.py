@@ -117,7 +117,14 @@ class TempVerifyModelView(ModernModelView):
 
 def init_admin(app):
     # 將 Flask-Admin 掛在 /admin_panel，並指定 endpoint 名稱避免與自訂 'admin' 藍圖衝突
-    admin = Admin(app, name='後台管理', url='/admin_panel', endpoint='admin_panel')
+    admin = Admin(
+        app,
+        name='後台管理',
+        url='/admin_panel',
+        endpoint='admin_panel',
+        template_mode='bootstrap4',
+        base_template='admin/master.html'
+    )
     admin.add_view(WhitelistModelView(Whitelist, db.session, name='<i class="fa fa-list"></i> 白名單', endpoint='fa_whitelist'))
     admin.add_view(BlacklistModelView(Blacklist, db.session, name='<i class="fa fa-ban"></i> 黑名單', endpoint='fa_blacklist'))
     admin.add_view(CouponModelView(Coupon, db.session, name='<i class="fa fa-ticket"></i> 抽獎券', endpoint='fa_coupon'))
@@ -125,7 +132,8 @@ def init_admin(app):
     # 確保自訂 CSS 被載入
     @app.context_processor
     def override_admin_css():
-        return dict(admin_custom_css='/static/admin_custom.css')
+        # 仍保留舊變數以兼容，實際樣式由 admin_panel_new.css 提供
+        return dict(admin_custom_css='/static/admin_panel_new.css')
     # 若應用有啟用 CSRFProtect，豁免 Flask-Admin 內建的 POST 視圖，避免 400 錯誤
     try:
         csrf = app.extensions.get('csrf')
