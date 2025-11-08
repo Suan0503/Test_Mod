@@ -117,14 +117,18 @@ class TempVerifyModelView(ModernModelView):
 
 def init_admin(app):
     # 將 Flask-Admin 掛在 /admin_panel，並指定 endpoint 名稱避免與自訂 'admin' 藍圖衝突
-    admin = Admin(
-        app,
-        name='後台管理',
-        url='/admin_panel',
-        endpoint='admin_panel',
-        template_mode='bootstrap4',
-        base_template='admin/custom_master.html'
-    )
+    common_kwargs = dict(name='後台管理', url='/admin_panel', endpoint='admin_panel')
+    admin = None
+    try:
+        # 新版 Flask-Admin（支援 template_mode）
+        admin = Admin(app, template_mode='bootstrap4', base_template='admin/custom_master.html', **common_kwargs)
+    except TypeError:
+        try:
+            # 舊版可能不支援 template_mode，但支援 base_template
+            admin = Admin(app, base_template='admin/custom_master.html', **common_kwargs)
+        except TypeError:
+            # 最保險：完全使用預設模板
+            admin = Admin(app, **common_kwargs)
     admin.add_view(WhitelistModelView(Whitelist, db.session, name='<i class="fa fa-list"></i> 白名單', endpoint='fa_whitelist'))
     admin.add_view(BlacklistModelView(Blacklist, db.session, name='<i class="fa fa-ban"></i> 黑名單', endpoint='fa_blacklist'))
     admin.add_view(CouponModelView(Coupon, db.session, name='<i class="fa fa-ticket"></i> 抽獎券', endpoint='fa_coupon'))
