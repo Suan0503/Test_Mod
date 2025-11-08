@@ -35,6 +35,17 @@ def render_dashboard(whitelists=None, blacklists=None, tempverifies=None):
                         .limit(DASHBOARD_LIMIT).all())
     return render_template('admin_dashboard.html', whitelists=whitelists, blacklists=blacklists, tempverifies=tempverifies)
 
+def render_home(whitelists=None, blacklists=None, tempverifies=None):
+    if whitelists is None or blacklists is None or tempverifies is None:
+        base_wl, base_bl, base_tv = load_dashboard_data()
+        if whitelists is None:
+            whitelists = base_wl
+        if blacklists is None:
+            blacklists = base_bl
+        if tempverifies is None:
+            tempverifies = base_tv
+    return render_template('admin_home.html', whitelists=whitelists, blacklists=blacklists, tempverifies=tempverifies, limit=DASHBOARD_LIMIT)
+
 
 @admin_bp.route('/')
 def admin_root():
@@ -55,6 +66,7 @@ def admin_dashboard():
 @admin_bp.route('/whitelist/search')
 def whitelist_search():
     q = request.args.get('q', '').strip()
+    view = request.args.get('view')
     if q:
         whitelists = Whitelist.query.filter(
             Whitelist.phone.like(f"%{q}%") |
@@ -63,6 +75,8 @@ def whitelist_search():
         ).order_by(Whitelist.created_at.desc()).limit(DASHBOARD_LIMIT).all()
     else:
         whitelists = None
+    if view == 'home':
+        return render_home(whitelists=whitelists)
     return render_dashboard(whitelists=whitelists)
 
 
@@ -101,6 +115,7 @@ def whitelist_delete():
 @admin_bp.route('/blacklist/search')
 def blacklist_search():
     q = request.args.get('q','').strip()
+    view = request.args.get('view')
     if q:
         blacklists = Blacklist.query.filter(
             Blacklist.phone.like(f"%{q}%") |
@@ -108,6 +123,8 @@ def blacklist_search():
         ).order_by(Blacklist.created_at.desc()).limit(DASHBOARD_LIMIT).all()
     else:
         blacklists = None
+    if view == 'home':
+        return render_home(blacklists=blacklists)
     return render_dashboard(blacklists=blacklists)
 
 

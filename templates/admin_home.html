@@ -7,20 +7,25 @@
   <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap" rel="stylesheet">
   <style>
     body {font-family:'Zen Maru Gothic','微軟正黑體',sans-serif;background:#f9f7f5;margin:0;color:#444;}
-    .header {text-align:center;padding:32px 0;background:#ffe4ee;box-shadow:0 2px 8px rgba(0,0,0,0.06);} 
+  .header {text-align:center;padding:24px 0;background:#ffe4ee;box-shadow:0 2px 8px rgba(0,0,0,0.06);} 
     .header h1 {margin:0;font-size:2.2rem;color:#e57399;letter-spacing:.05em;}
+  .header-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:10px}
+  .header-btn{display:inline-block;background:#ba68c8;color:#fff;padding:8px 14px;border-radius:10px;text-decoration:none;font-weight:700}
     .grid {max-width:1000px;margin:40px auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:28px;padding:0 20px;}
     .card {background:#fff;border-radius:18px;padding:26px 24px;box-shadow:0 4px 14px rgba(0,0,0,0.08);display:flex;flex-direction:column;justify-content:space-between;transition:.2s;}
     .card:hover {box-shadow:0 8px 24px rgba(0,0,0,0.12);} 
     .card h2 {margin:0 0 14px;font-size:1.3rem;color:#ba68c8;}
-    .desc {font-size:.9rem;line-height:1.5;color:#666;margin-bottom:14px;}
+  .desc {font-size:.9rem;line-height:1.45;color:#666;margin-bottom:8px;}
     .actions form {display:flex;flex-direction:column;gap:10px;margin-bottom:10px;}
     .actions input[type=text] {padding:8px 12px;border:1px solid #e0c7d4;border-radius:10px;font-size:.95rem;width:100%;}
     .actions button {background:linear-gradient(90deg,#f8bbd0,#b2ebf2);border:none;color:#fff;padding:10px 0;border-radius:12px;font-weight:700;cursor:pointer;font-size:.95rem;letter-spacing:.05em;}
     .actions button:hover {background:linear-gradient(90deg,#f48fb1,#80deea);} 
-    table {width:100%;border-collapse:collapse;font-size:.85rem;margin-top:6px;}
+  table {width:100%;border-collapse:collapse;font-size:.85rem;margin-top:6px;}
     thead tr {background:#fce4ec;color:#ba68c8;} 
-    th,td {padding:6px 8px;text-align:left;border-bottom:1px solid #f3e1e7;} 
+  th,td {padding:6px 8px;text-align:left;border-bottom:1px solid #f3e1e7;} 
+  /* 緊湊表格尺寸（針對白/黑名單） */
+  .table-compact{font-size:.80rem}
+  .table-compact th,.table-compact td{padding:4px 6px}
     .remove-btn {background:#e57373 !important;}
     .status-pending {color:#ffb74d;font-weight:700;}
     .status-verified {color:#81c784;font-weight:700;}
@@ -40,8 +45,11 @@
   <div class="header">
     <h1>後台主頁</h1>
     <div style="margin-top:6px;color:#888;font-size:.95rem;">快速管理白名單 / 黑名單 / 待驗證名單</div>
-    <div style="margin-top:10px;">
-      <a href="/admin_panel" style="display:inline-block;background:#ba68c8;color:#fff;padding:8px 14px;border-radius:10px;text-decoration:none;font-weight:700;">進入官方管理面板</a>
+    <div class="header-actions">
+      <a href="/admin_panel" class="header-btn">進入官方管理面板</a>
+      <a href="#whitelist" class="header-btn">白名單</a>
+      <a href="#blacklist" class="header-btn">黑名單</a>
+      <a href="#pending" class="header-btn">待驗證名單</a>
     </div>
   </div>
   {% with messages = get_flashed_messages(with_categories=true) %}
@@ -54,66 +62,8 @@
     {% endif %}
   {% endwith %}
   <div class="grid">
-    <!-- 白名單 -->
-    <div class="card">
-      <h2>白名單</h2>
-      <div class="desc">新增或移除信任用戶。手機與 LINE ID 必填。</div>
-      <div class="actions">
-        <form method="post" action="/admin/whitelist/add">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="text" name="phone" placeholder="手機 (09xxxxxxxx)" maxlength="10" required>
-          <input type="text" name="name" placeholder="暱稱" maxlength="30" required>
-          <input type="text" name="line_id" placeholder="LINE ID" maxlength="50" required>
-          <button type="submit">新增白名單</button>
-        </form>
-        <form method="post" action="/admin/whitelist/delete">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="text" name="phone" placeholder="欲刪除的手機" maxlength="10" required>
-          <button type="submit" class="remove-btn">移除白名單</button>
-        </form>
-      </div>
-      <table>
-        <thead><tr><th>手機</th><th>暱稱</th><th>LINE ID</th><th>加入</th></tr></thead>
-        <tbody>
-          {% for w in whitelists %}
-          <tr>
-            <td>{{ w.phone }}</td><td>{{ w.name }}</td><td>{{ w.line_id }}</td><td>{{ w.created_at.strftime('%Y/%m/%d') }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <!-- 黑名單 -->
-    <div class="card">
-      <h2>黑名單</h2>
-      <div class="desc">封鎖或解除問題用戶。需提供封鎖原因。</div>
-      <div class="actions">
-        <form method="post" action="/admin/blacklist/add">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="text" name="phone" placeholder="手機" maxlength="10" required>
-          <input type="text" name="name" placeholder="暱稱" maxlength="30" required>
-          <input type="text" name="reason" placeholder="原因" maxlength="50" required>
-          <button type="submit">新增黑名單</button>
-        </form>
-        <form method="post" action="/admin/blacklist/delete">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="text" name="phone" placeholder="欲刪除的手機" maxlength="10" required>
-          <button type="submit" class="remove-btn">移除黑名單</button>
-        </form>
-      </div>
-      <table>
-        <thead><tr><th>手機</th><th>暱稱</th><th>原因</th><th>加入</th></tr></thead>
-        <tbody>
-          {% for b in blacklists %}
-          <tr>
-            <td>{{ b.phone }}</td><td>{{ b.name }}</td><td>{{ b.reason }}</td><td>{{ b.created_at.strftime('%Y/%m/%d') }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <!-- 待驗證名單 -->
-    <div class="card">
+    <!-- 待驗證名單（放最上方） -->
+    <div class="card" id="pending">
       <h2>待驗證名單</h2>
       <div class="desc">尚未完成官方驗證，具手機與 LINE ID 的暫存資料。</div>
       <table>
@@ -136,6 +86,75 @@
                 <button type="submit" class="remove-btn" style="padding:4px 10px;font-size:.75rem;">刪除</button>
               </form>
             </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 白名單 -->
+    <div class="card" id="whitelist">
+      <h2>白名單</h2>
+      <div class="desc">新增或移除信任用戶。手機與 LINE ID 必填。</div>
+      <form method="get" action="/admin/whitelist/search" style="display:flex;gap:8px;margin-bottom:10px;">
+        <input type="text" name="q" placeholder="查詢手機 / LINE ID / 暱稱" style="flex:1;padding:6px 10px;border-radius:10px;border:1px solid #e0c7d4;">
+        <input type="hidden" name="view" value="home">
+        <button type="submit" class="actions" style="padding:8px 14px;border-radius:10px;background:#ba68c8;color:#fff;border:none;font-weight:700;">查詢</button>
+      </form>
+      <div class="actions">
+        <form method="post" action="/admin/whitelist/add">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="text" name="phone" placeholder="手機 (09xxxxxxxx)" maxlength="10" required>
+          <input type="text" name="name" placeholder="暱稱" maxlength="30" required>
+          <input type="text" name="line_id" placeholder="LINE ID" maxlength="50" required>
+          <button type="submit">新增白名單</button>
+        </form>
+        <form method="post" action="/admin/whitelist/delete">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="text" name="phone" placeholder="欲刪除的手機" maxlength="10" required>
+          <button type="submit" class="remove-btn">移除白名單</button>
+        </form>
+      </div>
+      <table class="table-compact">
+        <thead><tr><th>手機</th><th>暱稱</th><th>LINE ID</th><th>加入</th></tr></thead>
+        <tbody>
+          {% for w in whitelists %}
+          <tr>
+            <td>{{ w.phone }}</td><td>{{ w.name }}</td><td>{{ w.line_id }}</td><td>{{ w.created_at.strftime('%Y/%m/%d') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <!-- 黑名單 -->
+    <div class="card" id="blacklist">
+      <h2>黑名單</h2>
+      <div class="desc">封鎖或解除問題用戶。需提供封鎖原因。</div>
+      <form method="get" action="/admin/blacklist/search" style="display:flex;gap:8px;margin-bottom:10px;">
+        <input type="text" name="q" placeholder="查詢手機 / 暱稱" style="flex:1;padding:6px 10px;border-radius:10px;border:1px solid #e0c7d4;">
+        <input type="hidden" name="view" value="home">
+        <button type="submit" class="actions" style="padding:8px 14px;border-radius:10px;background:#ba68c8;color:#fff;border:none;font-weight:700;">查詢</button>
+      </form>
+      <div class="actions">
+        <form method="post" action="/admin/blacklist/add">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="text" name="phone" placeholder="手機" maxlength="10" required>
+          <input type="text" name="name" placeholder="暱稱" maxlength="30" required>
+          <input type="text" name="reason" placeholder="原因" maxlength="50" required>
+          <button type="submit">新增黑名單</button>
+        </form>
+        <form method="post" action="/admin/blacklist/delete">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="text" name="phone" placeholder="欲刪除的手機" maxlength="10" required>
+          <button type="submit" class="remove-btn">移除黑名單</button>
+        </form>
+      </div>
+      <table class="table-compact">
+        <thead><tr><th>手機</th><th>暱稱</th><th>原因</th><th>加入</th></tr></thead>
+        <tbody>
+          {% for b in blacklists %}
+          <tr>
+            <td>{{ b.phone }}</td><td>{{ b.name }}</td><td>{{ b.reason }}</td><td>{{ b.created_at.strftime('%Y/%m/%d') }}</td>
           </tr>
           {% endfor %}
         </tbody>
