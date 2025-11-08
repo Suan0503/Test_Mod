@@ -4,7 +4,7 @@ from linebot.models import (
     QuickReply, QuickReplyButton, MessageAction, ImageSendMessage
 )
 from extensions import handler, line_bot_api, db
-from models import Blacklist, Whitelist
+from models import Blacklist, Whitelist, TempVerify
 from utils.temp_users import get_temp_user, set_temp_user, pop_temp_user
 
 # 補助：取得所有暫存用戶（僅限 dict 模式）
@@ -106,6 +106,57 @@ def _find_pending_by_code(code):
     return None, None
 
 # ───────────────────────────────────────────────────────────────
+# TempVerify 資料庫同步（待驗證清單）
+# ───────────────────────────────────────────────────────────────
+def upsert_tempverify(phone, line_id, nickname):
+    """建立或更新 TempVerify 讓後台可見，狀態維持 pending。"""
+    try:
+        if not phone:
+            return
+        tv = TempVerify.query.filter_by(phone=phone, status='pending').first()
+        if not tv:
+            tv = TempVerify(phone=phone)
+            db.session.add(tv)
+        tv.line_id = line_id or tv.line_id
+        tv.nickname = nickname or tv.nickname
+        tv.status = 'pending'
+        # 將建立時間更新到現在，讓列表排序能顯示在上方
+        tv.created_at = datetime.utcnow()
+        db.session.commit()
+    except Exception:
+        logging.exception("upsert_tempverify failed")
+
+def mark_tempverify_verified_by_phone(phone):
+    """驗證完成後，將相同手機的 pending 紀錄標記為 verified。"""
+    try:
+        if not phone:
+            return
+        tvs = TempVerify.query.filter_by(phone=phone, status='pending').all()
+        changed = False
+        for tv in tvs:
+            tv.status = 'verified'
+            changed = True
+        if changed:
+            db.session.commit()
+    except Exception:
+        logging.exception("mark_tempverify_verified_by_phone failed")
+
+def mark_tempverify_failed_by_phone(phone):
+    """當管理員拒絕或流程中止時，將 pending 改為 failed 以自清列表。"""
+    try:
+        if not phone:
+            return
+        tvs = TempVerify.query.filter_by(phone=phone, status='pending').all()
+        changed = False
+        for tv in tvs:
+            tv.status = 'failed'
+            changed = True
+        if changed:
+            db.session.commit()
+    except Exception:
+        logging.exception("mark_tempverify_failed_by_phone failed")
+
+# ───────────────────────────────────────────────────────────────
 # 1) 加入好友：送歡迎訊息
 # ───────────────────────────────────────────────────────────────
 @handler.add(FollowEvent)
@@ -161,6 +212,10 @@ def admin_approve_manual_verify(admin_id, target_user_id):
     }
     record, _ = update_or_create_whitelist_from_data(pending_data, target_user_id, reverify=True)
     try:
+        mark_tempverify_verified_by_phone(record.phone)
+    except Exception:
+        logging.exception("mark_tempverify_verified_by_phone (admin approve) failed")
+    try:
         line_bot_api.push_message(target_user_id, TextSendMessage(text=(
             f"📱 {record.phone}\n"
             f"🌸 暱稱：{record.name or pending.get('nickname')}\n"
@@ -180,6 +235,10 @@ def admin_reject_manual_verify(admin_id, target_user_id):
     pending = manual_verify_pending.pop(target_user_id, None)
     if not pending:
         return False, "找不到待審核項目。"
+    try:
+        mark_tempverify_failed_by_phone(pending.get("phone"))
+    except Exception:
+        logging.exception("mark_tempverify_failed_by_phone (admin reject) failed")
     try:
         line_bot_api.push_message(target_user_id, TextSendMessage(text="管理員已拒絕您的手動驗證申請，請重新聯絡客服或重新申請。"))
     except Exception:
@@ -405,6 +464,11 @@ def handle_text(event):
         tu["step"] = "waiting_screenshot"
         tu["user_id"] = user_id
         set_temp_user(user_id, tu)
+        # 寫入 TempVerify，讓後台待驗證名單可見
+        try:
+            upsert_tempverify(phone=tu.get("phone"), line_id=line_id, nickname=tu.get("name") or tu.get("nickname"))
+        except Exception:
+            logging.exception("upsert_tempverify from waiting_lineid failed")
         reply_basic(
             event,
             "📸 請上傳您的 LINE 個人頁面截圖\n"
@@ -470,6 +534,11 @@ def handle_image(event):
             record, _ = update_or_create_whitelist_from_data(
                 data, user_id, reverify=tu.get("reverify", False)
             )
+            # 標記 TempVerify 為 verified
+            try:
+                mark_tempverify_verified_by_phone(record.phone)
+            except Exception:
+                logging.exception("mark_tempverify_verified_by_phone (fast_pass) failed")
             reply = (
                 f"📱 {record.phone}\n"
                 f"🌸 暱稱：{record.name or '用戶'}\n"
@@ -576,6 +645,10 @@ def handle_post_ocr_confirm(event):
             record, _ = update_or_create_whitelist_from_data(
                 data, user_id, reverify=data.get("reverify", False)
             )
+            try:
+                mark_tempverify_verified_by_phone(record.phone)
+            except Exception:
+                logging.exception("mark_tempverify_verified_by_phone (post_ocr user confirm) failed")
             reply = (
                 f"📱 {record.phone}\n"
                 f"🌸 暱稱：{record.name or '用戶'}\n"
@@ -602,6 +675,10 @@ def handle_post_ocr_confirm(event):
                 record, _ = update_or_create_whitelist_from_data(
                     data, user_id, reverify=True
                 )
+                try:
+                    mark_tempverify_verified_by_phone(record.phone)
+                except Exception:
+                    logging.exception("mark_tempverify_verified_by_phone (admin manual 1) failed")
                 reply = (
                     f"📱 {record.phone}\n"
                     f"🌸 暱稱：{record.name or '用戶'}\n"
