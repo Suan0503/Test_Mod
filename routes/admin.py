@@ -2,6 +2,9 @@ import os
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from models import Whitelist, Blacklist, TempVerify
 from utils.db_utils import update_or_create_whitelist_from_data
+from hander.verify import EXTRA_NOTICE
+from linebot.models import TextSendMessage
+from extensions import line_bot_api
 from extensions import db
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
@@ -176,11 +179,23 @@ def tempverify_verify():
             'name': tv.nickname,
             'line_id': tv.line_id,
         }
-        record, _ = update_or_create_whitelist_from_data(data, user_id=None, reverify=True)
-        # 寫入完成後刪除暫存（或可改為標記 verified）
+        record, _ = update_or_create_whitelist_from_data(data, user_id=tv.line_user_id, reverify=True)
         db.session.delete(tv)
         db.session.commit()
         flash(f'已通過並寫入白名單：{record.phone}','success')
+        if record.line_user_id:
+            try:
+                msg = (
+                    f"📱 {record.phone}\n"
+                    f"🌸 暱稱：{record.name or '用戶'}\n"
+                    f"🔗 LINE ID：{record.line_id or '未登記'}\n"
+                    f"🕒 {record.created_at}\n"
+                    f"✅ 驗證成功，歡迎加入茗殿\n"
+                    f"🌟 加入密碼：ming666"
+                ) + EXTRA_NOTICE
+                line_bot_api.push_message(record.line_user_id, TextSendMessage(text=msg))
+            except Exception:
+                pass
     except Exception as e:
         db.session.rollback()
         flash(f'寫入白名單時發生錯誤：{e}','danger')

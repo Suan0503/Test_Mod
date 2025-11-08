@@ -122,7 +122,7 @@ def _find_pending_by_code(code):
 # ───────────────────────────────────────────────────────────────
 # TempVerify 資料庫同步（待驗證清單）
 # ───────────────────────────────────────────────────────────────
-def upsert_tempverify(phone, line_id, nickname):
+def upsert_tempverify(phone, line_id, nickname, line_user_id=None):
     """建立或更新 TempVerify 讓後台可見，狀態維持 pending。"""
     try:
         if not phone:
@@ -133,6 +133,8 @@ def upsert_tempverify(phone, line_id, nickname):
             db.session.add(tv)
         tv.line_id = line_id or tv.line_id
         tv.nickname = nickname or tv.nickname
+        if line_user_id:
+            tv.line_user_id = line_user_id
         tv.status = 'pending'
         # 將建立時間更新到現在，讓列表排序能顯示在上方
         tv.created_at = datetime.utcnow()
@@ -398,6 +400,33 @@ def handle_text(event):
         return
 
     phone_candidate = normalize_phone(user_text)
+    # 若輸入為手機號且該號已在白名單，直接綁定當前 user 並回覆主選單（即使存在 temp 狀態）
+    if re.match(r"^09\d{8}$", phone_candidate):
+        wl = Whitelist.query.filter_by(phone=phone_candidate).first()
+        if wl:
+            if wl.line_user_id and wl.line_user_id != user_id:
+                reply_basic(event, "❌ 此手機已綁定其他帳號，請聯絡客服協助。")
+                return
+            # 綁定 line_user_id（若尚未綁定）
+            if wl.line_user_id != user_id:
+                wl.line_user_id = user_id
+                try:
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+            # 回覆主選單
+            reply = (
+                f"📱 {wl.phone}\n"
+                f"🌸 暱稱：{wl.name or display_name}\n"
+                f"       個人編號：{wl.id}\n"
+                f"🔗 LINE ID：{wl.line_id or '未登記'}\n"
+                f"🕒 {wl.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
+                f"✅ 驗證成功，歡迎加入茗殿\n"
+                f"🌟 加入密碼：ming666"
+            ) + EXTRA_NOTICE
+            reply_with_menu(event.reply_token, reply)
+            pop_temp_user(user_id)
+            return
     if not get_temp_user(user_id) and re.match(r"^09\d{8}$", phone_candidate):
         logging.info(f"[handle_text] 進入手機號分支 user_id={user_id} phone={phone_candidate}")
         if Blacklist.query.filter_by(phone=phone_candidate).first():
@@ -481,7 +510,7 @@ def handle_text(event):
         set_temp_user(user_id, tu)
         # 寫入 TempVerify，讓後台待驗證名單可見
         try:
-            upsert_tempverify(phone=tu.get("phone"), line_id=line_id, nickname=tu.get("name") or tu.get("nickname"))
+            upsert_tempverify(phone=tu.get("phone"), line_id=line_id, nickname=tu.get("name") or tu.get("nickname"), line_user_id=user_id)
         except Exception:
             logging.exception("upsert_tempverify from waiting_lineid failed")
         reply_basic(
