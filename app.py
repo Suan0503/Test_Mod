@@ -19,7 +19,6 @@ from flask_migrate import Migrate
 from routes.message import message_bp
 from routes.pending_verify import pending_bp
 from routes.admin import admin_bp
-from hander.admin_panel import init_admin
 from models import Whitelist, Blacklist, TempVerify, Coupon
 import secrets
 
@@ -45,7 +44,6 @@ app.register_blueprint(message_bp)
 csrf.exempt(message_bp)  # 豁免 LINE Webhook /callback 不使用 CSRF Token
 app.register_blueprint(pending_bp)
 app.register_blueprint(admin_bp)
-init_admin(app)
 
 """admin 相關路由已移至 routes/admin.py 的 Blueprint"""
 
