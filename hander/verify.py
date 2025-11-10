@@ -129,7 +129,8 @@ def upsert_tempverify(phone, line_id, nickname, line_user_id=None):
             return
         tv = TempVerify.query.filter_by(phone=phone, status='pending').first()
         if not tv:
-            tv = TempVerify(phone=phone)
+            tv = TempVerify()
+            tv.phone = phone
             db.session.add(tv)
         tv.line_id = line_id or tv.line_id
         tv.nickname = nickname or tv.nickname
@@ -361,8 +362,12 @@ def handle_text(event):
                 f"🕒 {existing.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
                 f"✅ 驗證成功，歡迎加入茗殿\n"
                 f"🌟 加入密碼：ming666"
-            ) + EXTRA_NOTICE
+            )
             reply_with_menu(event.reply_token, reply)
+            try:
+                line_bot_api.push_message(user_id, TextSendMessage(text=EXTRA_NOTICE))
+            except Exception:
+                logging.exception("push EXTRA_NOTICE after existing whitelist view failed")
         else:
             reply_with_reverify(event, "⚠️ 已驗證，若要查看資訊請輸入您當時驗證的手機號碼。")
         return
@@ -423,8 +428,12 @@ def handle_text(event):
                 f"🕒 {wl.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
                 f"✅ 驗證成功，歡迎加入茗殿\n"
                 f"🌟 加入密碼：ming666"
-            ) + EXTRA_NOTICE
+            )
             reply_with_menu(event.reply_token, reply)
+            try:
+                line_bot_api.push_message(user_id, TextSendMessage(text=EXTRA_NOTICE))
+            except Exception:
+                logging.exception("push EXTRA_NOTICE after phone bind failed")
             pop_temp_user(user_id)
             return
     if not get_temp_user(user_id) and re.match(r"^09\d{8}$", phone_candidate):
@@ -590,8 +599,12 @@ def handle_image(event):
                 f"🕒 {record.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
                 f"✅ 驗證成功，歡迎加入茗殿\n"
                 f"🌟 加入密碼：ming666"
-            ) + EXTRA_NOTICE
+            )
             reply_with_menu(event.reply_token, reply)
+            try:
+                line_bot_api.push_message(user_id, TextSendMessage(text=EXTRA_NOTICE))
+            except Exception:
+                logging.exception("push EXTRA_NOTICE after fast_pass failed")
             pop_temp_user(user_id)
 
         # 修正：用 .strip().lower() 強化容錯
@@ -700,8 +713,12 @@ def handle_post_ocr_confirm(event):
                 f"🕒 {record.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
                 f"✅ 驗證成功，歡迎加入茗殿\n"
                 f"🌟 加入密碼：ming666"
-            ) + EXTRA_NOTICE
+            )
             reply_with_menu(event.reply_token, reply)
+            try:
+                line_bot_api.push_message(user_id, TextSendMessage(text=EXTRA_NOTICE))
+            except Exception:
+                logging.exception("push EXTRA_NOTICE after post_ocr confirm failed")
             pop_temp_user(user_id)
             return True
         # 管理員人工驗證流程
@@ -730,8 +747,12 @@ def handle_post_ocr_confirm(event):
                     f"🕒 {record.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')}\n"
                     f"✅ 驗證成功，歡迎加入茗殿\n"
                     f"🌟 加入密碼：ming666"
-                ) + EXTRA_NOTICE
+                )
                 reply_with_menu(event.reply_token, reply)
+                try:
+                    line_bot_api.push_message(user_id, TextSendMessage(text=EXTRA_NOTICE))
+                except Exception:
+                    logging.exception("push EXTRA_NOTICE after manual verify confirm failed")
                 manual_verify_pending.pop(user_id, None)
                 pop_temp_user(user_id)
                 return True

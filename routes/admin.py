@@ -92,11 +92,14 @@ def whitelist_add():
     line_id = request.form.get('line_id','').strip()
     if not phone or not name or not line_id:
         flash('白名單新增資料不完整','warning')
-        return redirect(url_for('admin.admin_dashboard'))
+        return redirect(url_for('admin.home', tab='whitelist'))
     if Whitelist.query.filter_by(phone=phone).first():
-        flash('手機已存在於白名單','danger')
-        return redirect(url_for('admin.admin_dashboard'))
-    w = Whitelist(phone=phone, name=name, line_id=line_id)
+        flash('手機已存在於白名單','warning')
+        return redirect(url_for('admin.home', tab='whitelist'))
+    w = Whitelist()
+    w.phone = phone
+    w.name = name
+    w.line_id = line_id
     db.session.add(w)
     db.session.commit()
     flash('白名單新增成功','success')
@@ -108,8 +111,8 @@ def whitelist_delete():
     phone = request.form.get('phone','').strip()
     w = Whitelist.query.filter_by(phone=phone).first()
     if not w:
-        flash('找不到該白名單紀錄','danger')
-        return redirect(url_for('admin.admin_dashboard'))
+        flash('找不到該白名單記錄','danger')
+        return redirect(url_for('admin.home', tab='whitelist'))
     db.session.delete(w)
     db.session.commit()
     flash('白名單刪除成功','info')
@@ -140,11 +143,14 @@ def blacklist_add():
     reason = request.form.get('reason','').strip()
     if not phone or not name or not reason:
         flash('黑名單新增資料不完整','warning')
-        return redirect(url_for('admin.admin_dashboard'))
+        return redirect(url_for('admin.home', tab='blacklist'))
     if Blacklist.query.filter_by(phone=phone).first():
-        flash('手機已存在於黑名單','danger')
-        return redirect(url_for('admin.admin_dashboard'))
-    b = Blacklist(phone=phone, name=name, reason=reason)
+        flash('手機已存在於黑名單','warning')
+        return redirect(url_for('admin.home', tab='blacklist'))
+    b = Blacklist()
+    b.phone = phone
+    b.name = name
+    b.reason = reason
     db.session.add(b)
     db.session.commit()
     flash('黑名單新增成功','success')
@@ -156,8 +162,8 @@ def blacklist_delete():
     phone = request.form.get('phone','').strip()
     b = Blacklist.query.filter_by(phone=phone).first()
     if not b:
-        flash('找不到該黑名單紀錄','danger')
-        return redirect(url_for('admin.admin_dashboard'))
+        flash('找不到該黑名單記錄','danger')
+        return redirect(url_for('admin.home', tab='blacklist'))
     db.session.delete(b)
     db.session.commit()
     flash('黑名單刪除成功','info')
