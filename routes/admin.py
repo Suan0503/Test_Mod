@@ -276,6 +276,8 @@ def wallet_home():
                 # 分類
                 temp_exp_map = {}  # key (amount, expiry_str) -> count
                 temp_perm_map = {}  # key amount -> count
+                draw_count_map = {}  # amount -> count (today)
+                draw_used_map = {}   # amount -> used boolean today
                 for c in coupons:
                     expiry_str = None
                     if c.expiry_date:
@@ -283,12 +285,25 @@ def wallet_home():
                         expiry_str = expiry_local.strftime('%Y/%m/%d')
                         # 今日抽獎券：source=draw 且 expiry=今日
                         if c.source == 'draw' and expiry_local.date() == today:
-                            # 顯示在今日抽獎券
-                            today_draw_coupons.append({'amount': c.amount, 'count': 1})
+                            # 顯示在今日抽獎券（暫存計數，稍後彙總）
+                            draw_count_map[c.amount] = draw_count_map.get(c.amount, 0) + 1
                         key = (c.amount, expiry_str)
                         temp_exp_map[key] = temp_exp_map.get(key, 0) + 1
                     else:
                         temp_perm_map[c.amount] = temp_perm_map.get(c.amount, 0) + 1
+                # 今日是否使用過抽獎券：從今日 consume 交易看是否有扣除 100/200/300/500
+                today_consume = [t for t in txns if t.type == 'consume' and t.created_at.date() == today]
+                used_map = {100:0,200:0,300:0,500:0}
+                for t in today_consume:
+                    used_map[100] += (t.coupon_100_count or 0)
+                    used_map[300] += (t.coupon_300_count or 0)
+                    used_map[500] += (t.coupon_500_count or 0)
+                # 彙總今日抽獎券
+                today_draw_coupons = []
+                for amt in sorted(draw_count_map.keys()):
+                    cnt = draw_count_map[amt]
+                    used = used_map.get(amt,0) > 0
+                    today_draw_coupons.append({'amount': amt, 'count': cnt, 'used_today': used})
                 for (amt, exp_str), cnt in sorted(temp_exp_map.items(), key=lambda x: (x[0][1], x[0][0])):
                     expiring_coupons.append({'amount': amt, 'expiry': exp_str, 'count': cnt})
                 for amt, cnt in sorted(temp_perm_map.items()):

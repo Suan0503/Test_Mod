@@ -84,7 +84,7 @@
           {% if today_draw_coupons %}
             <ul style="margin:4px 0 8px;padding-left:18px;font-size:.85rem;">
               {% for c in today_draw_coupons %}
-              <li>{{ c.amount }}元 x {{ c.count }} (今日)</li>
+              <li>{{ c.amount }}元 x {{ c.count }} (今日){% if c.used_today %} <span style="color:#d32f2f">（今日已使用）</span>{% endif %}</li>
               {% endfor %}
             </ul>
           {% else %}
