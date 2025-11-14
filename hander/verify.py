@@ -88,14 +88,16 @@ def maybe_push_coupon_expiry_notice(user_id):
         if not (notice_start <= now_dt <= expire_dt):
             return
         q = StoredValueTransaction.query.filter_by(wallet_id=wallet.id).all()
-        c500 = c300 = 0
+        c500 = c300 = c100 = 0
         for t in q:
             sign = 1 if t.type == 'topup' else -1
             c500 += sign * (t.coupon_500_count or 0)
             c300 += sign * (t.coupon_300_count or 0)
+            c100 += sign * (getattr(t, 'coupon_100_count', 0) or 0)
         c500 = max(c500, 0)
         c300 = max(c300, 0)
-        if c500 <= 0 and c300 <= 0:
+        c100 = max(c100, 0)
+        if c500 <= 0 and c300 <= 0 and c100 <= 0:
             return
         last = wallet.last_coupon_notice_at
         show_notice = False
@@ -108,7 +110,7 @@ def maybe_push_coupon_expiry_notice(user_id):
             return
         msg = (
             f"提醒：您的折價券將於 {expire_dt.strftime('%Y/%m/%d')} 到期。\n"
-            f"目前剩餘：500券 x {c500}、300券 x {c300}"
+            f"目前剩餘：500券 x {c500}、300券 x {c300}、100券 x {c100}"
         )
         try:
             line_bot_api.push_message(user_id, TextSendMessage(text=msg))
@@ -403,42 +405,45 @@ def handle_text(event):
                 .order_by(StoredValueTransaction.created_at.desc())
                 .limit(8).all())
         q = StoredValueTransaction.query.filter_by(wallet_id=wallet.id).all()
-        c500 = c300 = 0
+        c500 = c300 = c100 = 0
         for t in q:
             sign = 1 if t.type == 'topup' else -1
             c500 += sign * (t.coupon_500_count or 0)
             c300 += sign * (t.coupon_300_count or 0)
+            c100 += sign * (getattr(t, 'coupon_100_count', 0) or 0)
         tz_local = pytz.timezone("Asia/Taipei")
         now_dt = datetime.now(tz_local)
         expire_dt = tz_local.localize(datetime(now_dt.year, 12, 31, 23, 59, 59))
         if now_dt > expire_dt:
             rem500 = max(c500, 0)
             rem300 = max(c300, 0)
-            if rem500 > 0 or rem300 > 0:
+            rem100 = max(c100, 0)
+            if rem500 > 0 or rem300 > 0 or rem100 > 0:
                 try:
-                    t = StoredValueTransaction()
-                    t.wallet_id = wallet.id
-                    t.type = 'consume'
-                    t.amount = 0
-                    t.remark = f"優惠券到期自動清除 {expire_dt.strftime('%Y/%m/%d')}"
-                    t.coupon_500_count = rem500
-                    t.coupon_300_count = rem300
-                    db.session.add(t)
+                    expire_txn = StoredValueTransaction()
+                    expire_txn.wallet_id = wallet.id
+                    expire_txn.type = 'consume'
+                    expire_txn.amount = 0
+                    expire_txn.remark = f"優惠券到期自動清除 {expire_dt.strftime('%Y/%m/%d')}"
+                    expire_txn.coupon_500_count = rem500
+                    expire_txn.coupon_300_count = rem300
+                    expire_txn.coupon_100_count = rem100
+                    db.session.add(expire_txn)
                     db.session.commit()
                 except Exception:
                     db.session.rollback()
-            c500 = 0
-            c300 = 0
+            c500 = c300 = c100 = 0
         else:
             c500 = max(c500, 0)
             c300 = max(c300, 0)
+            c100 = max(c100, 0)
         maybe_push_coupon_expiry_notice(user_id)
         txn_boxes = []
         if not txns:
             txn_boxes.append({"type": "text", "text": "(尚無交易紀錄)", "size": "sm", "color": "#999999"})
         else:
             for t in txns:
-                ts = t.created_at.strftime('%m/%d %H:%M') if t.created_at else ''
+                ts = t.created_at.astimezone(tz_local).strftime('%m/%d %H:%M') if t.created_at else ''
                 label = '儲值 -' if t.type == 'topup' else '扣款 -'
                 # 券文案
                 parts = []
@@ -447,11 +452,15 @@ def handle_text(event):
                         parts.append(f"新增500折價券X{t.coupon_500_count}")
                     if (t.coupon_300_count or 0) > 0:
                         parts.append(f"新增300折價券X{t.coupon_300_count}")
+                    if (getattr(t, 'coupon_100_count', 0) or 0) > 0:
+                        parts.append(f"新增100折價券X{t.coupon_100_count}")
                 else:
                     if (t.coupon_500_count or 0) > 0:
                         parts.append(f"使用500折價券X{t.coupon_500_count}")
                     if (t.coupon_300_count or 0) > 0:
                         parts.append(f"使用300折價券X{t.coupon_300_count}")
+                    if (getattr(t, 'coupon_100_count', 0) or 0) > 0:
+                        parts.append(f"使用100折價券X{t.coupon_100_count}")
                 coupon_text = '、'.join(parts) if parts else '-'
                 remark_text = t.remark or '-'
                 txn_boxes.append({
@@ -491,7 +500,7 @@ def handle_text(event):
                         {"type": "text", "text": f"{wallet.balance} 元", "size": "sm", "weight": "bold", "color": "#1b5e20", "align": "end", "flex": 5}
                     ]},
                     {"type": "box", "layout": "vertical", "margin": "md", "contents": [
-                        {"type": "text", "text": f"折價券剩餘：500券 x {c500}、300券 x {c300}", "size": "sm", "color": "#6a1b9a"}
+                        {"type": "text", "text": f"折價券剩餘：500券 x {c500}、300券 x {c300}、100券 x {c100}", "size": "sm", "color": "#6a1b9a"}
                     ]}
                 ]},
                 {"type": "separator", "margin": "md"},
@@ -516,6 +525,10 @@ def handle_text(event):
         # 已驗證用戶：若輸入手機或「儲值金」「查餘額」「餘額」直接顯示對應資訊
         if user_text in ("儲值金", "查餘額", "餘額"):
             reply_wallet(existing)
+            return
+        # Hotline 文字直接回主選單
+        if '茗殿熱線' in user_text:
+            reply_with_menu(event.reply_token, user_text)
             return
         if normalize_phone(user_text) == normalize_phone(existing.phone):
             reply = (

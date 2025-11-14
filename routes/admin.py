@@ -263,6 +263,30 @@ def wallet_home():
     return render_template('wallet.html', q=q, wallet=wallet, txns=txns, error=error,
                            coupon_500_total=coupon_500_total, coupon_300_total=coupon_300_total)
 
+@admin_bp.route('/wallet/summary')
+def wallet_summary():
+    """列出所有已有錢包的用戶：手機號碼 / 暱稱 / 編號 / 累計儲值金額 / 目前餘額。"""
+    wallets = StoredValueWallet.query.order_by(StoredValueWallet.created_at.asc()).all()
+    rows = []
+    import pytz
+    tz = pytz.timezone('Asia/Taipei')
+    for w in wallets:
+        wl = None
+        if w.whitelist_id:
+            wl = Whitelist.query.filter_by(id=w.whitelist_id).first()
+        # 累計儲值：所有 topup 交易金額相加
+        topups = StoredValueTransaction.query.filter_by(wallet_id=w.id, type='topup').all()
+        total_topup = sum(t.amount for t in topups if t.amount)
+        rows.append({
+            'phone': w.phone,
+            'nickname': (wl.name if wl and wl.name else '—'),
+            'code': (wl.id if wl else '—'),
+            'total_topup': total_topup,
+            'balance': w.balance,
+            'created_at': w.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M') if w.created_at else ''
+        })
+    return render_template('wallet_summary.html', rows=rows, count=len(rows))
+
 
 def _get_or_create_wallet_by_phone(phone):
     phone = (phone or '').strip()
