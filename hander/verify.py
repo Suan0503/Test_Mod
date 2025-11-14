@@ -442,7 +442,7 @@ def handle_text(event):
         maybe_push_coupon_expiry_notice(user_id)
         txn_boxes = []
         if not txns:
-            txn_boxes.append({"type": "text", "text": "(尚無交易紀錄)", "size": "sm", "color": "#999"})
+            txn_boxes.append({"type": "text", "text": "(尚無交易紀錄)", "size": "sm", "color": "#999999"})
         else:
             for t in txns:
                 ts = t.created_at.strftime('%m/%d %H:%M') if t.created_at else ''
@@ -452,9 +452,9 @@ def handle_text(event):
                     "type": "box",
                     "layout": "baseline",
                     "contents": [
-                        {"type": "text", "text": ts, "size": "xs", "color": "#666", "flex": 3},
+                        {"type": "text", "text": ts, "size": "xs", "color": "#666666", "flex": 3},
                         {"type": "text", "text": label, "size": "xs", "color": "#455a64", "flex": 2},
-                        {"type": "text", "text": str(t.amount), "size": "xs", "weight": "bold", "color": "#000", "flex": 2},
+                        {"type": "text", "text": str(t.amount), "size": "xs", "weight": "bold", "color": "#000000", "flex": 2},
                         {"type": "text", "text": coupon_part, "size": "xs", "color": "#8e24aa", "wrap": True, "flex": 5}
                     ]
                 })
@@ -474,7 +474,7 @@ def handle_text(event):
                     {"type": "text", "text": f"查詢時間：{now_str}", "size": "sm", "color": "#607d8b"},
                     {"type": "separator", "margin": "md"},
                     {"type": "box", "layout": "horizontal", "contents": [
-                        {"type": "text", "text": "目前餘額", "size": "sm", "color": "#555", "flex": 5},
+                        {"type": "text", "text": "目前餘額", "size": "sm", "color": "#555555", "flex": 5},
                         {"type": "text", "text": f"{wallet.balance} 元", "size": "sm", "weight": "bold", "color": "#1b5e20", "align": "end", "flex": 5}
                     ]},
                     {"type": "box", "layout": "vertical", "margin": "md", "contents": [
