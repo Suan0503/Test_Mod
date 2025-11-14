@@ -86,35 +86,41 @@
               </form>
             </div>
           </div>
-          <div class="col">
-            <div class="card">
-              <h3>扣款</h3>
-              <form method="post" action="/admin/wallet/consume" onsubmit="return confirmConsume()">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="phone" value="{{ wallet.phone }}">
-                <label>金額</label>
-                <input name="amount" type="number" min="0" required />
-                <label>備註</label>
-                <textarea name="remark" rows="2" placeholder="備註（例如：預約紀錄）"></textarea>
-                <div style="display:flex;gap:10px;margin-top:8px">
-                  <div>
-                    <label>500券</label>
-                    <input name="coupon_500_count" type="number" min="0" value="0" style="max-width:90px" />
-                  </div>
-                  <div>
-                    <label>300券</label>
-                    <input name="coupon_300_count" type="number" min="0" value="0" style="max-width:90px" />
-                  </div>
-                  <div>
-                    <label>100券</label>
-                    <input name="coupon_100_count" type="number" min="0" value="0" style="max-width:90px" />
-                  </div>
-                </div>
-                <div style="margin-top:10px"><button type="submit" class="danger">扣款</button></div>
-              </form>
+          <form id="topup-form" method="post" action="/admin/wallet/topup">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="phone" value="{{ wallet.phone }}">
+            <label>金額</label>
+            <input name="amount" type="number" min="0" required />
+            <label>備註</label>
+            <textarea name="remark" rows="2" placeholder="備註（例如：現金、轉帳後五碼...）"></textarea>
+            <div style="display:flex;gap:10px;margin-top:8px;align-items:flex-end">
+              <div>
+                <label>500券</label>
+                <input name="coupon_500_count" type="number" min="0" value="0" style="max-width:90px" />
+              </div>
+              <div>
+                <label>300券</label>
+                <input name="coupon_300_count" type="number" min="0" value="0" style="max-width:90px" />
+              </div>
+              <div>
+                <label>100券</label>
+                <input name="coupon_100_count" type="number" min="0" value="0" style="max-width:90px" />
+              </div>
             </div>
-          </div>
+            <div style="margin-top:10px"><button type="submit">儲值</button></div>
+          </form>
         </div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <h3>扣款</h3>
+          <form method="post" action="/admin/wallet/consume" onsubmit="return confirmConsume()">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="phone" value="{{ wallet.phone }}">
+            <label>金額</label>
+            <input name="amount" type="number" min="0" required />
+            <label>備註</label>
+            <textarea name="remark" rows="2" placeholder="備註（例如：預約紀錄）"></textarea>
             <div style="display:flex;gap:10px;margin-top:8px">
               <div>
                 <label>500券</label>
