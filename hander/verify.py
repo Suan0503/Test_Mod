@@ -399,10 +399,110 @@ def handle_text(event):
             return
 
     # 非管理員 / 一般流程處理
+    def reply_wallet(wl):
+        from linebot.models import FlexSendMessage
+        wallet = StoredValueWallet.query.filter_by(phone=wl.phone).first()
+        if not wallet:
+            reply_basic(event, f"目前無錢包資料（手機：{wl.phone}），請聯絡客服或稍後再試。")
+            return
+        txns = (StoredValueTransaction.query
+                .filter_by(wallet_id=wallet.id)
+                .order_by(StoredValueTransaction.created_at.desc())
+                .limit(8).all())
+        q = StoredValueTransaction.query.filter_by(wallet_id=wallet.id).all()
+        c500 = c300 = 0
+        for t in q:
+            sign = 1 if t.type == 'topup' else -1
+            c500 += sign * (t.coupon_500_count or 0)
+            c300 += sign * (t.coupon_300_count or 0)
+        tz_local = pytz.timezone("Asia/Taipei")
+        now_dt = datetime.now(tz_local)
+        expire_dt = tz_local.localize(datetime(now_dt.year, 12, 31, 23, 59, 59))
+        if now_dt > expire_dt:
+            rem500 = max(c500, 0)
+            rem300 = max(c300, 0)
+            if rem500 > 0 or rem300 > 0:
+                try:
+                    t = StoredValueTransaction()
+                    t.wallet_id = wallet.id
+                    t.type = 'consume'
+                    t.amount = 0
+                    t.remark = f"優惠券到期自動清除 {expire_dt.strftime('%Y/%m/%d')}"
+                    t.coupon_500_count = rem500
+                    t.coupon_300_count = rem300
+                    db.session.add(t)
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+            c500 = 0
+            c300 = 0
+        else:
+            c500 = max(c500, 0)
+            c300 = max(c300, 0)
+        maybe_push_coupon_expiry_notice(user_id)
+        txn_boxes = []
+        if not txns:
+            txn_boxes.append({"type": "text", "text": "(尚無交易紀錄)", "size": "sm", "color": "#999"})
+        else:
+            for t in txns:
+                ts = t.created_at.strftime('%m/%d %H:%M') if t.created_at else ''
+                label = '儲值 +' if t.type == 'topup' else '扣款 -'
+                coupon_part = f" 500券{t.coupon_500_count} 300券{t.coupon_300_count}" if (t.coupon_500_count or t.coupon_300_count) else ''
+                txn_boxes.append({
+                    "type": "box",
+                    "layout": "baseline",
+                    "contents": [
+                        {"type": "text", "text": ts, "size": "xs", "color": "#666", "flex": 3},
+                        {"type": "text", "text": label, "size": "xs", "color": "#455a64", "flex": 2},
+                        {"type": "text", "text": str(t.amount), "size": "xs", "weight": "bold", "color": "#000", "flex": 2},
+                        {"type": "text", "text": coupon_part, "size": "xs", "color": "#8e24aa", "wrap": True, "flex": 5}
+                    ]
+                })
+        now_str = now_dt.strftime('%Y/%m/%d %H:%M:%S')
+        nickname = (wl.name if wl else '') or '用戶'
+        line_id_display = wl.line_id if wl and wl.line_id else '未登記'
+        user_code = wl.id if wl else '—'
+        bubble = {
+            "type": "bubble",
+            "header": {"type": "box", "layout": "vertical", "backgroundColor": "#212121", "paddingAll": "16px", "contents": [{"type": "text", "text": "💳 儲值金資訊", "size": "lg", "weight": "bold", "color": "#FFD700", "align": "center"}]},
+            "body": {"type": "box", "layout": "vertical", "spacing": "md", "contents": [
+                {"type": "box", "layout": "vertical", "contents": [
+                    {"type": "text", "text": f"手機號碼：{wl.phone}", "size": "sm"},
+                    {"type": "text", "text": f"用戶暱稱：{nickname}", "size": "sm"},
+                    {"type": "text", "text": f"個人編號：{user_code}", "size": "sm"},
+                    {"type": "text", "text": f"LINE ID：{line_id_display}", "size": "sm"},
+                    {"type": "text", "text": f"查詢時間：{now_str}", "size": "sm", "color": "#607d8b"},
+                    {"type": "separator", "margin": "md"},
+                    {"type": "box", "layout": "horizontal", "contents": [
+                        {"type": "text", "text": "目前餘額", "size": "sm", "color": "#555", "flex": 5},
+                        {"type": "text", "text": f"{wallet.balance} 元", "size": "sm", "weight": "bold", "color": "#1b5e20", "align": "end", "flex": 5}
+                    ]},
+                    {"type": "box", "layout": "vertical", "margin": "md", "contents": [
+                        {"type": "text", "text": f"折價券剩餘：500券 x {c500}、300券 x {c300}", "size": "sm", "color": "#6a1b9a"}
+                    ]}
+                ]},
+                {"type": "separator", "margin": "md"},
+                {"type": "text", "text": "使用記錄", "size": "sm", "weight": "bold"},
+                {"type": "box", "layout": "vertical", "spacing": "xs", "contents": txn_boxes}
+            ]},
+            "footer": {"type": "box", "layout": "vertical", "spacing": "sm", "contents": [
+                {"type": "button", "style": "primary", "color": "#3F51B5", "action": {"type": "message", "label": "🏛️ 回主選單", "text": "主選單"}},
+                {"type": "button", "style": "secondary", "color": "#8E24AA", "action": {"type": "message", "label": "🔁 重新查詢", "text": "儲值金"}}
+            ]}
+        }
+        try:
+            line_bot_api.reply_message(event.reply_token, FlexSendMessage(alt_text="儲值金資訊", contents=bubble))
+        except Exception:
+            logging.exception("reply wallet flex failed")
+
     existing = Whitelist.query.filter_by(line_user_id=user_id).first()
     if existing:
         if user_text == "重新驗證":
             reply_with_reverify(event, "您已通過驗證，無法重新驗證。")
+            return
+        # 已驗證用戶：若輸入手機或「儲值金」「查餘額」「餘額」直接顯示對應資訊
+        if user_text in ("儲值金", "查餘額", "餘額"):
+            reply_wallet(existing)
             return
         if normalize_phone(user_text) == normalize_phone(existing.phone):
             reply = (
@@ -424,7 +524,7 @@ def handle_text(event):
             except Exception:
                 logging.exception("expiry notice after whitelist view failed")
         else:
-            reply_with_reverify(event, "⚠️ 已驗證，若要查看資訊請輸入您當時驗證的手機號碼。")
+            reply_with_reverify(event, "⚠️ 已驗證，若要查看資訊請輸入您當時驗證的手機號碼或輸入『儲值金』查錢包。")
         return
 
     if user_text.startswith("查詢 - "):
