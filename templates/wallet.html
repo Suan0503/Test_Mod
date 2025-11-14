@@ -70,15 +70,7 @@
           <div>手機：{{ wallet.phone or '未綁定' }}</div>
           <div>白名單編號：{{ wallet.whitelist_id or '未綁定' }}</div>
           <div>目前餘額：<b>{{ wallet.balance }}</b></div>
-          {% set txs = txns %}
-          {% set c500 = 0 %}
-          {% set c300 = 0 %}
-          {% for t in txs %}
-            {% set sign = 1 if t.type == 'topup' else -1 %}
-            {% set c500 = c500 + (sign * (t.coupon_500_count or 0)) %}
-            {% set c300 = c300 + (sign * (t.coupon_300_count or 0)) %}
-          {% endfor %}
-          <div>折價券剩餘：500券 x {{ c500 if c500>0 else 0 }}、300券 x {{ c300 if c300>0 else 0 }}</div>
+          <div>折價券剩餘：500券 x {{ coupon_500_total or 0 }}、300券 x {{ coupon_300_total or 0 }}</div>
           <div>上次到期提醒：{{ wallet.last_coupon_notice_at.strftime('%Y/%m/%d %H:%M:%S') if wallet.last_coupon_notice_at else '尚未提醒' }}</div>
         </div>
         <div class="card">
@@ -87,7 +79,7 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="phone" value="{{ wallet.phone }}">
             <label>金額</label>
-            <input name="amount" type="number" min="1" required />
+            <input name="amount" type="number" min="0" required />
             <label>備註</label>
             <textarea name="remark" rows="2" placeholder="備註（例如：現金、轉帳後五碼...）"></textarea>
             <div style="display:flex;gap:10px;margin-top:8px">
@@ -111,7 +103,7 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="phone" value="{{ wallet.phone }}">
             <label>金額</label>
-            <input name="amount" type="number" min="1" required />
+            <input name="amount" type="number" min="0" required />
             <label>備註</label>
             <textarea name="remark" rows="2" placeholder="備註（例如：預約紀錄）"></textarea>
             <div style="display:flex;gap:10px;margin-top:8px">

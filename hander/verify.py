@@ -439,20 +439,36 @@ def handle_text(event):
         else:
             for t in txns:
                 ts = t.created_at.strftime('%m/%d %H:%M') if t.created_at else ''
-                label = '儲值 +' if t.type == 'topup' else '扣款 -'
-                has_coupon = (t.coupon_500_count or 0) > 0 or (t.coupon_300_count or 0) > 0
-                if has_coupon:
-                    coupon_part = f"500券{t.coupon_500_count or 0} 300券{t.coupon_300_count or 0}"
+                label = '儲值 -' if t.type == 'topup' else '扣款 -'
+                # 券文案
+                parts = []
+                if t.type == 'topup':
+                    if (t.coupon_500_count or 0) > 0:
+                        parts.append(f"新增500折價券X{t.coupon_500_count}")
+                    if (t.coupon_300_count or 0) > 0:
+                        parts.append(f"新增300折價券X{t.coupon_300_count}")
                 else:
-                    coupon_part = "-"  # 不能空字串，避免 LINE Flex 400
+                    if (t.coupon_500_count or 0) > 0:
+                        parts.append(f"使用500折價券X{t.coupon_500_count}")
+                    if (t.coupon_300_count or 0) > 0:
+                        parts.append(f"使用300折價券X{t.coupon_300_count}")
+                coupon_text = '、'.join(parts) if parts else '-'
+                remark_text = t.remark or '-'
                 txn_boxes.append({
                     "type": "box",
-                    "layout": "baseline",
+                    "layout": "vertical",
                     "contents": [
-                        {"type": "text", "text": ts or "-", "size": "xs", "color": "#666666", "flex": 3},
-                        {"type": "text", "text": label, "size": "xs", "color": "#455a64", "flex": 2},
-                        {"type": "text", "text": str(t.amount), "size": "xs", "weight": "bold", "color": "#000000", "flex": 2},
-                        {"type": "text", "text": coupon_part, "size": "xs", "color": "#8e24aa", "wrap": True, "flex": 5}
+                        {
+                            "type": "box",
+                            "layout": "baseline",
+                            "contents": [
+                                {"type": "text", "text": ts or "-", "size": "xs", "color": "#666666", "flex": 3},
+                                {"type": "text", "text": label, "size": "xs", "color": "#455a64", "flex": 2},
+                                {"type": "text", "text": str(t.amount), "size": "xs", "weight": "bold", "color": "#000000", "flex": 2},
+                                {"type": "text", "text": coupon_text, "size": "xs", "color": "#8e24aa", "wrap": True, "flex": 5}
+                            ]
+                        },
+                        {"type": "text", "text": f"備註：{remark_text}", "size": "xxs", "color": "#555555", "wrap": True}
                     ]
                 })
         now_str = now_dt.strftime('%Y/%m/%d %H:%M:%S')

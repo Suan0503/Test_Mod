@@ -210,6 +210,8 @@ def wallet_home():
     q = (request.args.get('q') or '').strip()
     wallet = None
     txns = []
+    coupon_500_total = 0
+    coupon_300_total = 0
     error = None
     if q:
         try:
@@ -241,14 +243,25 @@ def wallet_home():
                     db.session.add(wallet)
                     db.session.commit()
             if wallet:
+                # 近期交易
                 txns = (StoredValueTransaction.query
                         .filter_by(wallet_id=wallet.id)
                         .order_by(StoredValueTransaction.created_at.desc())
                         .limit(100).all())
+                # 折價券總數（全量計算避免被limit影響）
+                all_txns = StoredValueTransaction.query.filter_by(wallet_id=wallet.id).all()
+                c500 = c300 = 0
+                for t in all_txns:
+                    sign = 1 if t.type == 'topup' else -1
+                    c500 += sign * (t.coupon_500_count or 0)
+                    c300 += sign * (t.coupon_300_count or 0)
+                coupon_500_total = max(c500, 0)
+                coupon_300_total = max(c300, 0)
         except Exception as e:
             db.session.rollback()
             error = f"資料讀取錯誤，可能尚未執行遷移：{e}"
-    return render_template('wallet.html', q=q, wallet=wallet, txns=txns, error=error)
+    return render_template('wallet.html', q=q, wallet=wallet, txns=txns, error=error,
+                           coupon_500_total=coupon_500_total, coupon_300_total=coupon_300_total)
 
 
 def _get_or_create_wallet_by_phone(phone):
@@ -272,8 +285,8 @@ def wallet_topup():
     raw_remark = (request.form.get('remark') or '').strip()
     c500 = int(request.form.get('coupon_500_count') or 0)
     c300 = int(request.form.get('coupon_300_count') or 0)
-    if amount <= 0:
-        flash('金額需為正整數','warning')
+    if amount < 0:
+        flash('金額不可為負數','warning')
         return redirect(url_for('admin.wallet_home', q=phone))
     wallet = _get_or_create_wallet_by_phone(phone)
     wallet.balance += amount
@@ -299,10 +312,10 @@ def wallet_consume():
     c500 = int(request.form.get('coupon_500_count') or 0)
     c300 = int(request.form.get('coupon_300_count') or 0)
     wallet = _get_or_create_wallet_by_phone(phone)
-    if amount <= 0:
-        flash('金額需為正整數','warning')
+    if amount < 0:
+        flash('金額不可為負數','warning')
         return redirect(url_for('admin.wallet_home', q=phone))
-    if wallet.balance < amount:
+    if amount > 0 and wallet.balance < amount:
         flash('餘額不足','danger')
         return redirect(url_for('admin.wallet_home', q=phone))
     wallet.balance -= amount
