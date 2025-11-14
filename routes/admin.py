@@ -1,11 +1,12 @@
 import os
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from models import Whitelist, Blacklist, TempVerify
+from models import Whitelist, Blacklist, TempVerify, StoredValueWallet, StoredValueTransaction
 from utils.db_utils import update_or_create_whitelist_from_data
 from hander.verify import EXTRA_NOTICE
 from linebot.models import TextSendMessage
 from extensions import line_bot_api
 from extensions import db
+from datetime import datetime
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -224,3 +225,114 @@ def tempverify_delete():
 @admin_bp.route('/schedule/')
 def admin_schedule():
     return render_template('schedule.html')
+
+
+# ========= 儲值金專區 =========
+@admin_bp.route('/wallet')
+def wallet_home():
+    q = (request.args.get('q') or '').strip()
+    wallet = None
+    txns = []
+    if q:
+        # 以手機或用戶編號查找
+        wl = None
+        if q.isdigit():
+            try:
+                wl = Whitelist.query.filter((Whitelist.phone == q) | (Whitelist.id == int(q))).first()
+            except Exception:
+                wl = Whitelist.query.filter_by(phone=q).first()
+        else:
+            wl = Whitelist.query.filter_by(phone=q).first()
+        wallet = None
+        if wl:
+            wallet = StoredValueWallet.query.filter_by(whitelist_id=wl.id).first()
+            if not wallet:
+                wallet = StoredValueWallet()
+                wallet.whitelist_id = wl.id
+                wallet.phone = wl.phone
+                wallet.balance = 0
+                db.session.add(wallet)
+                db.session.commit()
+        else:
+            wallet = StoredValueWallet.query.filter_by(phone=q).first()
+            if not wallet and q.isdigit() and len(q) == 10 and q.startswith('09'):
+                wallet = StoredValueWallet()
+                wallet.phone = q
+                wallet.balance = 0
+                db.session.add(wallet)
+                db.session.commit()
+        if wallet:
+            txns = (StoredValueTransaction.query
+                    .filter_by(wallet_id=wallet.id)
+                    .order_by(StoredValueTransaction.created_at.desc())
+                    .limit(100).all())
+    return render_template('wallet.html', q=q, wallet=wallet, txns=txns)
+
+
+def _get_or_create_wallet_by_phone(phone):
+    phone = (phone or '').strip()
+    wl = Whitelist.query.filter_by(phone=phone).first()
+    wallet = StoredValueWallet.query.filter_by(phone=phone).first()
+    if not wallet:
+        wallet = StoredValueWallet()
+        wallet.phone = phone
+        wallet.balance = 0
+        wallet.whitelist_id = wl.id if wl else None
+        db.session.add(wallet)
+        db.session.commit()
+    return wallet
+
+
+@admin_bp.route('/wallet/topup', methods=['POST'])
+def wallet_topup():
+    phone = (request.form.get('phone') or '').strip()
+    amount = int(request.form.get('amount') or 0)
+    remark = (request.form.get('remark') or '').strip()
+    c500 = int(request.form.get('coupon_500_count') or 0)
+    c300 = int(request.form.get('coupon_300_count') or 0)
+    if amount <= 0:
+        flash('金額需為正整數','warning')
+        return redirect(url_for('admin.wallet_home', q=phone))
+    wallet = _get_or_create_wallet_by_phone(phone)
+    wallet.balance += amount
+    wallet.updated_at = datetime.utcnow()
+    txn = StoredValueTransaction()
+    txn.wallet_id = wallet.id
+    txn.type = 'topup'
+    txn.amount = amount
+    txn.remark = remark
+    txn.coupon_500_count = c500
+    txn.coupon_300_count = c300
+    db.session.add(txn)
+    db.session.commit()
+    flash(f'已為 {phone} 儲值 {amount} 元，餘額 {wallet.balance}','success')
+    return redirect(url_for('admin.wallet_home', q=phone))
+
+
+@admin_bp.route('/wallet/consume', methods=['POST'])
+def wallet_consume():
+    phone = (request.form.get('phone') or '').strip()
+    amount = int(request.form.get('amount') or 0)
+    remark = (request.form.get('remark') or '').strip()
+    c500 = int(request.form.get('coupon_500_count') or 0)
+    c300 = int(request.form.get('coupon_300_count') or 0)
+    wallet = _get_or_create_wallet_by_phone(phone)
+    if amount <= 0:
+        flash('金額需為正整數','warning')
+        return redirect(url_for('admin.wallet_home', q=phone))
+    if wallet.balance < amount:
+        flash('餘額不足','danger')
+        return redirect(url_for('admin.wallet_home', q=phone))
+    wallet.balance -= amount
+    wallet.updated_at = datetime.utcnow()
+    txn = StoredValueTransaction()
+    txn.wallet_id = wallet.id
+    txn.type = 'consume'
+    txn.amount = amount
+    txn.remark = remark
+    txn.coupon_500_count = c500
+    txn.coupon_300_count = c300
+    db.session.add(txn)
+    db.session.commit()
+    flash(f'已為 {phone} 扣款 {amount} 元，餘額 {wallet.balance}','info')
+    return redirect(url_for('admin.wallet_home', q=phone))

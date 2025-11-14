@@ -4,7 +4,7 @@ from linebot.models import (
     QuickReply, QuickReplyButton, MessageAction, ImageSendMessage
 )
 from extensions import handler, line_bot_api, db
-from models import Blacklist, Whitelist, TempVerify
+from models import Blacklist, Whitelist, TempVerify, StoredValueWallet, StoredValueTransaction
 from utils.temp_users import get_temp_user, set_temp_user, pop_temp_user
 
 # 補助：取得所有暫存用戶（僅限 dict 模式）
@@ -396,6 +396,40 @@ def handle_text(event):
         else:
             msg += " X黑名單\n"
         reply_basic(event, msg)
+        return
+
+    if user_text in ("儲值金", "查餘額", "餘額"):
+        # 顯示用戶錢包餘額與最近交易
+        target_phone = None
+        wl = Whitelist.query.filter_by(line_user_id=user_id).first()
+        if wl:
+            target_phone = wl.phone
+        if not target_phone:
+            tu = get_temp_user(user_id)
+            target_phone = (tu or {}).get("phone")
+        if not target_phone:
+            reply_basic(event, "請先輸入手機號完成驗證，再使用儲值金功能。")
+            return
+        wallet = StoredValueWallet.query.filter_by(phone=target_phone).first()
+        if not wallet:
+            reply_basic(event, f"目前無錢包資料（手機：{target_phone}），請聯絡客服或稍後再試。")
+            return
+        txns = (StoredValueTransaction.query
+                .filter_by(wallet_id=wallet.id)
+                .order_by(StoredValueTransaction.created_at.desc())
+                .limit(5).all())
+        lines = [
+            f"📱 {target_phone}",
+            f"💳 目前餘額：{wallet.balance} 元",
+            "— 最近交易 —"
+        ]
+        if not txns:
+            lines.append("(無交易紀錄)")
+        else:
+            for t in txns:
+                ts = t.created_at.strftime('%m/%d %H:%M') if t.created_at else ''
+                lines.append(f"{ts} {t.type} {t.amount}｜500券{t.coupon_500_count}｜300券{t.coupon_300_count}")
+        reply_with_menu(event.reply_token, "\n".join(lines))
         return
 
     if user_text == "重新驗證":

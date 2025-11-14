@@ -113,7 +113,8 @@ with app.app_context():
             used_create_all = True
             try:
                 # stamp to latest known revision to align DB with migrations state
-                _stamp(migrations_path, '0001_add_tempverify_line_user_id')
+                from flask_migrate import stamp as _stamp  # ensure defined in this scope
+                _stamp(migrations_path, '0002_add_stored_value')
             except Exception:
                 pass
     else:
@@ -121,7 +122,7 @@ with app.app_context():
         used_create_all = True
         try:
             from flask_migrate import stamp as _stamp
-            _stamp(migrations_path, '0001_add_tempverify_line_user_id')
+            _stamp(migrations_path, '0002_add_stored_value')
         except Exception:
             pass
 
