@@ -4,7 +4,7 @@ from linebot.models import (
     QuickReply, QuickReplyButton, MessageAction, ImageSendMessage
 )
 from extensions import handler, line_bot_api, db
-from models import Blacklist, Whitelist, TempVerify, StoredValueWallet, StoredValueTransaction
+from models import Blacklist, Whitelist, TempVerify, StoredValueWallet, StoredValueTransaction, Coupon
 from utils.temp_users import get_temp_user, set_temp_user, pop_temp_user
 
 # 補助：取得所有暫存用戶（僅限 dict 模式）
@@ -402,19 +402,25 @@ def handle_text(event):
                 .filter_by(wallet_id=wallet.id)
                 .order_by(StoredValueTransaction.created_at.desc())
                 .limit(8).all())
+        # 台北時區顯示
+        tz_local = pytz.timezone("Asia/Taipei")
+        for t in txns:
+            if t.created_at and t.created_at.tzinfo is None:
+                t.created_at = t.created_at.replace(tzinfo=pytz.utc).astimezone(tz_local)
         q = StoredValueTransaction.query.filter_by(wallet_id=wallet.id).all()
-        c500 = c300 = 0
+        c500 = c300 = c100 = 0
         for t in q:
             sign = 1 if t.type == 'topup' else -1
             c500 += sign * (t.coupon_500_count or 0)
             c300 += sign * (t.coupon_300_count or 0)
-        tz_local = pytz.timezone("Asia/Taipei")
+            c100 += sign * (t.coupon_100_count or 0)
         now_dt = datetime.now(tz_local)
         expire_dt = tz_local.localize(datetime(now_dt.year, 12, 31, 23, 59, 59))
         if now_dt > expire_dt:
             rem500 = max(c500, 0)
             rem300 = max(c300, 0)
-            if rem500 > 0 or rem300 > 0:
+            rem100 = max(c100, 0)
+            if rem500 > 0 or rem300 > 0 or rem100 > 0:
                 try:
                     t = StoredValueTransaction()
                     t.wallet_id = wallet.id
@@ -423,15 +429,18 @@ def handle_text(event):
                     t.remark = f"優惠券到期自動清除 {expire_dt.strftime('%Y/%m/%d')}"
                     t.coupon_500_count = rem500
                     t.coupon_300_count = rem300
+                    t.coupon_100_count = rem100
                     db.session.add(t)
                     db.session.commit()
                 except Exception:
                     db.session.rollback()
             c500 = 0
             c300 = 0
+            c100 = 0
         else:
             c500 = max(c500, 0)
             c300 = max(c300, 0)
+            c100 = max(c100, 0)
         maybe_push_coupon_expiry_notice(user_id)
         txn_boxes = []
         if not txns:
@@ -447,11 +456,15 @@ def handle_text(event):
                         parts.append(f"新增500折價券X{t.coupon_500_count}")
                     if (t.coupon_300_count or 0) > 0:
                         parts.append(f"新增300折價券X{t.coupon_300_count}")
+                    if (t.coupon_100_count or 0) > 0:
+                        parts.append(f"新增100折價券X{t.coupon_100_count}")
                 else:
                     if (t.coupon_500_count or 0) > 0:
                         parts.append(f"使用500折價券X{t.coupon_500_count}")
                     if (t.coupon_300_count or 0) > 0:
                         parts.append(f"使用300折價券X{t.coupon_300_count}")
+                    if (t.coupon_100_count or 0) > 0:
+                        parts.append(f"使用100折價券X{t.coupon_100_count}")
                 coupon_text = '、'.join(parts) if parts else '-'
                 remark_text = t.remark or '-'
                 txn_boxes.append({
@@ -475,9 +488,37 @@ def handle_text(event):
         nickname = (wl.name if wl else '') or '用戶'
         line_id_display = wl.line_id if wl and wl.line_id else '未登記'
         user_code = wl.id if wl else '—'
+        # 其他折價券（每日/回報文）統計
+        extra_draw = {500: 0, 300: 0, 100: 0}
+        extra_report = {500: 0, 300: 0, 100: 0}
+        try:
+            if wl and wl.line_user_id:
+                extras = Coupon.query.filter_by(line_user_id=wl.line_user_id).all()
+                for c in extras:
+                    if c.amount in (500, 300, 100):
+                        if (c.type or 'draw') == 'report':
+                            extra_report[c.amount] = extra_report.get(c.amount, 0) + 1
+                        else:
+                            extra_draw[c.amount] = extra_draw.get(c.amount, 0) + 1
+        except Exception:
+            logging.exception("count extra coupons failed")
+        extra_lines = []
+        if sum(extra_draw.values()) > 0:
+            segs = []
+            if extra_draw.get(500): segs.append(f"500x{extra_draw[500]}")
+            if extra_draw.get(300): segs.append(f"300x{extra_draw[300]}")
+            if extra_draw.get(100): segs.append(f"100x{extra_draw[100]}")
+            extra_lines.append(f"每日抽獎：{'、'.join(segs)}")
+        if sum(extra_report.values()) > 0:
+            segs = []
+            if extra_report.get(500): segs.append(f"500x{extra_report[500]}")
+            if extra_report.get(300): segs.append(f"300x{extra_report[300]}")
+            if extra_report.get(100): segs.append(f"100x{extra_report[100]}")
+            extra_lines.append(f"回報文：{'、'.join(segs)}")
+        extra_text = "；".join(extra_lines) if extra_lines else "無"
         bubble = {
             "type": "bubble",
-            "header": {"type": "box", "layout": "vertical", "backgroundColor": "#212121", "paddingAll": "16px", "contents": [{"type": "text", "text": "💳 儲值金資訊", "size": "lg", "weight": "bold", "color": "#FFD700", "align": "center"}]},
+            "header": {"type": "box", "layout": "vertical", "backgroundColor": "#212121", "paddingAll": "16px", "contents": [{"type": "text", "text": "💼 我的錢包", "size": "lg", "weight": "bold", "color": "#FFD700", "align": "center"}]},
             "body": {"type": "box", "layout": "vertical", "spacing": "md", "contents": [
                 {"type": "box", "layout": "vertical", "contents": [
                     {"type": "text", "text": f"手機號碼：{wl.phone}", "size": "sm"},
@@ -491,7 +532,8 @@ def handle_text(event):
                         {"type": "text", "text": f"{wallet.balance} 元", "size": "sm", "weight": "bold", "color": "#1b5e20", "align": "end", "flex": 5}
                     ]},
                     {"type": "box", "layout": "vertical", "margin": "md", "contents": [
-                        {"type": "text", "text": f"折價券剩餘：500券 x {c500}、300券 x {c300}", "size": "sm", "color": "#6a1b9a"}
+                        {"type": "text", "text": f"折價券剩餘：500券 x {c500}、300券 x {c300}、100券 x {c100}", "size": "sm", "color": "#6a1b9a"},
+                        {"type": "text", "text": f"其他折價券（每日/回報）：{extra_text}", "size": "xs", "color": "#6a1b9a", "wrap": True}
                     ]}
                 ]},
                 {"type": "separator", "margin": "md"},
@@ -504,7 +546,7 @@ def handle_text(event):
             ]}
         }
         try:
-            line_bot_api.reply_message(event.reply_token, FlexSendMessage(alt_text="儲值金資訊", contents=bubble))
+            line_bot_api.reply_message(event.reply_token, FlexSendMessage(alt_text="我的錢包", contents=bubble))
         except Exception:
             logging.exception("reply wallet flex failed")
 
@@ -514,8 +556,12 @@ def handle_text(event):
             reply_with_reverify(event, "您已通過驗證，無法重新驗證。")
             return
         # 已驗證用戶：若輸入手機或「儲值金」「查餘額」「餘額」直接顯示對應資訊
-        if user_text in ("儲值金", "查餘額", "餘額"):
+        if user_text in ("儲值金", "查餘額", "餘額", "我的錢包"):
             reply_wallet(existing)
+            return
+        # 服務專線訊息 -> 不要顯示已驗證提示，改出主選單
+        if user_text.startswith("📞 茗殿熱線："):
+            reply_with_menu(event.reply_token)
             return
         if normalize_phone(user_text) == normalize_phone(existing.phone):
             reply = (
@@ -537,7 +583,7 @@ def handle_text(event):
             except Exception:
                 logging.exception("expiry notice after whitelist view failed")
         else:
-            reply_with_reverify(event, "⚠️ 已驗證，若要查看資訊請輸入您當時驗證的手機號碼或輸入『儲值金』查錢包。")
+            reply_with_menu(event.reply_token)
         return
 
     if user_text.startswith("查詢 - "):

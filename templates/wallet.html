@@ -70,7 +70,7 @@
           <div>手機：{{ wallet.phone or '未綁定' }}</div>
           <div>白名單編號：{{ wallet.whitelist_id or '未綁定' }}</div>
           <div>目前餘額：<b>{{ wallet.balance }}</b></div>
-          <div>折價券剩餘：500券 x {{ coupon_500_total or 0 }}、300券 x {{ coupon_300_total or 0 }}</div>
+          <div>折價券剩餘：500券 x {{ coupon_500_total or 0 }}、300券 x {{ coupon_300_total or 0 }}、100券 x {{ coupon_100_total or 0 }}</div>
           <div>上次到期提醒：{{ wallet.last_coupon_notice_at.strftime('%Y/%m/%d %H:%M:%S') if wallet.last_coupon_notice_at else '尚未提醒' }}</div>
         </div>
         <div class="card">
@@ -80,16 +80,25 @@
             <input type="hidden" name="phone" value="{{ wallet.phone }}">
             <label>金額</label>
             <input name="amount" type="number" min="0" required />
+            <div style="margin:8px 0; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+              <button type="button" onclick="applyPreset('10k')">套用 10000 元方案</button>
+              <button type="button" onclick="applyPreset('5k')">套用 5000 元方案</button>
+              <span style="font-size:.8rem;color:#666">（依日期自動帶入不同折價券組合）</span>
+            </div>
             <label>備註</label>
             <textarea name="remark" rows="2" placeholder="備註（例如：現金、轉帳後五碼...）"></textarea>
-            <div style="display:flex;gap:10px;margin-top:8px">
+            <div style="display:flex;gap:10px;margin-top:8px;align-items:flex-end;flex-wrap:wrap">
               <div>
                 <label>500券</label>
-                <input name="coupon_500_count" type="number" min="0" value="0" />
+                <input name="coupon_500_count" type="number" min="0" value="0" style="width:80px" />
               </div>
               <div>
                 <label>300券</label>
-                <input name="coupon_300_count" type="number" min="0" value="0" />
+                <input name="coupon_300_count" type="number" min="0" value="0" style="width:80px" />
+              </div>
+              <div>
+                <label>100券</label>
+                <input name="coupon_100_count" type="number" min="0" value="0" style="width:80px" />
               </div>
             </div>
             <div style="margin-top:10px"><button type="submit">儲值</button></div>
@@ -106,7 +115,7 @@
             <input name="amount" type="number" min="0" required />
             <label>備註</label>
             <textarea name="remark" rows="2" placeholder="備註（例如：預約紀錄）"></textarea>
-            <div style="display:flex;gap:10px;margin-top:8px">
+            <div style="display:flex;gap:10px;margin-top:8px;align-items:flex-end;flex-wrap:wrap">
               <div>
                 <label>500券</label>
                 <input name="coupon_500_count" type="number" min="0" value="0" />
@@ -114,6 +123,10 @@
               <div>
                 <label>300券</label>
                 <input name="coupon_300_count" type="number" min="0" value="0" />
+              </div>
+              <div>
+                <label>100券</label>
+                <input name="coupon_100_count" type="number" min="0" value="0" />
               </div>
             </div>
             <div style="margin-top:10px"><button type="submit" class="danger">扣款</button></div>
@@ -125,7 +138,7 @@
     <div class="card">
       <h3>最近交易</h3>
       <table>
-        <thead><tr><th>時間</th><th>類型</th><th>金額</th><th>備註</th><th>500券</th><th>300券</th></tr></thead>
+        <thead><tr><th>時間（台北）</th><th>類型</th><th>金額</th><th>備註</th><th>500券</th><th>300券</th><th>100券</th><th>操作</th></tr></thead>
         <tbody>
           {% for t in txns %}
           <tr>
@@ -135,6 +148,15 @@
             <td>{{ t.remark }}</td>
             <td>{{ t.coupon_500_count }}</td>
             <td>{{ t.coupon_300_count }}</td>
+            <td>{{ t.coupon_100_count }}</td>
+            <td>
+              <form method="post" action="/admin/wallet/txn/delete" onsubmit="return confirm('確認刪除此交易？')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="id" value="{{ t.id }}">
+                <input type="hidden" name="phone" value="{{ wallet.phone }}">
+                <button type="submit" class="danger">刪除</button>
+              </form>
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -142,5 +164,34 @@
     </div>
     {% endif %}
   </div>
+  <script>
+  function dateInRange(d, startMonth, startDay, endMonth, endDay){
+    const y = d.getFullYear();
+    const start = new Date(y, startMonth-1, startDay);
+    const end = new Date(y, endMonth-1, endDay, 23,59,59,999);
+    return d>=start && d<=end;
+  }
+  function applyPreset(kind){
+    const now = new Date();
+    const isFirst = dateInRange(now, 11, 14, 11, 21);
+    const isSecond = dateInRange(now, 11, 22, 11, 30);
+    const amt = (kind === '10k') ? 10000 : 5000;
+    const form = document.querySelector('form[action="/admin/wallet/topup"]');
+    if(!form) return;
+    form.querySelector('input[name="amount"]').value = amt;
+    let c500=0, c300=0, c100=0;
+    if (isFirst){
+      if (amt===10000){ c500=4; c300=6; }
+      else { c500=1; c300=3; }
+    } else if (isSecond){
+      if (amt===10000){ c500=3; c300=5; }
+      else { c500=0; c300=4; }
+    }
+    form.querySelector('input[name="coupon_500_count"]').value = c500;
+    form.querySelector('input[name="coupon_300_count"]').value = c300;
+    const c100Input = form.querySelector('input[name="coupon_100_count"]');
+    if (c100Input) c100Input.value = c100;
+  }
+  </script>
 </body>
 </html>

@@ -76,4 +76,5 @@ class StoredValueTransaction(db.Model):
     remark = db.Column(db.Text)  # 例如預約記錄
     coupon_500_count = db.Column(db.Integer, default=0, nullable=False)
     coupon_300_count = db.Column(db.Integer, default=0, nullable=False)
+    coupon_100_count = db.Column(db.Integer, default=0, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)

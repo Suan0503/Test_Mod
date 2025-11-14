@@ -7,6 +7,7 @@ from linebot.models import TextSendMessage
 from extensions import line_bot_api
 from extensions import db
 from datetime import datetime
+import pytz
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -243,25 +244,33 @@ def wallet_home():
                     db.session.add(wallet)
                     db.session.commit()
             if wallet:
-                # 近期交易
+                # 近期交易（顯示台北時間）
                 txns = (StoredValueTransaction.query
                         .filter_by(wallet_id=wallet.id)
                         .order_by(StoredValueTransaction.created_at.desc())
                         .limit(100).all())
+                tz = pytz.timezone('Asia/Taipei')
+                for t in txns:
+                    if t.created_at and t.created_at.tzinfo is None:
+                        # assume UTC stored, convert to Taipei for display convenience via a helper
+                        t.created_at = t.created_at.replace(tzinfo=pytz.utc).astimezone(tz)
                 # 折價券總數（全量計算避免被limit影響）
                 all_txns = StoredValueTransaction.query.filter_by(wallet_id=wallet.id).all()
-                c500 = c300 = 0
+                c500 = c300 = c100 = 0
                 for t in all_txns:
                     sign = 1 if t.type == 'topup' else -1
                     c500 += sign * (t.coupon_500_count or 0)
                     c300 += sign * (t.coupon_300_count or 0)
+                    c100 += sign * (t.coupon_100_count or 0)
                 coupon_500_total = max(c500, 0)
                 coupon_300_total = max(c300, 0)
+                coupon_100_total = max(c100, 0)
         except Exception as e:
             db.session.rollback()
             error = f"資料讀取錯誤，可能尚未執行遷移：{e}"
     return render_template('wallet.html', q=q, wallet=wallet, txns=txns, error=error,
-                           coupon_500_total=coupon_500_total, coupon_300_total=coupon_300_total)
+                           coupon_500_total=coupon_500_total, coupon_300_total=coupon_300_total,
+                           coupon_100_total=locals().get('coupon_100_total', 0))
 
 
 def _get_or_create_wallet_by_phone(phone):
@@ -285,6 +294,7 @@ def wallet_topup():
     raw_remark = (request.form.get('remark') or '').strip()
     c500 = int(request.form.get('coupon_500_count') or 0)
     c300 = int(request.form.get('coupon_300_count') or 0)
+    c100 = int(request.form.get('coupon_100_count') or 0)
     if amount < 0:
         flash('金額不可為負數','warning')
         return redirect(url_for('admin.wallet_home', q=phone))
@@ -298,6 +308,7 @@ def wallet_topup():
     txn.remark = raw_remark if raw_remark else 'TOPUP_CASH'
     txn.coupon_500_count = c500
     txn.coupon_300_count = c300
+    txn.coupon_100_count = c100
     db.session.add(txn)
     db.session.commit()
     flash(f'已為 {phone} 儲值 {amount} 元，餘額 {wallet.balance}','success')
@@ -311,6 +322,7 @@ def wallet_consume():
     raw_remark = (request.form.get('remark') or '').strip()
     c500 = int(request.form.get('coupon_500_count') or 0)
     c300 = int(request.form.get('coupon_300_count') or 0)
+    c100 = int(request.form.get('coupon_100_count') or 0)
     wallet = _get_or_create_wallet_by_phone(phone)
     if amount < 0:
         flash('金額不可為負數','warning')
@@ -327,7 +339,33 @@ def wallet_consume():
     txn.remark = raw_remark if raw_remark else 'CONSUME_SERVICE'
     txn.coupon_500_count = c500
     txn.coupon_300_count = c300
+    txn.coupon_100_count = c100
     db.session.add(txn)
     db.session.commit()
     flash(f'已為 {phone} 扣款 {amount} 元，餘額 {wallet.balance}','info')
+    return redirect(url_for('admin.wallet_home', q=phone))
+
+@admin_bp.route('/wallet/txn/delete', methods=['POST'])
+def wallet_txn_delete():
+    tid = request.form.get('id')
+    phone = request.form.get('phone')
+    txn = StoredValueTransaction.query.filter_by(id=tid).first()
+    if not txn:
+        flash('找不到該交易','warning')
+        return redirect(url_for('admin.wallet_home', q=phone))
+    # 調整餘額（若為扣款刪除，需把金額加回；若為儲值刪除，需把金額扣回）
+    wallet = StoredValueWallet.query.filter_by(id=txn.wallet_id).first()
+    if wallet:
+        if txn.type == 'consume':
+            wallet.balance += max(txn.amount, 0)
+        else:
+            wallet.balance -= max(txn.amount, 0)
+        wallet.updated_at = datetime.utcnow()
+        try:
+            db.session.delete(txn)
+            db.session.commit()
+            flash('交易已刪除並調整餘額','info')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'刪除失敗：{e}','danger')
     return redirect(url_for('admin.wallet_home', q=phone))
