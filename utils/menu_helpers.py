@@ -4,15 +4,17 @@ from extensions import line_bot_api
 from storage import ADMIN_IDS  # 管理員清單
 from secrets import choice as secrets_choice
 
-# ================= 聖誕風主題配色 =================
-XMAS_BG_1   = "#0F3D3E"
-XMAS_BG_2   = "#092324"
-XMAS_GOLD   = "#FFD54F"
-XMAS_RED    = "#C62828"
-XMAS_GREEN  = "#2E7D32"
-XMAS_MINT   = "#26A69A"
-XMAS_SNOW   = "#ECEFF1"
-XMAS_STEEL  = "#455A64"
+# ================= 魔法學院配色（可依喜好微調） - 現代化調整 =================
+# 簡潔現代主題：深色底，輔以亮色強調，按鈕風格調整
+MAG_BG_1   = "#212121"  # 深灰（頁1底，更現代）
+MAG_BG_2   = "#121212"  # 幾乎黑（頁2底）
+MAG_GOLD   = "#FFD700"  # 亮金色/強調
+MAG_PARCH  = "#B0BEC5"  # 羊皮紙灰（輔助文字）
+MAG_BURG   = "#E53935"  # 亮紅色（警示/主要操作）
+MAG_EMER   = "#00C853"  # 亮綠色（成功/功能）
+MAG_INDIGO = "#3F51B5"  # 亮藍色（主要按鈕）
+MAG_PURPLE = "#8E24AA"  # 紫色（次要強調）
+MAG_STEEL  = "#424242"  # 鋼灰（分隔線）
 
 # ====== 共用：隨機客服/預約群連結 ======
 def choose_link():
@@ -39,8 +41,8 @@ JKF_LINKS = [
 
 # ====== 廣告專區（魔法學院主題）======
 def get_ad_menu():
-    btn_primary   = XMAS_GREEN
-    btn_secondary = XMAS_RED
+    btn_primary   = MAG_INDIGO   # 亮藍色
+    btn_secondary = MAG_PURPLE   # 紫色
 
     buttons = []
     for i, link in enumerate(JKF_LINKS):
@@ -66,7 +68,7 @@ def get_ad_menu():
             "header": {
                 "type": "box",
                 "layout": "vertical",
-                "backgroundColor": XMAS_BG_2,
+                "backgroundColor": MAG_BG_2,
                 "paddingAll": "16px",
                 "contents": [{
                     "type": "text",
@@ -74,16 +76,16 @@ def get_ad_menu():
                     "weight": "bold",
                     "size": "lg",
                     "align": "center",
-                    "color": XMAS_GOLD
+                    "color": MAG_GOLD
                 }]
             },
             "body": {
                 "type": "box",
                 "layout": "vertical",
-                "backgroundColor": XMAS_BG_2,
+                "backgroundColor": MAG_BG_2,
                 "spacing": "md",
                 "contents": [
-                    {"type": "separator", "color": XMAS_STEEL},
+                    {"type": "separator", "color": MAG_STEEL},
                     {"type": "box", "layout": "vertical", "spacing": "sm", "margin": "lg", "contents": buttons}
                 ]
             },
@@ -93,12 +95,12 @@ def get_ad_menu():
 
 # ====== 魔法學院主選單（兩頁 Carousel）- **更新版** ======
 def get_menu_carousel():
-    # 聖誕主題配色
-    COLOR_PRIMARY = XMAS_GREEN
-    COLOR_ACCENT = XMAS_MINT
-    COLOR_SECONDARY = XMAS_RED
-    COLOR_GRAY = XMAS_SNOW
-    COLOR_ALERT = XMAS_RED
+    # 新現代主題配色
+    COLOR_PRIMARY = MAG_INDIGO
+    COLOR_ACCENT = MAG_EMER
+    COLOR_SECONDARY = MAG_PURPLE
+    COLOR_GRAY = MAG_PARCH
+    COLOR_ALERT = MAG_BURG
 
     # 第一頁 - 主功能
     page1 = {
@@ -107,7 +109,7 @@ def get_menu_carousel():
         "header": {
             "type": "box",
             "layout": "vertical",
-            "backgroundColor": XMAS_BG_1,
+            "backgroundColor": MAG_BG_1,
             "paddingAll": "16px",
             "contents": [{
                 "type": "text",
@@ -115,16 +117,16 @@ def get_menu_carousel():
                 "weight": "bold",
                 "align": "center",
                 "size": "lg",
-                "color": XMAS_GOLD
+                "color": MAG_GOLD
             }]
         },
         "body": {
             "type": "box",
             "layout": "vertical",
-            "backgroundColor": XMAS_BG_1,
+            "backgroundColor": MAG_BG_1,
             "spacing": "md",
             "contents": [
-                {"type": "separator", "color": XMAS_STEEL},
+                {"type": "separator", "color": MAG_STEEL},
                 {
                     "type": "box",
                     "layout": "vertical",
@@ -179,7 +181,7 @@ def get_menu_carousel():
         "header": {
             "type": "box",
             "layout": "vertical",
-            "backgroundColor": XMAS_BG_2,
+            "backgroundColor": MAG_BG_2,
             "paddingAll": "16px",
             "contents": [{
                 "type": "text",
@@ -187,16 +189,16 @@ def get_menu_carousel():
                 "weight": "bold",
                 "align": "center",
                 "size": "lg",
-                "color": XMAS_GOLD
+                "color": MAG_GOLD
             }]
         },
         "body": {
             "type": "box",
             "layout": "vertical",
-            "backgroundColor": XMAS_BG_2,
+            "backgroundColor": MAG_BG_2,
             "spacing": "md",
             "contents": [
-                {"type": "separator", "color": XMAS_STEEL},
+                {"type": "separator", "color": MAG_STEEL},
                 {
                     "type": "box",
                     "layout": "vertical",
@@ -214,12 +216,19 @@ def get_menu_carousel():
                             "style": "primary",
                             "color": COLOR_ACCENT
                         },
-                        # 2. 我的錢包（合併儲值金/優惠券）
+                        # 2. 優惠券專區
                         {
                             "type": "button",
-                            "action": {"type": "message", "label": "� 我的錢包（餘額/折價券）", "text": "我的錢包"},
+                            "action": {"type": "message", "label": "💸 優惠券專區", "text": "折價券管理"},
                             "style": "primary",
                             "color": COLOR_PRIMARY
+                        },
+                        # 2.5. 儲值金專區
+                        {
+                            "type": "button",
+                            "action": {"type": "message", "label": "💳 儲值金專區", "text": "儲值金"},
+                            "style": "primary",
+                            "color": COLOR_ACCENT
                         },
                         # 3. 呼叫管理員
                         {
@@ -246,7 +255,7 @@ def get_menu_carousel():
     }
 
     return FlexSendMessage(
-        alt_text="茗殿聖誕主選單",
+        alt_text="茗殿現代主選單",
         contents={"type": "carousel", "contents": [page1, page2]}
     )
 

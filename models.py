@@ -76,15 +76,4 @@ class StoredValueTransaction(db.Model):
     remark = db.Column(db.Text)  # 例如預約記錄
     coupon_500_count = db.Column(db.Integer, default=0, nullable=False)
     coupon_300_count = db.Column(db.Integer, default=0, nullable=False)
-    coupon_100_count = db.Column(db.Integer, default=0, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-
-# 個別折價券（用於有期限 / 無期限管理）
-class StoredValueCoupon(db.Model):
-    __tablename__ = "stored_value_coupon"
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    wallet_id = db.Column(db.Integer, index=True, nullable=False)
-    amount = db.Column(db.Integer, nullable=False)  # 100/200/300/500
-    expiry_date = db.Column(db.DateTime)  # None 代表無期限；有值則為到期日（23:59:59 統一處理）
-    source = db.Column(db.String(20), default="manual")  # manual / preset / draw / report
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)

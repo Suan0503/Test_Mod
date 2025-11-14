@@ -1,9 +1,7 @@
 import random
-from datetime import datetime, time
+from datetime import datetime
 from pytz import timezone
 from linebot.models import FlexSendMessage
-from models import Whitelist, StoredValueWallet, StoredValueCoupon
-from typing import Optional
 
 def draw_coupon():
     """
@@ -31,52 +29,19 @@ def has_drawn_today(user_id, CouponModel):
     today = datetime.now(tz).date()
     return CouponModel.query.filter_by(line_user_id=user_id, date=str(today)).first()
 
-def save_coupon_record(user_id, amount, CouponModel, db, type: str = "draw", coupon_type: Optional[str] = None):
+def save_coupon_record(user_id, amount, CouponModel, db):
     """
-    儲存今日抽獎結果（Coupon 表），若中獎(amount>0) 同步建立 StoredValueCoupon（當日到期，source=draw）。
+    儲存今日抽獎結果
     """
     tz = timezone("Asia/Taipei")
-    now = datetime.now(tz)
-    today = now.date()
-    # 1) 紀錄於 Coupon (歷史)
-    record_type = coupon_type if coupon_type else type
+    today = datetime.now(tz).date()
     new_coupon = CouponModel(
         line_user_id=user_id,
         amount=amount,
         date=str(today),
-        created_at=now,
-        type=record_type
+        created_at=datetime.now(tz)
     )
     db.session.add(new_coupon)
-    # 2) 若中獎，寫入 stored_value_coupon 以便錢包/扣款使用
-    try:
-        if amount and amount > 0:
-            wl = Whitelist.query.filter_by(line_user_id=user_id).first()
-            if wl:
-                wallet = StoredValueWallet.query.filter_by(whitelist_id=wl.id).first()
-                if not wallet:
-                    wallet = StoredValueWallet()
-                    wallet.whitelist_id = wl.id
-                    wallet.phone = wl.phone
-                    wallet.balance = 0
-                    db.session.add(wallet)
-                    db.session.flush()
-                # 設定到期為當日 23:59:59
-                expiry_dt = datetime.combine(today, time(23,59,59))
-                # 儲存為台北時間 aware datetime，避免誤判日期
-                try:
-                    expiry_dt = timezone('Asia/Taipei').localize(expiry_dt)
-                except Exception:
-                    pass
-                svc = StoredValueCoupon()
-                svc.wallet_id = wallet.id
-                svc.amount = amount
-                svc.expiry_date = expiry_dt
-                svc.source = 'draw'
-                db.session.add(svc)
-    except Exception:
-        # 若寫入 stored_value_coupon 失敗，不阻斷 Coupon 記錄
-        pass
     db.session.commit()
     return new_coupon
 
