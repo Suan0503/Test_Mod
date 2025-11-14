@@ -1,6 +1,6 @@
 import os
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from models import Whitelist, Blacklist, TempVerify, StoredValueWallet, StoredValueTransaction
+from models import Whitelist, Blacklist, TempVerify, StoredValueWallet, StoredValueTransaction, StoredValueCoupon
 from utils.db_utils import update_or_create_whitelist_from_data
 from hander.verify import EXTRA_NOTICE
 from linebot.models import TextSendMessage
@@ -213,6 +213,10 @@ def wallet_home():
     txns = []
     coupon_500_total = 0
     coupon_300_total = 0
+    # 新：折價券詳細（有期限、無期限、今日抽獎）
+    expiring_coupons = []  # list of dict {amount, expiry_date_str, count}
+    permanent_coupons = []  # list of dict {amount, count}
+    today_draw_coupons = []  # list of dict {amount, count}
     error = None
     if q:
         try:
@@ -265,12 +269,38 @@ def wallet_home():
                 coupon_500_total = max(c500, 0)
                 coupon_300_total = max(c300, 0)
                 coupon_100_total = max(c100, 0)
+                # 讀取單張折價券
+                coupons = StoredValueCoupon.query.filter_by(wallet_id=wallet.id).all()
+                tz = pytz.timezone('Asia/Taipei')
+                today = datetime.now(tz).date()
+                # 分類
+                temp_exp_map = {}  # key (amount, expiry_str) -> count
+                temp_perm_map = {}  # key amount -> count
+                for c in coupons:
+                    expiry_str = None
+                    if c.expiry_date:
+                        expiry_local = c.expiry_date if c.expiry_date.tzinfo else c.expiry_date.replace(tzinfo=pytz.utc).astimezone(tz)
+                        expiry_str = expiry_local.strftime('%Y/%m/%d')
+                        # 今日抽獎券：source=draw 且 expiry=今日
+                        if c.source == 'draw' and expiry_local.date() == today:
+                            # 顯示在今日抽獎券
+                            today_draw_coupons.append({'amount': c.amount, 'count': 1})
+                        key = (c.amount, expiry_str)
+                        temp_exp_map[key] = temp_exp_map.get(key, 0) + 1
+                    else:
+                        temp_perm_map[c.amount] = temp_perm_map.get(c.amount, 0) + 1
+                for (amt, exp_str), cnt in sorted(temp_exp_map.items(), key=lambda x: (x[0][1], x[0][0])):
+                    expiring_coupons.append({'amount': amt, 'expiry': exp_str, 'count': cnt})
+                for amt, cnt in sorted(temp_perm_map.items()):
+                    permanent_coupons.append({'amount': amt, 'count': cnt})
         except Exception as e:
             db.session.rollback()
             error = f"資料讀取錯誤，可能尚未執行遷移：{e}"
     return render_template('wallet.html', q=q, wallet=wallet, txns=txns, error=error,
                            coupon_500_total=coupon_500_total, coupon_300_total=coupon_300_total,
-                           coupon_100_total=locals().get('coupon_100_total', 0))
+                           coupon_100_total=locals().get('coupon_100_total', 0),
+                           expiring_coupons=expiring_coupons, permanent_coupons=permanent_coupons,
+                           today_draw_coupons=today_draw_coupons)
 
 
 def _get_or_create_wallet_by_phone(phone):
@@ -295,6 +325,14 @@ def wallet_topup():
     c500 = int(request.form.get('coupon_500_count') or 0)
     c300 = int(request.form.get('coupon_300_count') or 0)
     c100 = int(request.form.get('coupon_100_count') or 0)
+    expiry_mode = request.form.get('coupon_expiry_mode') or 'expiring'
+    expiry_date_raw = request.form.get('coupon_expiry_date') or '2026-01-31'
+    expiry_dt = None
+    try:
+        if expiry_mode == 'expiring':
+            expiry_dt = datetime.strptime(expiry_date_raw, '%Y-%m-%d')
+    except Exception:
+        expiry_dt = None
     if amount < 0:
         flash('金額不可為負數','warning')
         return redirect(url_for('admin.wallet_home', q=phone))
@@ -310,6 +348,18 @@ def wallet_topup():
     txn.coupon_300_count = c300
     txn.coupon_100_count = c100
     db.session.add(txn)
+    # 建立單張折價券記錄
+    def _add_coupons(count, amount):
+        for _ in range(count):
+            sc = StoredValueCoupon()
+            sc.wallet_id = wallet.id
+            sc.amount = amount
+            sc.expiry_date = expiry_dt if expiry_mode == 'expiring' else None
+            sc.source = 'preset' if raw_remark == 'TOPUP_CASH' else 'manual'
+            db.session.add(sc)
+    _add_coupons(c500, 500)
+    _add_coupons(c300, 300)
+    _add_coupons(c100, 100)
     db.session.commit()
     flash(f'已為 {phone} 儲值 {amount} 元，餘額 {wallet.balance}','success')
     return redirect(url_for('admin.wallet_home', q=phone))
@@ -341,6 +391,25 @@ def wallet_consume():
     txn.coupon_300_count = c300
     txn.coupon_100_count = c100
     db.session.add(txn)
+    # 扣除單張折價券：依 expiry_date 由最近到期優先，其次無期限
+    def _consume_coupons(amount, count):
+        if count <= 0:
+            return
+        q = StoredValueCoupon.query.filter_by(wallet_id=wallet.id, amount=amount).all()
+        # 排序：有期限 => 到期日升冪；無期限最後
+        q_sorted = sorted(q, key=lambda c: (c.expiry_date is None, c.expiry_date or datetime.max))
+        removed = 0
+        for c in q_sorted:
+            if removed >= count:
+                break
+            try:
+                db.session.delete(c)
+                removed += 1
+            except Exception:
+                pass
+    _consume_coupons(500, c500)
+    _consume_coupons(300, c300)
+    _consume_coupons(100, c100)
     db.session.commit()
     flash(f'已為 {phone} 扣款 {amount} 元，餘額 {wallet.balance}','info')
     return redirect(url_for('admin.wallet_home', q=phone))

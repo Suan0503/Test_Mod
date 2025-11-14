@@ -42,42 +42,74 @@ migrate = Migrate(app, db, directory=os.path.join(os.path.dirname(__file__), 'mi
 # APScheduler：每日清除過期優惠券（若有殘留未查詢）
 try:
     from apscheduler.schedulers.background import BackgroundScheduler
+    from linebot.models import TextSendMessage
     scheduler = BackgroundScheduler(timezone='Asia/Taipei')
 
-    def expire_coupons_job():
-        from models import StoredValueWallet, StoredValueTransaction
+    def daily_coupon_maintenance_job():
+        """每日 00:10:
+        1. 刪除所有已過期 stored_value_coupon (expiry_date < 今天 00:00)
+        2. 有期限券統一到期為 2026/01/31：於剩餘 30/25/20/15/10/5/0 天提醒一次。
+        3. 每日抽獎券過期後即刪除 (屬於 step1)。
+        """
         import pytz
-        from datetime import datetime as _dt
+        from datetime import datetime as _dt, date
+        from models import StoredValueWallet, StoredValueCoupon, Whitelist
+        from extensions import line_bot_api
         tz = pytz.timezone('Asia/Taipei')
         now_dt = _dt.now(tz)
-        expire_dt = tz.localize(_dt(now_dt.year, 12, 31, 23, 59, 59))
-        if now_dt.date() != expire_dt.date():
-            return  # 僅在 12/31 當天執行一次批次清除
-        wallets = StoredValueWallet.query.all()
-        for w in wallets:
-            txns = StoredValueTransaction.query.filter_by(wallet_id=w.id).all()
-            c500 = c300 = 0
-            for t in txns:
-                sign = 1 if t.type == 'topup' else -1
-                c500 += sign * (t.coupon_500_count or 0)
-                c300 += sign * (t.coupon_300_count or 0)
-            c500 = max(c500,0)
-            c300 = max(c300,0)
-            if c500 > 0 or c300 > 0:
+        today_date = now_dt.date()
+        # 1. 刪除已過期券
+        try:
+            expired = StoredValueCoupon.query.filter(StoredValueCoupon.expiry_date.isnot(None)).all()
+            removed_ids = []
+            for c in expired:
                 try:
-                    txn = StoredValueTransaction()
-                    txn.wallet_id = w.id
-                    txn.type = 'consume'
-                    txn.amount = 0
-                    txn.remark = f"AUTO_EXPIRE {expire_dt.strftime('%Y/%m/%d')}"
-                    txn.coupon_500_count = c500
-                    txn.coupon_300_count = c300
-                    db.session.add(txn)
-                    db.session.commit()
+                    exp_local = c.expiry_date if c.expiry_date.tzinfo else c.expiry_date.replace(tzinfo=pytz.utc).astimezone(tz)
                 except Exception:
-                    db.session.rollback()
-    scheduler.add_job(expire_coupons_job, 'cron', hour=0, minute=10, id='expire_coupons_daily')
-    scheduler.start()
+                    exp_local = c.expiry_date
+                if exp_local.date() < today_date:
+                    removed_ids.append(c.id)
+                    db.session.delete(c)
+            if removed_ids:
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
+        # 2. 統一到期目標日期提醒
+        unify_expiry = date(2026, 1, 31)
+        days_left = (unify_expiry - today_date).days
+        remind_days_set = {0,5,10,15,20,25,30}
+        if 0 <= days_left <= 30 and days_left in remind_days_set:
+            try:
+                wallets = StoredValueWallet.query.all()
+                for w in wallets:
+                    coupons = StoredValueCoupon.query.filter_by(wallet_id=w.id).all()
+                    exp_counts = {}
+                    for c in coupons:
+                        if c.expiry_date:
+                            exp_counts[c.amount] = exp_counts.get(c.amount,0)+1
+                    if not exp_counts:
+                        continue
+                    wl_entry = Whitelist.query.filter_by(phone=w.phone).first()
+                    if not (wl_entry and wl_entry.line_user_id):
+                        continue
+                    parts = [f"{amt}元x{cnt}" for amt,cnt in sorted(exp_counts.items())]
+                    detail = '、'.join(parts)
+                    base_msg = f"提醒：您的有期限折價券將於 {unify_expiry.strftime('%Y/%m/%d')} 到期。剩餘 {detail}"
+                    if days_left == 0:
+                        base_msg += "\n(今天到期，請盡速使用)"
+                    try:
+                        line_bot_api.push_message(wl_entry.line_user_id, TextSendMessage(text=base_msg))
+                    except Exception:
+                        pass
+            except Exception:
+                db.session.rollback()
+        # 3. 每日抽獎券在 step1 已刪除
+
+    try:
+        scheduler.add_job(daily_coupon_maintenance_job, 'cron', hour=0, minute=10, id='daily_coupon_maintenance')
+        scheduler.start()
+    except Exception:
+        pass
 except Exception:
     pass  # 若未安裝 apscheduler 則略過排程功能
 
@@ -258,6 +290,13 @@ with app.app_context():
                     db.session.commit()
         except Exception:
             db.session.rollback()
+
+    # 兼容補丁：建立 stored_value_coupon 表（若不存在）簡易 create（僅 SQLite/PG 常用欄位）
+    try:
+        db.session.execute(text("CREATE TABLE IF NOT EXISTS stored_value_coupon (id SERIAL PRIMARY KEY, wallet_id INTEGER NOT NULL, amount INTEGER NOT NULL, expiry_date TIMESTAMP NULL, source VARCHAR(20), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))

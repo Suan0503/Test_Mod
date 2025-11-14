@@ -4,7 +4,7 @@ from linebot.models import (
     QuickReply, QuickReplyButton, MessageAction, ImageSendMessage
 )
 from extensions import handler, line_bot_api, db
-from models import Blacklist, Whitelist, TempVerify, StoredValueWallet, StoredValueTransaction, Coupon
+from models import Blacklist, Whitelist, TempVerify, StoredValueWallet, StoredValueTransaction, Coupon, StoredValueCoupon
 from utils.temp_users import get_temp_user, set_temp_user, pop_temp_user
 
 # 補助：取得所有暫存用戶（僅限 dict 模式）
@@ -73,54 +73,8 @@ EXTRA_NOTICE = (
 )
 
 def maybe_push_coupon_expiry_notice(user_id):
-    """在 12/10~12/31 期間，針對已驗證用戶每日第一次顯示折價券到期提醒。"""
-    try:
-        wl = Whitelist.query.filter_by(line_user_id=user_id).first()
-        if not wl:
-            return
-        wallet = StoredValueWallet.query.filter_by(phone=wl.phone).first()
-        if not wallet:
-            return
-        tz = pytz.timezone("Asia/Taipei")
-        now_dt = datetime.now(tz)
-        notice_start = tz.localize(datetime(now_dt.year, 12, 10, 0, 0, 0))
-        expire_dt = tz.localize(datetime(now_dt.year, 12, 31, 23, 59, 59))
-        if not (notice_start <= now_dt <= expire_dt):
-            return
-        q = StoredValueTransaction.query.filter_by(wallet_id=wallet.id).all()
-        c500 = c300 = 0
-        for t in q:
-            sign = 1 if t.type == 'topup' else -1
-            c500 += sign * (t.coupon_500_count or 0)
-            c300 += sign * (t.coupon_300_count or 0)
-        c500 = max(c500, 0)
-        c300 = max(c300, 0)
-        if c500 <= 0 and c300 <= 0:
-            return
-        last = wallet.last_coupon_notice_at
-        show_notice = False
-        if not last:
-            show_notice = True
-        else:
-            last_local = last.astimezone(tz)
-            show_notice = last_local.date() < now_dt.date()
-        if not show_notice:
-            return
-        msg = (
-            f"提醒：您的折價券將於 {expire_dt.strftime('%Y/%m/%d')} 到期。\n"
-            f"目前剩餘：500券 x {c500}、300券 x {c300}"
-        )
-        try:
-            line_bot_api.push_message(user_id, TextSendMessage(text=msg))
-        except Exception:
-            pass
-        wallet.last_coupon_notice_at = datetime.utcnow()
-        try:
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-    except Exception:
-        logging.exception("maybe_push_coupon_expiry_notice failed")
+    """Deprecated: 新到期提醒由 daily_coupon_maintenance_job 集中處理。保留函式避免舊呼叫錯誤。"""
+    return
 
 def make_qr(*labels_texts):
     """快速小工具：產生 QuickReply from tuples(label, text)"""
@@ -488,26 +442,40 @@ def handle_text(event):
         nickname = (wl.name if wl else '') or '用戶'
         line_id_display = wl.line_id if wl and wl.line_id else '未登記'
         user_code = wl.id if wl else '—'
-        # 其他折價券（僅顯示「每日抽獎」），含 100/200/300/500 面額
-        extra_draw = {100: 0, 200: 0, 300: 0, 500: 0}
+        # 新：讀取細項折價券（有期限 / 無期限 / 今日抽獎）
+        exp_map = {}  # (amount, expiry_str) -> count
+        perm_map = {}  # amount -> count
+        today_draw = []
         try:
-            if wl and wl.line_user_id:
-                extras = Coupon.query.filter_by(line_user_id=wl.line_user_id).all()
-                for c in extras:
-                    amt = int(c.amount or 0)
-                    if (c.type or 'draw') == 'draw' and amt in (100, 200, 300, 500):
-                        extra_draw[amt] = extra_draw.get(amt, 0) + 1
+            coupons = StoredValueCoupon.query.filter_by(wallet_id=wallet.id).all()
+            tz = pytz.timezone('Asia/Taipei')
+            today_date = datetime.now(tz).date()
+            for c in coupons:
+                exp_str = None
+                if c.expiry_date:
+                    exp_local = c.expiry_date if c.expiry_date.tzinfo else c.expiry_date.replace(tzinfo=pytz.utc).astimezone(tz)
+                    exp_str = exp_local.strftime('%Y/%m/%d')
+                    key = (c.amount, exp_str)
+                    exp_map[key] = exp_map.get(key, 0) + 1
+                    if c.source == 'draw' and exp_local.date() == today_date:
+                        today_draw.append(c.amount)
+                else:
+                    perm_map[c.amount] = perm_map.get(c.amount, 0) + 1
         except Exception:
-            logging.exception("count extra coupons failed")
-        if sum(extra_draw.values()) > 0:
-            segs = []
-            if extra_draw.get(100): segs.append(f"100元x{extra_draw[100]}")
-            if extra_draw.get(200): segs.append(f"200元x{extra_draw[200]}")
-            if extra_draw.get(300): segs.append(f"300元x{extra_draw[300]}")
-            if extra_draw.get(500): segs.append(f"500元x{extra_draw[500]}")
-            extra_text = '、'.join(segs)
-        else:
-            extra_text = "無"
+            logging.exception('build coupon maps failed')
+        exp_lines = []
+        for (amt, es), cnt in sorted(exp_map.items(), key=lambda x: (x[0][1], x[0][0])):
+            exp_lines.append(f"{amt}元 x {cnt} ({es})")
+        perm_lines = []
+        for amt, cnt in sorted(perm_map.items()):
+            perm_lines.append(f"{amt}元 x {cnt}")
+        draw_line = ''
+        if today_draw:
+            td_counts = {}
+            for a in today_draw: td_counts[a] = td_counts.get(a,0)+1
+            parts = [f"{a}元x{td_counts[a]}" for a in sorted(td_counts)]
+            draw_line = '、'.join(parts)
+        # 組合顯示區塊（使用多行 text）
         bubble = {
             "type": "bubble",
             "header": {"type": "box", "layout": "vertical", "backgroundColor": "#212121", "paddingAll": "16px", "contents": [{"type": "text", "text": "💼 我的錢包", "size": "lg", "weight": "bold", "color": "#FFD700", "align": "center"}]},
@@ -524,8 +492,11 @@ def handle_text(event):
                         {"type": "text", "text": f"{wallet.balance} 元", "size": "sm", "weight": "bold", "color": "#1b5e20", "align": "end", "flex": 5}
                     ]},
                     {"type": "box", "layout": "vertical", "margin": "md", "contents": [
-                        {"type": "text", "text": f"折價券剩餘：500券 x {c500}、300券 x {c300}", "size": "sm", "color": "#6a1b9a"},
-                        {"type": "text", "text": f"其他折價券（每日抽獎）：{extra_text}", "size": "xs", "color": "#6a1b9a", "wrap": True}
+                        {"type": "text", "text": "有期限折價券：", "size": "sm", "color": "#6a1b9a"},
+                        {"type": "text", "text": ("\n".join(exp_lines) or "無"), "size": "xs", "wrap": True, "color": "#6a1b9a"},
+                        {"type": "text", "text": "每日抽獎券（當日）：" + (draw_line or "無"), "size": "xs", "wrap": True, "color": "#6a1b9a"},
+                        {"type": "text", "text": "無期限折價券：", "size": "sm", "color": "#6a1b9a", "margin": "md"},
+                        {"type": "text", "text": ("\n".join(perm_lines) or "無"), "size": "xs", "wrap": True, "color": "#6a1b9a"}
                     ]}
                 ]},
                 {"type": "separator", "margin": "md"},
