@@ -419,6 +419,10 @@ def handle_text(event):
                 line_bot_api.push_message(user_id, TextSendMessage(text=EXTRA_NOTICE))
             except Exception:
                 logging.exception("push EXTRA_NOTICE after existing whitelist view failed")
+            try:
+                maybe_push_coupon_expiry_notice(user_id)
+            except Exception:
+                logging.exception("expiry notice after whitelist view failed")
         else:
             reply_with_reverify(event, "⚠️ 已驗證，若要查看資訊請輸入您當時驗證的手機號碼。")
         return
@@ -612,6 +616,10 @@ def handle_text(event):
                 line_bot_api.push_message(user_id, TextSendMessage(text=EXTRA_NOTICE))
             except Exception:
                 logging.exception("push EXTRA_NOTICE after phone bind failed")
+            try:
+                maybe_push_coupon_expiry_notice(user_id)
+            except Exception:
+                logging.exception("expiry notice after phone bind failed")
             pop_temp_user(user_id)
             return
     if not get_temp_user(user_id) and re.match(r"^09\d{8}$", phone_candidate):
@@ -783,6 +791,10 @@ def handle_image(event):
                 line_bot_api.push_message(user_id, TextSendMessage(text=EXTRA_NOTICE))
             except Exception:
                 logging.exception("push EXTRA_NOTICE after fast_pass failed")
+            try:
+                maybe_push_coupon_expiry_notice(user_id)
+            except Exception:
+                logging.exception("expiry notice after fast_pass failed")
             pop_temp_user(user_id)
 
         # 修正：用 .strip().lower() 強化容錯
@@ -897,6 +909,10 @@ def handle_post_ocr_confirm(event):
                 line_bot_api.push_message(user_id, TextSendMessage(text=EXTRA_NOTICE))
             except Exception:
                 logging.exception("push EXTRA_NOTICE after post_ocr confirm failed")
+            try:
+                maybe_push_coupon_expiry_notice(user_id)
+            except Exception:
+                logging.exception("expiry notice after post_ocr confirm failed")
             pop_temp_user(user_id)
             return True
         # 管理員人工驗證流程
@@ -931,6 +947,10 @@ def handle_post_ocr_confirm(event):
                     line_bot_api.push_message(user_id, TextSendMessage(text=EXTRA_NOTICE))
                 except Exception:
                     logging.exception("push EXTRA_NOTICE after manual verify confirm failed")
+                try:
+                    maybe_push_coupon_expiry_notice(user_id)
+                except Exception:
+                    logging.exception("expiry notice after manual verify confirm failed")
                 manual_verify_pending.pop(user_id, None)
                 pop_temp_user(user_id)
                 return True

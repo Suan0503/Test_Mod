@@ -287,7 +287,7 @@ def _get_or_create_wallet_by_phone(phone):
 def wallet_topup():
     phone = (request.form.get('phone') or '').strip()
     amount = int(request.form.get('amount') or 0)
-    remark = (request.form.get('remark') or '').strip()
+    raw_remark = (request.form.get('remark') or '').strip()
     c500 = int(request.form.get('coupon_500_count') or 0)
     c300 = int(request.form.get('coupon_300_count') or 0)
     if amount <= 0:
@@ -300,7 +300,7 @@ def wallet_topup():
     txn.wallet_id = wallet.id
     txn.type = 'topup'
     txn.amount = amount
-    txn.remark = remark
+    txn.remark = raw_remark if raw_remark else 'TOPUP_CASH'
     txn.coupon_500_count = c500
     txn.coupon_300_count = c300
     db.session.add(txn)
@@ -313,7 +313,7 @@ def wallet_topup():
 def wallet_consume():
     phone = (request.form.get('phone') or '').strip()
     amount = int(request.form.get('amount') or 0)
-    remark = (request.form.get('remark') or '').strip()
+    raw_remark = (request.form.get('remark') or '').strip()
     c500 = int(request.form.get('coupon_500_count') or 0)
     c300 = int(request.form.get('coupon_300_count') or 0)
     wallet = _get_or_create_wallet_by_phone(phone)
@@ -329,7 +329,7 @@ def wallet_consume():
     txn.wallet_id = wallet.id
     txn.type = 'consume'
     txn.amount = amount
-    txn.remark = remark
+    txn.remark = raw_remark if raw_remark else 'CONSUME_SERVICE'
     txn.coupon_500_count = c500
     txn.coupon_300_count = c300
     db.session.add(txn)
