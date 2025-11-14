@@ -488,34 +488,26 @@ def handle_text(event):
         nickname = (wl.name if wl else '') or '用戶'
         line_id_display = wl.line_id if wl and wl.line_id else '未登記'
         user_code = wl.id if wl else '—'
-        # 其他折價券（每日/回報文）統計
-        extra_draw = {500: 0, 300: 0, 100: 0}
-        extra_report = {500: 0, 300: 0, 100: 0}
+        # 其他折價券（僅顯示「每日抽獎」），含 100/200/300/500 面額
+        extra_draw = {100: 0, 200: 0, 300: 0, 500: 0}
         try:
             if wl and wl.line_user_id:
                 extras = Coupon.query.filter_by(line_user_id=wl.line_user_id).all()
                 for c in extras:
-                    if c.amount in (500, 300, 100):
-                        if (c.type or 'draw') == 'report':
-                            extra_report[c.amount] = extra_report.get(c.amount, 0) + 1
-                        else:
-                            extra_draw[c.amount] = extra_draw.get(c.amount, 0) + 1
+                    amt = int(c.amount or 0)
+                    if (c.type or 'draw') == 'draw' and amt in (100, 200, 300, 500):
+                        extra_draw[amt] = extra_draw.get(amt, 0) + 1
         except Exception:
             logging.exception("count extra coupons failed")
-        extra_lines = []
         if sum(extra_draw.values()) > 0:
             segs = []
-            if extra_draw.get(500): segs.append(f"500x{extra_draw[500]}")
-            if extra_draw.get(300): segs.append(f"300x{extra_draw[300]}")
-            if extra_draw.get(100): segs.append(f"100x{extra_draw[100]}")
-            extra_lines.append(f"每日抽獎：{'、'.join(segs)}")
-        if sum(extra_report.values()) > 0:
-            segs = []
-            if extra_report.get(500): segs.append(f"500x{extra_report[500]}")
-            if extra_report.get(300): segs.append(f"300x{extra_report[300]}")
-            if extra_report.get(100): segs.append(f"100x{extra_report[100]}")
-            extra_lines.append(f"回報文：{'、'.join(segs)}")
-        extra_text = "；".join(extra_lines) if extra_lines else "無"
+            if extra_draw.get(100): segs.append(f"100元x{extra_draw[100]}")
+            if extra_draw.get(200): segs.append(f"200元x{extra_draw[200]}")
+            if extra_draw.get(300): segs.append(f"300元x{extra_draw[300]}")
+            if extra_draw.get(500): segs.append(f"500元x{extra_draw[500]}")
+            extra_text = '、'.join(segs)
+        else:
+            extra_text = "無"
         bubble = {
             "type": "bubble",
             "header": {"type": "box", "layout": "vertical", "backgroundColor": "#212121", "paddingAll": "16px", "contents": [{"type": "text", "text": "💼 我的錢包", "size": "lg", "weight": "bold", "color": "#FFD700", "align": "center"}]},
@@ -532,8 +524,8 @@ def handle_text(event):
                         {"type": "text", "text": f"{wallet.balance} 元", "size": "sm", "weight": "bold", "color": "#1b5e20", "align": "end", "flex": 5}
                     ]},
                     {"type": "box", "layout": "vertical", "margin": "md", "contents": [
-                        {"type": "text", "text": f"折價券剩餘：500券 x {c500}、300券 x {c300}、100券 x {c100}", "size": "sm", "color": "#6a1b9a"},
-                        {"type": "text", "text": f"其他折價券（每日/回報）：{extra_text}", "size": "xs", "color": "#6a1b9a", "wrap": True}
+                        {"type": "text", "text": f"折價券剩餘：500券 x {c500}、300券 x {c300}", "size": "sm", "color": "#6a1b9a"},
+                        {"type": "text", "text": f"其他折價券（每日抽獎）：{extra_text}", "size": "xs", "color": "#6a1b9a", "wrap": True}
                     ]}
                 ]},
                 {"type": "separator", "margin": "md"},
