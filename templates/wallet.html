@@ -52,6 +52,14 @@
         <input name="q" value="{{ q or '' }}" placeholder="輸入手機或用戶編號查詢" />
         <button type="submit">查詢</button>
       </form>
+  {% if error %}
+  <div style="margin-top:10px;color:#d32f2f;font-size:.85rem;">{{ error }}</div>
+  {% endif %}
+  {% if not wallet and q %}
+  <div style="margin-top:10px;color:#666;font-size:.85rem;">未找到資料，可確認是否輸入正確或該手機尚未建立錢包（可直接儲值自動建立）。</div>
+  {% elif not wallet and not q %}
+  <div style="margin-top:10px;color:#666;font-size:.85rem;">請先輸入手機或白名單編號查詢。</div>
+  {% endif %}
     </div>
 
     {% if wallet %}
