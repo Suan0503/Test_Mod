@@ -212,6 +212,7 @@ def wallet_home():
     txns = []
     coupon_500_total = 0
     coupon_300_total = 0
+    coupon_100_total = 0
     error = None
     if q:
         try:
@@ -248,20 +249,44 @@ def wallet_home():
                         .filter_by(wallet_id=wallet.id)
                         .order_by(StoredValueTransaction.created_at.desc())
                         .limit(100).all())
+                # 轉換時間為台北時區字串
+                try:
+                    import pytz
+                    tz = pytz.timezone('Asia/Taipei')
+                    utc = pytz.utc
+                    for _t in txns:
+                        dt = getattr(_t, 'created_at', None)
+                        if dt:
+                            if dt.tzinfo is None:
+                                dt = utc.localize(dt)
+                            local_dt = dt.astimezone(tz)
+                            _t.local_time_str = local_dt.strftime('%Y/%m/%d %H:%M')
+                        else:
+                            _t.local_time_str = ''
+                except Exception:
+                    for _t in txns:
+                        _t.local_time_str = _t.created_at.strftime('%Y/%m/%d %H:%M') if _t.created_at else ''
                 # 折價券總數（全量計算避免被limit影響）
                 all_txns = StoredValueTransaction.query.filter_by(wallet_id=wallet.id).all()
-                c500 = c300 = 0
+                c500 = c300 = c100 = 0
                 for t in all_txns:
                     sign = 1 if t.type == 'topup' else -1
                     c500 += sign * (t.coupon_500_count or 0)
                     c300 += sign * (t.coupon_300_count or 0)
+                    # 可能舊資料無欄位
+                    try:
+                        c100 += sign * (getattr(t, 'coupon_100_count', 0) or 0)
+                    except Exception:
+                        pass
                 coupon_500_total = max(c500, 0)
                 coupon_300_total = max(c300, 0)
+                coupon_100_total = max(c100, 0)
         except Exception as e:
             db.session.rollback()
             error = f"資料讀取錯誤，可能尚未執行遷移：{e}"
     return render_template('wallet.html', q=q, wallet=wallet, txns=txns, error=error,
-                           coupon_500_total=coupon_500_total, coupon_300_total=coupon_300_total)
+                           coupon_500_total=coupon_500_total, coupon_300_total=coupon_300_total,
+                           coupon_100_total=coupon_100_total)
 
 @admin_bp.route('/wallet/summary')
 def wallet_summary():
@@ -309,6 +334,7 @@ def wallet_topup():
     raw_remark = (request.form.get('remark') or '').strip()
     c500 = int(request.form.get('coupon_500_count') or 0)
     c300 = int(request.form.get('coupon_300_count') or 0)
+    c100 = int(request.form.get('coupon_100_count') or 0)
     if amount < 0:
         flash('金額不可為負數','warning')
         return redirect(url_for('admin.wallet_home', q=phone))
@@ -322,6 +348,10 @@ def wallet_topup():
     txn.remark = raw_remark if raw_remark else 'TOPUP_CASH'
     txn.coupon_500_count = c500
     txn.coupon_300_count = c300
+    try:
+        txn.coupon_100_count = c100
+    except Exception:
+        pass
     db.session.add(txn)
     db.session.commit()
     flash(f'已為 {phone} 儲值 {amount} 元，餘額 {wallet.balance}','success')
@@ -335,6 +365,7 @@ def wallet_consume():
     raw_remark = (request.form.get('remark') or '').strip()
     c500 = int(request.form.get('coupon_500_count') or 0)
     c300 = int(request.form.get('coupon_300_count') or 0)
+    c100 = int(request.form.get('coupon_100_count') or 0)
     wallet = _get_or_create_wallet_by_phone(phone)
     if amount < 0:
         flash('金額不可為負數','warning')
@@ -351,7 +382,31 @@ def wallet_consume():
     txn.remark = raw_remark if raw_remark else 'CONSUME_SERVICE'
     txn.coupon_500_count = c500
     txn.coupon_300_count = c300
+    try:
+        txn.coupon_100_count = c100
+    except Exception:
+        pass
     db.session.add(txn)
     db.session.commit()
     flash(f'已為 {phone} 扣款 {amount} 元，餘額 {wallet.balance}','info')
     return redirect(url_for('admin.wallet_home', q=phone))
+
+@admin_bp.route('/wallet/txn/delete', methods=['POST'])
+def wallet_txn_delete():
+    tid = request.form.get('id')
+    q = request.form.get('q') or ''
+    if not tid:
+        flash('缺少交易 ID','warning')
+        return redirect(url_for('admin.wallet_home', q=q))
+    t = StoredValueTransaction.query.filter_by(id=tid).first()
+    if not t:
+        flash('找不到交易紀錄','danger')
+        return redirect(url_for('admin.wallet_home', q=q))
+    try:
+        db.session.delete(t)
+        db.session.commit()
+        flash('已刪除一筆交易','info')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'刪除失敗：{e}','danger')
+    return redirect(url_for('admin.wallet_home', q=q))
