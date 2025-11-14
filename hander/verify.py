@@ -453,7 +453,11 @@ def handle_text(event):
             for c in coupons:
                 exp_str = None
                 if c.expiry_date:
-                    exp_local = c.expiry_date if c.expiry_date.tzinfo else c.expiry_date.replace(tzinfo=pytz.utc).astimezone(tz)
+                    # 將 naive 視為台北時間
+                    if c.expiry_date.tzinfo:
+                        exp_local = c.expiry_date.astimezone(tz)
+                    else:
+                        exp_local = tz.localize(c.expiry_date)
                     exp_str = exp_local.strftime('%Y/%m/%d')
                     key = (c.amount, exp_str)
                     exp_map[key] = exp_map.get(key, 0) + 1

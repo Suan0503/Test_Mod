@@ -63,7 +63,11 @@ def save_coupon_record(user_id, amount, CouponModel, db, type: str = "draw", cou
                     db.session.flush()
                 # 設定到期為當日 23:59:59
                 expiry_dt = datetime.combine(today, time(23,59,59))
-                # 資料庫若需時區，這裡維持 naive 本地或由應用層轉換
+                # 儲存為台北時間 aware datetime，避免誤判日期
+                try:
+                    expiry_dt = timezone('Asia/Taipei').localize(expiry_dt)
+                except Exception:
+                    pass
                 svc = StoredValueCoupon()
                 svc.wallet_id = wallet.id
                 svc.amount = amount

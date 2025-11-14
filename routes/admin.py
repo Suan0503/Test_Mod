@@ -281,7 +281,11 @@ def wallet_home():
                 for c in coupons:
                     expiry_str = None
                     if c.expiry_date:
-                        expiry_local = c.expiry_date if c.expiry_date.tzinfo else c.expiry_date.replace(tzinfo=pytz.utc).astimezone(tz)
+                        # 將 naive 視為台北時間，不再誤當 UTC 轉換
+                        if c.expiry_date.tzinfo:
+                            expiry_local = c.expiry_date.astimezone(tz)
+                        else:
+                            expiry_local = tz.localize(c.expiry_date)
                         expiry_str = expiry_local.strftime('%Y/%m/%d')
                         # 今日抽獎券：source=draw 且 expiry=今日
                         if c.source == 'draw' and expiry_local.date() == today:
