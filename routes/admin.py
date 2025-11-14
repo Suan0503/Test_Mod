@@ -213,6 +213,7 @@ def wallet_home():
     coupon_500_total = 0
     coupon_300_total = 0
     coupon_100_total = 0
+    wl_user = None
     error = None
     if q:
         try:
@@ -281,12 +282,20 @@ def wallet_home():
                 coupon_500_total = max(c500, 0)
                 coupon_300_total = max(c300, 0)
                 coupon_100_total = max(c100, 0)
+                # 用戶資訊（暱稱、LINE ID）
+                try:
+                    if wallet.whitelist_id:
+                        wl_user = Whitelist.query.filter_by(id=wallet.whitelist_id).first()
+                    elif wallet.phone:
+                        wl_user = Whitelist.query.filter_by(phone=wallet.phone).first()
+                except Exception:
+                    wl_user = None
         except Exception as e:
             db.session.rollback()
             error = f"資料讀取錯誤，可能尚未執行遷移：{e}"
     return render_template('wallet.html', q=q, wallet=wallet, txns=txns, error=error,
                            coupon_500_total=coupon_500_total, coupon_300_total=coupon_300_total,
-                           coupon_100_total=coupon_100_total)
+                           coupon_100_total=coupon_100_total, wl_user=wl_user)
 
 @admin_bp.route('/wallet/summary')
 def wallet_summary():

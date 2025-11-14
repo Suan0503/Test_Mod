@@ -47,11 +47,18 @@
     {% endif %}
   {% endwith %}
   <div class="container">
-    <div class="card">
-      <form method="get" action="/admin/wallet" style="display:flex;gap:10px;align-items:center">
-        <input name="q" value="{{ q or '' }}" placeholder="輸入手機或用戶編號查詢" />
-        <button type="submit">查詢</button>
-      </form>
+    <div class="row">
+      <div class="col">
+        <div class="card">
+          <h3>用戶資訊</h3>
+          <div>手機：{{ wallet.phone or '未綁定' }}</div>
+          <div>白名單編號：{{ wallet.whitelist_id or '未綁定' }}</div>
+          <div>用戶暱稱：{{ (wl_user.name if wl_user and wl_user.name else '—') }}</div>
+          <div>LINE ID：{{ (wl_user.line_id if wl_user and wl_user.line_id else '未登記') }}</div>
+          <div>目前餘額：<b>{{ wallet.balance }}</b></div>
+          <div>折價券剩餘：500券 x {{ coupon_500_total or 0 }}、300券 x {{ coupon_300_total or 0 }}、100券 x {{ coupon_100_total or 0 }}</div>
+          <div>上次到期提醒：{{ wallet.last_coupon_notice_at.strftime('%Y/%m/%d %H:%M:%S') if wallet.last_coupon_notice_at else '尚未提醒' }}</div>
+        </div>
   {% if error %}
   <div style="margin-top:10px;color:#d32f2f;font-size:.85rem;">{{ error }}</div>
   {% endif %}
