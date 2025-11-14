@@ -71,7 +71,7 @@ def admin_dashboard():
 # 白名單
 @admin_bp.route('/whitelist/search')
 def whitelist_search():
-    q = request.args.get('q', '').strip()
+    q = request.args.get('q','').strip()
     view = request.args.get('view')
     if q:
         whitelists = Whitelist.query.filter(
@@ -84,29 +84,6 @@ def whitelist_search():
     if view == 'home':
         return render_home(whitelists=whitelists, active_tab='whitelist')
     return render_dashboard(whitelists=whitelists)
-
-
-@admin_bp.route('/whitelist/add', methods=['POST'])
-def whitelist_add():
-    phone = request.form.get('phone','').strip()
-    name = request.form.get('name','').strip()
-    line_id = request.form.get('line_id','').strip()
-    if not phone or not name or not line_id:
-        flash('白名單新增資料不完整','warning')
-        return redirect(url_for('admin.home', tab='whitelist'))
-    if Whitelist.query.filter_by(phone=phone).first():
-        flash('手機已存在於白名單','warning')
-        return redirect(url_for('admin.home', tab='whitelist'))
-    w = Whitelist()
-    w.phone = phone
-    w.name = name
-    w.line_id = line_id
-    db.session.add(w)
-    db.session.commit()
-    flash('白名單新增成功','success')
-    return redirect(url_for('admin.home', tab='whitelist'))
-
-
 @admin_bp.route('/whitelist/delete', methods=['POST'])
 def whitelist_delete():
     phone = request.form.get('phone','').strip()
@@ -233,40 +210,45 @@ def wallet_home():
     q = (request.args.get('q') or '').strip()
     wallet = None
     txns = []
+    error = None
     if q:
-        # 以手機或用戶編號查找
-        wl = None
-        if q.isdigit():
-            try:
-                wl = Whitelist.query.filter((Whitelist.phone == q) | (Whitelist.id == int(q))).first()
-            except Exception:
+        try:
+            # 以手機或用戶編號查找
+            wl = None
+            if q.isdigit():
+                try:
+                    wl = Whitelist.query.filter((Whitelist.phone == q) | (Whitelist.id == int(q))).first()
+                except Exception:
+                    wl = Whitelist.query.filter_by(phone=q).first()
+            else:
                 wl = Whitelist.query.filter_by(phone=q).first()
-        else:
-            wl = Whitelist.query.filter_by(phone=q).first()
-        wallet = None
-        if wl:
-            wallet = StoredValueWallet.query.filter_by(whitelist_id=wl.id).first()
-            if not wallet:
-                wallet = StoredValueWallet()
-                wallet.whitelist_id = wl.id
-                wallet.phone = wl.phone
-                wallet.balance = 0
-                db.session.add(wallet)
-                db.session.commit()
-        else:
-            wallet = StoredValueWallet.query.filter_by(phone=q).first()
-            if not wallet and q.isdigit() and len(q) == 10 and q.startswith('09'):
-                wallet = StoredValueWallet()
-                wallet.phone = q
-                wallet.balance = 0
-                db.session.add(wallet)
-                db.session.commit()
-        if wallet:
-            txns = (StoredValueTransaction.query
-                    .filter_by(wallet_id=wallet.id)
-                    .order_by(StoredValueTransaction.created_at.desc())
-                    .limit(100).all())
-    return render_template('wallet.html', q=q, wallet=wallet, txns=txns)
+            wallet = None
+            if wl:
+                wallet = StoredValueWallet.query.filter_by(whitelist_id=wl.id).first()
+                if not wallet:
+                    wallet = StoredValueWallet()
+                    wallet.whitelist_id = wl.id
+                    wallet.phone = wl.phone
+                    wallet.balance = 0
+                    db.session.add(wallet)
+                    db.session.commit()
+            else:
+                wallet = StoredValueWallet.query.filter_by(phone=q).first()
+                if not wallet and q.isdigit() and len(q) == 10 and q.startswith('09'):
+                    wallet = StoredValueWallet()
+                    wallet.phone = q
+                    wallet.balance = 0
+                    db.session.add(wallet)
+                    db.session.commit()
+            if wallet:
+                txns = (StoredValueTransaction.query
+                        .filter_by(wallet_id=wallet.id)
+                        .order_by(StoredValueTransaction.created_at.desc())
+                        .limit(100).all())
+        except Exception as e:
+            db.session.rollback()
+            error = f"資料讀取錯誤，可能尚未執行遷移：{e}"
+    return render_template('wallet.html', q=q, wallet=wallet, txns=txns, error=error)
 
 
 def _get_or_create_wallet_by_phone(phone):

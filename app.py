@@ -221,6 +221,24 @@ with app.app_context():
         db.session.commit()
     except Exception:
         db.session.rollback()
+    # 兼容補丁：確保 stored_value_wallet 有 last_coupon_notice_at 欄位
+    try:
+        # PostgreSQL 支援 IF NOT EXISTS
+        db.session.execute(text("ALTER TABLE stored_value_wallet ADD COLUMN IF NOT EXISTS last_coupon_notice_at TIMESTAMP"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        # SQLite 無 IF NOT EXISTS：檢查後再新增
+        try:
+            engine_name = db.get_engine().name
+            if engine_name == 'sqlite':
+                info = db.session.execute(text("PRAGMA table_info(stored_value_wallet)")).fetchall()
+                cols = {row[1] for row in info}
+                if 'last_coupon_notice_at' not in cols:
+                    db.session.execute(text("ALTER TABLE stored_value_wallet ADD COLUMN last_coupon_notice_at TIMESTAMP"))
+                    db.session.commit()
+        except Exception:
+            db.session.rollback()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
