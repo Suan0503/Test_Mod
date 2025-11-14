@@ -290,15 +290,32 @@ def wallet_home():
 
 @admin_bp.route('/wallet/summary')
 def wallet_summary():
-    """列出所有已有錢包的用戶：手機號碼 / 暱稱 / 編號 / 累計儲值金額 / 目前餘額。"""
-    wallets = StoredValueWallet.query.order_by(StoredValueWallet.created_at.asc()).all()
+    """列出所有已有錢包的用戶：手機號碼 / 暱稱 / 編號 / 累計儲值金額 / 目前餘額 / 折價券(500/300/100)。支援手機搜尋。"""
+    q = (request.args.get('q') or '').strip()
+    base_query = StoredValueWallet.query
+    if q:
+        base_query = base_query.filter(StoredValueWallet.phone.like(f"%{q}%"))
+    wallets = base_query.order_by(StoredValueWallet.created_at.asc()).all()
     rows = []
     import pytz
     tz = pytz.timezone('Asia/Taipei')
     for w in wallets:
-        # 跳過完全沒有交易且餘額為 0 的空錢包（可能因刪除交易後清理）
-        txn_count = StoredValueTransaction.query.filter_by(wallet_id=w.id).count()
-        if txn_count == 0 and (w.balance or 0) == 0:
+        # 計算折價券總數
+        txns = StoredValueTransaction.query.filter_by(wallet_id=w.id).all()
+        c500 = c300 = c100 = 0
+        for t in txns:
+            sign = 1 if t.type == 'topup' else -1
+            c500 += sign * (t.coupon_500_count or 0)
+            c300 += sign * (t.coupon_300_count or 0)
+            try:
+                c100 += sign * (getattr(t, 'coupon_100_count', 0) or 0)
+            except Exception:
+                pass
+        c500 = max(c500, 0)
+        c300 = max(c300, 0)
+        c100 = max(c100, 0)
+        # 若餘額與所有折價券皆為 0，從總表隱藏
+        if (w.balance or 0) == 0 and c500 == 0 and c300 == 0 and c100 == 0:
             continue
         wl = None
         if w.whitelist_id:
@@ -312,9 +329,12 @@ def wallet_summary():
             'code': (wl.id if wl else '—'),
             'total_topup': total_topup,
             'balance': w.balance,
+            'c500': c500,
+            'c300': c300,
+            'c100': c100,
             'created_at': w.created_at.astimezone(tz).strftime('%Y/%m/%d %H:%M') if w.created_at else ''
         })
-    return render_template('wallet_summary.html', rows=rows, count=len(rows))
+    return render_template('wallet_summary.html', rows=rows, count=len(rows), q=q)
 
 
 def _get_or_create_wallet_by_phone(phone):

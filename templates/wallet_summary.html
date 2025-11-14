@@ -23,6 +23,10 @@
     <a href="/admin/home">回後台主頁</a>
   </div>
   <div class="container">
+    <form method="get" action="/admin/wallet/summary" style="display:flex;gap:10px;margin-bottom:10px">
+      <input type="text" name="q" value="{{ q or '' }}" placeholder="輸入手機號碼搜尋" style="flex:1;padding:8px 10px;border:1px solid #b2dfdb;border-radius:8px">
+      <button type="submit" style="background:#00897b;color:#fff;border:none;padding:8px 14px;border-radius:10px">搜尋</button>
+    </form>
     <div class="count">共 {{ count }} 筆錢包</div>
     <table>
       <thead>
@@ -32,6 +36,9 @@
           <th>白名單編號</th>
           <th>累計儲值金額</th>
           <th>目前餘額</th>
+          <th>500券</th>
+          <th>300券</th>
+          <th>100券</th>
           <th>建立時間</th>
         </tr>
       </thead>
@@ -43,6 +50,9 @@
           <td>{{ r.code }}</td>
           <td>{{ r.total_topup }}</td>
           <td>{{ r.balance }}</td>
+          <td>{{ r.c500 }}</td>
+          <td>{{ r.c300 }}</td>
+          <td>{{ r.c100 }}</td>
           <td>{{ r.created_at }}</td>
         </tr>
         {% endfor %}

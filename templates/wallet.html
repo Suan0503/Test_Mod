@@ -66,22 +66,14 @@
     <div class="row">
       <div class="col">
         <div class="card">
-          <h3>用戶資訊</h3>
-          <div>手機：{{ wallet.phone or '未綁定' }}</div>
-          <div>白名單編號：{{ wallet.whitelist_id or '未綁定' }}</div>
-          <div>目前餘額：<b>{{ wallet.balance }}</b></div>
-          <div>折價券剩餘：500券 x {{ coupon_500_total or 0 }}、300券 x {{ coupon_300_total or 0 }}、100券 x {{ coupon_100_total or 0 }}</div>
-          <div>上次到期提醒：{{ wallet.last_coupon_notice_at.strftime('%Y/%m/%d %H:%M:%S') if wallet.last_coupon_notice_at else '尚未提醒' }}</div>
-        </div>
-        <div class="card">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
             <h3 style="margin:0">儲值</h3>
             <div style="display:flex;gap:8px">
-              <button type="button" onclick="applyPreset(10000)" style="background:#5e35b1">套用 10000 方案</button>
-              <button type="button" onclick="applyPreset(5000)" style="background:#5e35b1">套用 5000 方案</button>
+              <button type="button" onclick="applyPreset(10000)">10000 元方案</button>
+              <button type="button" onclick="applyPreset(5000)">5000 元方案</button>
             </div>
           </div>
-          <form method="post" action="/admin/wallet/topup">
+          <form id="topup-form" method="post" action="/admin/wallet/topup">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="phone" value="{{ wallet.phone }}">
             <label>金額</label>
@@ -100,10 +92,6 @@
               <div>
                 <label>100券</label>
                 <input name="coupon_100_count" type="number" min="0" value="0" style="max-width:90px" />
-              </div>
-              <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
-                <button type="button" onclick="applyPreset(10000)">套用 10000 方案</button>
-                <button type="button" onclick="applyPreset(5000)">套用 5000 方案</button>
               </div>
             </div>
             <div style="margin-top:10px"><button type="submit">儲值</button></div>
@@ -170,35 +158,33 @@
     {% endif %}
   </div>
   <script>
-    // 預設方案：依照日期區間自動填入金額與券數（100券不自動給）
-    function applyPreset(amount){
-      const now = new Date();
-      // JS 月份 0-11
-      const m = now.getMonth()+1; // 1-12
-      const d = now.getDate();
-      // 重設欄位
-      document.querySelector('input[name="amount"]').value = amount;
-      const c500 = document.querySelector('input[name="coupon_500_count"]');
-      const c300 = document.querySelector('input[name="coupon_300_count"]');
-      const c100 = document.querySelector('input[name="coupon_100_count"]');
+    // 依照日期區間自動帶入 10000/5000 預設方案（只作用於上方儲值表單）
+    function applyPreset(total){
+      const form = document.getElementById('topup-form');
+      if(!form) return;
+      const amountEl = form.querySelector('input[name="amount"]');
+      const c500El = form.querySelector('input[name="coupon_500_count"]');
+      const c300El = form.querySelector('input[name="coupon_300_count"]');
+      const c100El = form.querySelector('input[name="coupon_100_count"]');
+      if(amountEl) amountEl.value = total;
       let v500 = 0, v300 = 0;
-      // 區間一：11/14–11/21
+      const now = new Date();
+      const m = now.getMonth() + 1; // 1-12
+      const d = now.getDate();
       const inA = (m === 11 && d >= 14 && d <= 21);
-      // 區間二：11/22–11/30
       const inB = (m === 11 && d >= 22 && d <= 30);
       if(inA){
-        if(amount === 10000){ v500 = 4; v300 = 6; }
-        else if(amount === 5000){ v500 = 1; v300 = 3; }
+        if(total === 10000){ v500 = 4; v300 = 6; }
+        else if(total === 5000){ v500 = 1; v300 = 3; }
       } else if(inB){
-        if(amount === 10000){ v500 = 3; v300 = 5; }
-        else if(amount === 5000){ v500 = 0; v300 = 4; }
+        if(total === 10000){ v500 = 3; v300 = 5; }
+        else if(total === 5000){ v500 = 0; v300 = 4; }
       } else {
-        // 非活動區間，保留 0，僅帶入金額
         v500 = 0; v300 = 0;
       }
-      c500.value = v500;
-      c300.value = v300;
-      if(c100) c100.value = 0; // 100券不自動給，保留手動
+      if(c500El) c500El.value = v500;
+      if(c300El) c300El.value = v300;
+      if(c100El) c100El.value = 0; // 100券不自動給
     }
   </script>
 </body>
