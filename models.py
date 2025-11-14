@@ -62,6 +62,8 @@ class StoredValueWallet(db.Model):
     balance = db.Column(db.Integer, default=0, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    # 每日到期提醒用
+    last_coupon_notice_at = db.Column(db.DateTime)
 
 
 # 儲值金交易紀錄

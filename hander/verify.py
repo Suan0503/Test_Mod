@@ -72,6 +72,57 @@ EXTRA_NOTICE = (
     "❤️如果有需要刪除總機的好友跟對話，可以再加入總機後索取該總機的QR碼保存❤️"
 )
 
+def maybe_push_coupon_expiry_notice(user_id):
+    """在 12/10~12/31 期間，針對已驗證用戶每日第一次顯示折價券到期提醒。"""
+    try:
+        wl = Whitelist.query.filter_by(line_user_id=user_id).first()
+        if not wl:
+            return
+        wallet = StoredValueWallet.query.filter_by(phone=wl.phone).first()
+        if not wallet:
+            return
+        tz = pytz.timezone("Asia/Taipei")
+        now_dt = datetime.now(tz)
+        notice_start = tz.localize(datetime(now_dt.year, 12, 10, 0, 0, 0))
+        expire_dt = tz.localize(datetime(now_dt.year, 12, 31, 23, 59, 59))
+        if not (notice_start <= now_dt <= expire_dt):
+            return
+        # 計算券剩餘
+        q = StoredValueTransaction.query.filter_by(wallet_id=wallet.id).all()
+        c500 = c300 = 0
+        for t in q:
+            sign = 1 if t.type == 'topup' else -1
+            c500 += sign * (t.coupon_500_count or 0)
+            c300 += sign * (t.coupon_300_count or 0)
+        c500 = max(c500, 0)
+        c300 = max(c300, 0)
+        if c500 <= 0 and c300 <= 0:
+            return
+        last = wallet.last_coupon_notice_at
+        show_notice = False
+        if not last:
+            show_notice = True
+        else:
+            last_local = last.astimezone(tz)
+            show_notice = last_local.date() < now_dt.date()
+        if not show_notice:
+            return
+        msg = (
+            f"提醒：您的折價券將於 {expire_dt.strftime('%Y/%m/%d')} 到期。\n"
+            f"目前剩餘：500券 x {c500}、300券 x {c300}"
+        )
+        try:
+            line_bot_api.push_message(user_id, TextSendMessage(text=msg))
+        except Exception:
+            pass
+        wallet.last_coupon_notice_at = datetime.utcnow()
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+    except Exception:
+        logging.exception("maybe_push_coupon_expiry_notice failed")
+
 def make_qr(*labels_texts):
     """快速小工具：產生 QuickReply from tuples(label, text)"""
     return QuickReply(items=[
@@ -399,17 +450,13 @@ def handle_text(event):
         return
 
     if user_text in ("儲值金", "查餘額", "餘額"):
-        # 顯示用戶錢包餘額與最近交易
-        target_phone = None
+        from linebot.models import FlexSendMessage
+        # 僅限已驗證白名單（有 line_user_id 綁定）
         wl = Whitelist.query.filter_by(line_user_id=user_id).first()
-        if wl:
-            target_phone = wl.phone
-        if not target_phone:
-            tu = get_temp_user(user_id)
-            target_phone = (tu or {}).get("phone")
-        if not target_phone:
-            reply_basic(event, "請先輸入手機號完成驗證，再使用儲值金功能。")
+        if not wl:
+            reply_basic(event, "僅限已驗證用戶使用此功能，請先完成驗證流程。")
             return
+        target_phone = wl.phone
         wallet = StoredValueWallet.query.filter_by(phone=target_phone).first()
         if not wallet:
             reply_basic(event, f"目前無錢包資料（手機：{target_phone}），請聯絡客服或稍後再試。")
@@ -417,20 +464,117 @@ def handle_text(event):
         txns = (StoredValueTransaction.query
                 .filter_by(wallet_id=wallet.id)
                 .order_by(StoredValueTransaction.created_at.desc())
-                .limit(5).all())
-        lines = [
-            f"📱 {target_phone}",
-            f"💳 目前餘額：{wallet.balance} 元",
-            "— 最近交易 —"
-        ]
+                .limit(8).all())
+
+        # 折價券剩餘計算（topup 加、consume 減），並處理到期日
+        q = StoredValueTransaction.query.filter_by(wallet_id=wallet.id).all()
+        c500 = 0
+        c300 = 0
+        for t in q:
+            sign = 1 if t.type == 'topup' else -1
+            c500 += sign * (t.coupon_500_count or 0)
+            c300 += sign * (t.coupon_300_count or 0)
+        # 到期規則：網站儲值券僅至 12/31 當年有效（查詢時超過直接清除）
+        tz = pytz.timezone("Asia/Taipei")
+        now_dt = datetime.now(tz)
+        expire_dt = tz.localize(datetime(now_dt.year, 12, 31, 23, 59, 59))
+        if now_dt > expire_dt:
+            # 自動清除到期券（寫入一筆 consume 交易，金額 0）
+            rem500 = max(c500, 0)
+            rem300 = max(c300, 0)
+            if rem500 > 0 or rem300 > 0:
+                try:
+                    t = StoredValueTransaction()
+                    t.wallet_id = wallet.id
+                    t.type = 'consume'
+                    t.amount = 0
+                    t.remark = f"優惠券到期自動清除 {expire_dt.strftime('%Y/%m/%d')}"
+                    t.coupon_500_count = rem500
+                    t.coupon_300_count = rem300
+                    db.session.add(t)
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+            c500 = 0
+            c300 = 0
+        else:
+            c500 = max(c500, 0)
+            c300 = max(c300, 0)
+        # 每日提醒
+        maybe_push_coupon_expiry_notice(user_id)
+
+        # 使用記錄區塊
+        txn_boxes = []
         if not txns:
-            lines.append("(無交易紀錄)")
+            txn_boxes.append({"type": "text", "text": "(尚無交易紀錄)", "size": "sm", "color": "#999"})
         else:
             for t in txns:
                 ts = t.created_at.strftime('%m/%d %H:%M') if t.created_at else ''
-                lines.append(f"{ts} {t.type} {t.amount}｜500券{t.coupon_500_count}｜300券{t.coupon_300_count}")
-        reply_with_menu(event.reply_token, "\n".join(lines))
-        return
+                label = '儲值 +' if t.type == 'topup' else '扣款 -'
+                coupon_part = f" 500券{t.coupon_500_count} 300券{t.coupon_300_count}" if (t.coupon_500_count or t.coupon_300_count) else ''
+                txn_boxes.append({
+                    "type": "box",
+                    "layout": "baseline",
+                    "contents": [
+                        {"type": "text", "text": ts, "size": "xs", "color": "#666", "flex": 3},
+                        {"type": "text", "text": label, "size": "xs", "color": "#455a64", "flex": 2},
+                        {"type": "text", "text": str(t.amount), "size": "xs", "weight": "bold", "color": "#000", "flex": 2},
+                        {"type": "text", "text": coupon_part, "size": "xs", "color": "#8e24aa", "wrap": True, "flex": 5}
+                    ]
+                })
+
+        now_str = now_dt.strftime('%Y/%m/%d %H:%M:%S')
+        nickname = (wl.name if wl else '') or '用戶'
+        line_id_display = wl.line_id if wl and wl.line_id else '未登記'
+        user_code = wl.id if wl else '—'
+
+        bubble = {
+            "type": "bubble",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "backgroundColor": "#212121",
+                "paddingAll": "16px",
+                "contents": [
+                    {"type": "text", "text": "💳 儲值金資訊", "size": "lg", "weight": "bold", "color": "#FFD700", "align": "center"}
+                ]
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "md",
+                "contents": [
+                    {"type": "box", "layout": "vertical", "contents": [
+                        {"type": "text", "text": f"手機號碼：{target_phone}", "size": "sm"},
+                        {"type": "text", "text": f"用戶暱稱：{nickname}", "size": "sm"},
+                        {"type": "text", "text": f"個人編號：{user_code}", "size": "sm"},
+                        {"type": "text", "text": f"LINE ID：{line_id_display}", "size": "sm"},
+                        {"type": "text", "text": f"查詢時間：{now_str}", "size": "sm", "color": "#607d8b"},
+                        {"type": "separator", "margin": "md"},
+                        {"type": "box", "layout": "horizontal", "contents": [
+                            {"type": "text", "text": "目前餘額", "size": "sm", "color": "#555", "flex": 5},
+                            {"type": "text", "text": f"{wallet.balance} 元", "size": "sm", "weight": "bold", "color": "#1b5e20", "align": "end", "flex": 5}
+                        ]},
+                        {"type": "box", "layout": "vertical", "margin": "md", "contents": [
+                            {"type": "text", "text": f"折價券剩餘：500券 x {c500}、300券 x {c300}", "size": "sm", "color": "#6a1b9a"}
+                        ]}
+                    ]},
+                    {"type": "separator", "margin": "md"},
+                    {"type": "text", "text": "使用記錄", "size": "sm", "weight": "bold"},
+                    {"type": "box", "layout": "vertical", "spacing": "xs", "contents": txn_boxes}
+                ]
+            },
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "sm",
+                "contents": [
+                    {"type": "button", "style": "primary", "color": "#3F51B5", "action": {"type": "message", "label": "🏛️ 回主選單", "text": "主選單"}},
+                    {"type": "button", "style": "secondary", "color": "#8E24AA", "action": {"type": "message", "label": "🔁 重新查詢", "text": "儲值金"}}
+                ]
+            }
+        }
+    # 上方回覆已在分支內完成
 
     if user_text == "重新驗證":
         logging.info(f"[handle_text] 進入重新驗證分支 user_id={user_id}")

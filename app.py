@@ -114,7 +114,7 @@ with app.app_context():
             try:
                 # stamp to latest known revision to align DB with migrations state
                 from flask_migrate import stamp as _stamp  # ensure defined in this scope
-                _stamp(migrations_path, '0002_add_stored_value')
+                _stamp(migrations_path, '0003_add_wallet_notice')
             except Exception:
                 pass
     else:
@@ -122,7 +122,7 @@ with app.app_context():
         used_create_all = True
         try:
             from flask_migrate import stamp as _stamp
-            _stamp(migrations_path, '0002_add_stored_value')
+            _stamp(migrations_path, '0003_add_wallet_notice')
         except Exception:
             pass
 
