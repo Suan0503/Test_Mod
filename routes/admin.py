@@ -296,6 +296,10 @@ def wallet_summary():
     import pytz
     tz = pytz.timezone('Asia/Taipei')
     for w in wallets:
+        # 跳過完全沒有交易且餘額為 0 的空錢包（可能因刪除交易後清理）
+        txn_count = StoredValueTransaction.query.filter_by(wallet_id=w.id).count()
+        if txn_count == 0 and (w.balance or 0) == 0:
+            continue
         wl = None
         if w.whitelist_id:
             wl = Whitelist.query.filter_by(id=w.whitelist_id).first()
@@ -403,9 +407,23 @@ def wallet_txn_delete():
         flash('找不到交易紀錄','danger')
         return redirect(url_for('admin.wallet_home', q=q))
     try:
+        wallet = StoredValueWallet.query.filter_by(id=t.wallet_id).first()
+        # 還原餘額（topup 則扣回，consume 則加回）
+        if wallet:
+            if t.type == 'topup':
+                wallet.balance -= (t.amount or 0)
+            elif t.type == 'consume':
+                wallet.balance += (t.amount or 0)
+            wallet.updated_at = datetime.utcnow()
         db.session.delete(t)
         db.session.commit()
-        flash('已刪除一筆交易','info')
+        # 若該錢包已無交易且餘額為 0，刪除錢包紀錄（保持總表乾淨）
+        if wallet:
+            remain_txn = StoredValueTransaction.query.filter_by(wallet_id=wallet.id).count()
+            if remain_txn == 0 and (wallet.balance or 0) == 0:
+                db.session.delete(wallet)
+                db.session.commit()
+        flash('已刪除交易並同步更新餘額','info')
     except Exception as e:
         db.session.rollback()
         flash(f'刪除失敗：{e}','danger')

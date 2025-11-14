@@ -38,7 +38,7 @@
       <tbody>
         {% for r in rows %}
         <tr>
-          <td>{{ r.phone }}</td>
+          <td><a href="/admin/wallet?q={{ r.phone }}" style="color:#00695c;text-decoration:none">{{ r.phone }}</a></td>
           <td>{{ r.nickname }}</td>
           <td>{{ r.code }}</td>
           <td>{{ r.total_topup }}</td>

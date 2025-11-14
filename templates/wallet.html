@@ -74,7 +74,13 @@
           <div>上次到期提醒：{{ wallet.last_coupon_notice_at.strftime('%Y/%m/%d %H:%M:%S') if wallet.last_coupon_notice_at else '尚未提醒' }}</div>
         </div>
         <div class="card">
-          <h3>儲值</h3>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <h3 style="margin:0">儲值</h3>
+            <div style="display:flex;gap:8px">
+              <button type="button" onclick="applyPreset(10000)" style="background:#5e35b1">套用 10000 方案</button>
+              <button type="button" onclick="applyPreset(5000)" style="background:#5e35b1">套用 5000 方案</button>
+            </div>
+          </div>
           <form method="post" action="/admin/wallet/topup">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="phone" value="{{ wallet.phone }}">

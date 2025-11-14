@@ -526,9 +526,13 @@ def handle_text(event):
         if user_text in ("儲值金", "查餘額", "餘額"):
             reply_wallet(existing)
             return
-        # Hotline 文字直接回主選單
-        if '茗殿熱線' in user_text:
-            reply_with_menu(event.reply_token, user_text)
+        # 服務專線關鍵字：顯示熱線資訊後跳主選單
+        if user_text.strip() == '服務專線':
+            hotline_msg = (
+                '📞 茗殿熱線：0987-346-208\n'
+                '歡迎來電洽詢，專人即時服務！'
+            )
+            reply_with_menu(event.reply_token, hotline_msg)
             return
         if normalize_phone(user_text) == normalize_phone(existing.phone):
             reply = (
