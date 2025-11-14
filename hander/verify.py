@@ -87,7 +87,6 @@ def maybe_push_coupon_expiry_notice(user_id):
         expire_dt = tz.localize(datetime(now_dt.year, 12, 31, 23, 59, 59))
         if not (notice_start <= now_dt <= expire_dt):
             return
-        # 計算券剩餘
         q = StoredValueTransaction.query.filter_by(wallet_id=wallet.id).all()
         c500 = c300 = 0
         for t in q:
@@ -149,111 +148,82 @@ def reply_with_choices(event, text, choices):
     )
 
 def save_debug_image(temp_path, user_id):
+    """將使用者上傳的截圖複製到 DEBUG 目錄並回傳可公開檢視的 URL。失敗則回傳 None。"""
     try:
         if not (OCR_DEBUG_IMAGE_BASEURL and OCR_DEBUG_IMAGE_DIR):
             return None
         os.makedirs(OCR_DEBUG_IMAGE_DIR, exist_ok=True)
-        fname = f"{user_id}_{int(time.time())}.jpg"
-        dest = os.path.join(OCR_DEBUG_IMAGE_DIR, fname)
-        shutil.copyfile(temp_path, dest)
-        return f"{OCR_DEBUG_IMAGE_BASEURL}/{fname}"
+        filename = f"{user_id}_{int(time.time())}.jpg"
+        dest = os.path.join(OCR_DEBUG_IMAGE_DIR, filename)
+        shutil.copy(temp_path, dest)
+        return f"{OCR_DEBUG_IMAGE_BASEURL}/{filename}"
     except Exception:
         logging.exception("save_debug_image failed")
         return None
 
-def generate_verification_code(length=8):
-    return "".join(str(secrets.randbelow(10)) for _ in range(length))
-
-def _find_pending_by_code(code):
-    for key, pending in manual_verify_pending.items():
-        if pending and pending.get("code") == code:
-            return key, pending
-    return None, None
-
 # ───────────────────────────────────────────────────────────────
-# TempVerify 資料庫同步（待驗證清單）
+# TempVerify / Manual verify helpers (遺失函式補回)
 # ───────────────────────────────────────────────────────────────
-def upsert_tempverify(phone, line_id, nickname, line_user_id=None):
-    """建立或更新 TempVerify 讓後台可見，狀態維持 pending。"""
+def upsert_tempverify(phone, line_id=None, nickname=None, line_user_id=None):
+    """以 phone 為 key upsert temp_verify 資料，供後台待驗證列表顯示。"""
     try:
-        if not phone:
-            return
-        tv = TempVerify.query.filter_by(phone=phone, status='pending').first()
-        if not tv:
-            tv = TempVerify()
-            tv.phone = phone
-            db.session.add(tv)
-        tv.line_id = line_id or tv.line_id
-        tv.nickname = nickname or tv.nickname
-        if line_user_id:
-            tv.line_user_id = line_user_id
-        tv.status = 'pending'
-        # 將建立時間更新到現在，讓列表排序能顯示在上方
-        tv.created_at = datetime.utcnow()
-        db.session.commit()
+        phone_n = normalize_phone(phone)
+        rec = TempVerify.query.filter_by(phone=phone_n).first()
+        if not rec:
+            rec = TempVerify()
+            rec.phone = phone_n
+            db.session.add(rec)
+        # 更新欄位
+        if line_id is not None:
+            rec.line_id = line_id
+        if nickname is not None:
+            rec.nickname = nickname
+        if line_user_id is not None:
+            rec.line_user_id = line_user_id
+        if not rec.status:
+            rec.status = "pending"
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
     except Exception:
         logging.exception("upsert_tempverify failed")
 
 def mark_tempverify_verified_by_phone(phone):
-    """驗證完成後，將相同手機的 pending 紀錄標記為 verified。"""
     try:
-        if not phone:
-            return
-        tvs = TempVerify.query.filter_by(phone=phone, status='pending').all()
-        changed = False
-        for tv in tvs:
-            tv.status = 'verified'
-            changed = True
-        if changed:
+        phone_n = normalize_phone(phone)
+        rec = TempVerify.query.filter_by(phone=phone_n).first()
+        if rec:
+            rec.status = "verified"
             db.session.commit()
     except Exception:
+        db.session.rollback()
         logging.exception("mark_tempverify_verified_by_phone failed")
 
 def mark_tempverify_failed_by_phone(phone):
-    """當管理員拒絕或流程中止時，將 pending 改為 failed 以自清列表。"""
     try:
-        if not phone:
-            return
-        tvs = TempVerify.query.filter_by(phone=phone, status='pending').all()
-        changed = False
-        for tv in tvs:
-            tv.status = 'failed'
-            changed = True
-        if changed:
+        phone_n = normalize_phone(phone)
+        rec = TempVerify.query.filter_by(phone=phone_n).first()
+        if rec:
+            rec.status = "failed"
             db.session.commit()
     except Exception:
+        db.session.rollback()
         logging.exception("mark_tempverify_failed_by_phone failed")
 
-# ───────────────────────────────────────────────────────────────
-# 1) 加入好友：送歡迎訊息
-# ───────────────────────────────────────────────────────────────
-@handler.add(FollowEvent)
-def handle_follow(event):
-    welcome_msg = (
-        "歡迎加入🍵茗殿🍵\n"
-        "請正確按照步驟提供資料配合快速驗證\n\n"
-        "➡️ 請輸入手機號碼進行驗證（含09開頭）"
-    )
-    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=welcome_msg))
+def _find_pending_by_code(code):
+    """在 manual_verify_pending 中尋找指定驗證碼。回傳 (key, pending_dict) 或 (None, None)。"""
+    for k, v in manual_verify_pending.items():
+        if v.get("code") == code:
+            return k, v
+    return None, None
 
-# ───────────────────────────────────────────────────────────────
-# 管理員：發起手動驗證（多步）相關 helper
-# ───────────────────────────────────────────────────────────────
-def start_manual_verify_by_admin(admin_id, target_key, nickname, phone, line_id):
-    code = None
-    for _ in range(5):
-        temp_code = generate_verification_code(8)
-        found_key, found_pending = _find_pending_by_code(temp_code)
-        if not found_pending:
-            code = temp_code
-            break
-    if code is None:
-        # fallback: always assign a code even if not unique
-        code = generate_verification_code(8)
-
+def start_manual_verify_by_admin(admin_id, target_user_id_or_placeholder, nickname, phone, line_id):
+    """建立管理員手動驗證流程，回傳產生的 8 位數驗證碼。target_user_id_or_placeholder 若尚未有實際 user id 可用手機暫代。"""
+    code = f"{secrets.randbelow(10**8):08d}"
     tz = pytz.timezone("Asia/Taipei")
-    manual_verify_pending[target_key] = {
-        "phone": phone,
+    pending = {
+        "phone": normalize_phone(phone),
         "line_id": line_id,
         "nickname": nickname,
         "code": code,
@@ -263,11 +233,16 @@ def start_manual_verify_by_admin(admin_id, target_key, nickname, phone, line_id)
         "code_verified_at": None,
         "allow_user_confirm_until": None,
     }
-
-    logging.info(f"manual_verify_pending created for {target_key} by admin {admin_id} (code={code})")
+    manual_verify_pending[target_user_id_or_placeholder] = pending
+    # 讓後台可見
+    try:
+        upsert_tempverify(phone=pending["phone"], line_id=line_id, nickname=nickname, line_user_id=(target_user_id_or_placeholder if str(target_user_id_or_placeholder).startswith("U") else None))
+    except Exception:
+        logging.exception("upsert_tempverify in start_manual_verify_by_admin failed")
     return code
 
 def admin_approve_manual_verify(admin_id, target_user_id):
+    """管理員核准手動驗證。"""
     pending = manual_verify_pending.pop(target_user_id, None)
     if not pending:
         return False, "找不到待審核項目。"
@@ -283,6 +258,7 @@ def admin_approve_manual_verify(admin_id, target_user_id):
         mark_tempverify_verified_by_phone(record.phone)
     except Exception:
         logging.exception("mark_tempverify_verified_by_phone (admin approve) failed")
+    # 推送給使用者
     try:
         msg = (
             f"📱 {record.phone}\n"
@@ -294,11 +270,28 @@ def admin_approve_manual_verify(admin_id, target_user_id):
         line_bot_api.push_message(target_user_id, TextSendMessage(text=msg))
     except Exception:
         logging.exception("notify user after admin approve failed")
+    # 回覆管理員
     try:
         line_bot_api.push_message(admin_id, TextSendMessage(text=f"已核准 {target_user_id}，寫入白名單：{record.phone}"))
     except Exception:
         logging.exception("notify admin after approve failed")
     return True, "已核准"
+
+def handle_follow(event):
+    """使用者加入好友事件：初始化暫存狀態並提示輸入手機。"""
+    try:
+        user_id = event.source.user_id
+        profile_name = None
+        try:
+            profile = line_bot_api.get_profile(user_id)
+            profile_name = profile.display_name
+        except Exception:
+            pass
+        display_name = profile_name or "用戶"
+        set_temp_user(user_id, {"step": "waiting_phone", "name": display_name, "nickname": display_name, "user_id": user_id, "line_user_id": user_id})
+        reply_basic(event, "歡迎加入～請直接輸入手機號碼（09開頭）進行驗證。")
+    except Exception:
+        logging.exception("handle_follow failed")
 
 def admin_reject_manual_verify(admin_id, target_user_id):
     pending = manual_verify_pending.pop(target_user_id, None)
@@ -553,132 +546,7 @@ def handle_text(event):
         reply_basic(event, msg)
         return
 
-    if user_text in ("儲值金", "查餘額", "餘額"):
-        from linebot.models import FlexSendMessage
-        # 僅限已驗證白名單（有 line_user_id 綁定）
-        wl = Whitelist.query.filter_by(line_user_id=user_id).first()
-        if not wl:
-            reply_basic(event, "僅限已驗證用戶使用此功能，請先完成驗證流程。")
-            return
-        target_phone = wl.phone
-        wallet = StoredValueWallet.query.filter_by(phone=target_phone).first()
-        if not wallet:
-            reply_basic(event, f"目前無錢包資料（手機：{target_phone}），請聯絡客服或稍後再試。")
-            return
-        txns = (StoredValueTransaction.query
-                .filter_by(wallet_id=wallet.id)
-                .order_by(StoredValueTransaction.created_at.desc())
-                .limit(8).all())
-
-        # 折價券剩餘計算（topup 加、consume 減），並處理到期日
-        q = StoredValueTransaction.query.filter_by(wallet_id=wallet.id).all()
-        c500 = 0
-        c300 = 0
-        for t in q:
-            sign = 1 if t.type == 'topup' else -1
-            c500 += sign * (t.coupon_500_count or 0)
-            c300 += sign * (t.coupon_300_count or 0)
-        # 到期規則：網站儲值券僅至 12/31 當年有效（查詢時超過直接清除）
-        tz = pytz.timezone("Asia/Taipei")
-        now_dt = datetime.now(tz)
-        expire_dt = tz.localize(datetime(now_dt.year, 12, 31, 23, 59, 59))
-        if now_dt > expire_dt:
-            # 自動清除到期券（寫入一筆 consume 交易，金額 0）
-            rem500 = max(c500, 0)
-            rem300 = max(c300, 0)
-            if rem500 > 0 or rem300 > 0:
-                try:
-                    t = StoredValueTransaction()
-                    t.wallet_id = wallet.id
-                    t.type = 'consume'
-                    t.amount = 0
-                    t.remark = f"優惠券到期自動清除 {expire_dt.strftime('%Y/%m/%d')}"
-                    t.coupon_500_count = rem500
-                    t.coupon_300_count = rem300
-                    db.session.add(t)
-                    db.session.commit()
-                except Exception:
-                    db.session.rollback()
-            c500 = 0
-            c300 = 0
-        else:
-            c500 = max(c500, 0)
-            c300 = max(c300, 0)
-        # 每日提醒
-        maybe_push_coupon_expiry_notice(user_id)
-
-        # 使用記錄區塊
-        txn_boxes = []
-        if not txns:
-            txn_boxes.append({"type": "text", "text": "(尚無交易紀錄)", "size": "sm", "color": "#999"})
-        else:
-            for t in txns:
-                ts = t.created_at.strftime('%m/%d %H:%M') if t.created_at else ''
-                label = '儲值 +' if t.type == 'topup' else '扣款 -'
-                coupon_part = f" 500券{t.coupon_500_count} 300券{t.coupon_300_count}" if (t.coupon_500_count or t.coupon_300_count) else ''
-                txn_boxes.append({
-                    "type": "box",
-                    "layout": "baseline",
-                    "contents": [
-                        {"type": "text", "text": ts, "size": "xs", "color": "#666", "flex": 3},
-                        {"type": "text", "text": label, "size": "xs", "color": "#455a64", "flex": 2},
-                        {"type": "text", "text": str(t.amount), "size": "xs", "weight": "bold", "color": "#000", "flex": 2},
-                        {"type": "text", "text": coupon_part, "size": "xs", "color": "#8e24aa", "wrap": True, "flex": 5}
-                    ]
-                })
-
-        now_str = now_dt.strftime('%Y/%m/%d %H:%M:%S')
-        nickname = (wl.name if wl else '') or '用戶'
-        line_id_display = wl.line_id if wl and wl.line_id else '未登記'
-        user_code = wl.id if wl else '—'
-
-        bubble = {
-            "type": "bubble",
-            "header": {
-                "type": "box",
-                "layout": "vertical",
-                "backgroundColor": "#212121",
-                "paddingAll": "16px",
-                "contents": [
-                    {"type": "text", "text": "💳 儲值金資訊", "size": "lg", "weight": "bold", "color": "#FFD700", "align": "center"}
-                ]
-            },
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "spacing": "md",
-                "contents": [
-                    {"type": "box", "layout": "vertical", "contents": [
-                        {"type": "text", "text": f"手機號碼：{target_phone}", "size": "sm"},
-                        {"type": "text", "text": f"用戶暱稱：{nickname}", "size": "sm"},
-                        {"type": "text", "text": f"個人編號：{user_code}", "size": "sm"},
-                        {"type": "text", "text": f"LINE ID：{line_id_display}", "size": "sm"},
-                        {"type": "text", "text": f"查詢時間：{now_str}", "size": "sm", "color": "#607d8b"},
-                        {"type": "separator", "margin": "md"},
-                        {"type": "box", "layout": "horizontal", "contents": [
-                            {"type": "text", "text": "目前餘額", "size": "sm", "color": "#555", "flex": 5},
-                            {"type": "text", "text": f"{wallet.balance} 元", "size": "sm", "weight": "bold", "color": "#1b5e20", "align": "end", "flex": 5}
-                        ]},
-                        {"type": "box", "layout": "vertical", "margin": "md", "contents": [
-                            {"type": "text", "text": f"折價券剩餘：500券 x {c500}、300券 x {c300}", "size": "sm", "color": "#6a1b9a"}
-                        ]}
-                    ]},
-                    {"type": "separator", "margin": "md"},
-                    {"type": "text", "text": "使用記錄", "size": "sm", "weight": "bold"},
-                    {"type": "box", "layout": "vertical", "spacing": "xs", "contents": txn_boxes}
-                ]
-            },
-            "footer": {
-                "type": "box",
-                "layout": "vertical",
-                "spacing": "sm",
-                "contents": [
-                    {"type": "button", "style": "primary", "color": "#3F51B5", "action": {"type": "message", "label": "🏛️ 回主選單", "text": "主選單"}},
-                    {"type": "button", "style": "secondary", "color": "#8E24AA", "action": {"type": "message", "label": "🔁 重新查詢", "text": "儲值金"}}
-                ]
-            }
-        }
-    # 上方回覆已在分支內完成
+    # 上方 wallet 回覆已在 existing 分支處理
 
     if user_text == "重新驗證":
         logging.info(f"[handle_text] 進入重新驗證分支 user_id={user_id}")
