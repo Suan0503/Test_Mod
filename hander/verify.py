@@ -440,12 +440,16 @@ def handle_text(event):
             for t in txns:
                 ts = t.created_at.strftime('%m/%d %H:%M') if t.created_at else ''
                 label = '儲值 +' if t.type == 'topup' else '扣款 -'
-                coupon_part = f" 500券{t.coupon_500_count} 300券{t.coupon_300_count}" if (t.coupon_500_count or t.coupon_300_count) else ''
+                has_coupon = (t.coupon_500_count or 0) > 0 or (t.coupon_300_count or 0) > 0
+                if has_coupon:
+                    coupon_part = f"500券{t.coupon_500_count or 0} 300券{t.coupon_300_count or 0}"
+                else:
+                    coupon_part = "-"  # 不能空字串，避免 LINE Flex 400
                 txn_boxes.append({
                     "type": "box",
                     "layout": "baseline",
                     "contents": [
-                        {"type": "text", "text": ts, "size": "xs", "color": "#666666", "flex": 3},
+                        {"type": "text", "text": ts or "-", "size": "xs", "color": "#666666", "flex": 3},
                         {"type": "text", "text": label, "size": "xs", "color": "#455a64", "flex": 2},
                         {"type": "text", "text": str(t.amount), "size": "xs", "weight": "bold", "color": "#000000", "flex": 2},
                         {"type": "text", "text": coupon_part, "size": "xs", "color": "#8e24aa", "wrap": True, "flex": 5}
