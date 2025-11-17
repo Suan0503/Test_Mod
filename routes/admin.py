@@ -345,6 +345,172 @@ def wallet_summary():
         })
     return render_template('wallet_summary.html', rows=rows, count=len(rows), q=q)
 
+# ========= 儲值對帳（今日與區間） =========
+@admin_bp.route('/wallet/reconcile')
+def wallet_reconcile():
+    """對帳報表：顯示今日儲值總額，並提供自訂日期區間查詢與明細、彙總。"""
+    import pytz
+    from datetime import datetime as _dt, timedelta
+    tz = pytz.timezone('Asia/Taipei')
+
+    # 取得查詢參數
+    preset = (request.args.get('preset') or '').strip()  # today, yesterday, thisweek, thismonth
+    start_str = (request.args.get('start') or '').strip()
+    end_str = (request.args.get('end') or '').strip()
+    export = (request.args.get('export') or '').strip()  # csv
+
+    now_local = _dt.now(tz)
+
+    def day_bounds_local(d):
+        start_local = tz.localize(_dt(d.year, d.month, d.day, 0, 0, 0))
+        end_local = start_local + timedelta(days=1)
+        return start_local, end_local
+
+    # 預設為今日
+    if preset == 'yesterday':
+        y = now_local.date() - timedelta(days=1)
+        start_local, end_local = day_bounds_local(_dt(y.year, y.month, y.day))
+    elif preset == 'thisweek':
+        # 以週一為一週開始
+        weekday = now_local.date().weekday()  # Monday=0
+        monday = now_local.date() - timedelta(days=weekday)
+        start_local = tz.localize(_dt(monday.year, monday.month, monday.day))
+        end_local = tz.localize(_dt(now_local.year, now_local.month, now_local.day)) + timedelta(days=1)
+    elif preset == 'thismonth':
+        first = tz.localize(_dt(now_local.year, now_local.month, 1))
+        # 下月一號
+        if now_local.month == 12:
+            next_first = tz.localize(_dt(now_local.year+1, 1, 1))
+        else:
+            next_first = tz.localize(_dt(now_local.year, now_local.month+1, 1))
+        start_local, end_local = first, next_first
+    else:
+        # 若提供自訂起迄，採用自訂；否則今日
+        if start_str:
+            try:
+                y, m, d = [int(x) for x in start_str.split('-')]
+                start_local = tz.localize(_dt(y, m, d))
+            except Exception:
+                start_local = tz.localize(_dt(now_local.year, now_local.month, now_local.day))
+        else:
+            start_local = tz.localize(_dt(now_local.year, now_local.month, now_local.day))
+        if end_str:
+            try:
+                y2, m2, d2 = [int(x) for x in end_str.split('-')]
+                # end 選擇的日子 +1 天（半開區間）
+                end_local = tz.localize(_dt(y2, m2, d2)) + timedelta(days=1)
+            except Exception:
+                end_local = start_local + timedelta(days=1)
+        else:
+            end_local = start_local + timedelta(days=1)
+
+    # 轉為 UTC 以過濾（DB 使用 utcnow 建立時間）
+    start_utc = start_local.astimezone(pytz.utc)
+    end_utc = end_local.astimezone(pytz.utc)
+
+    # 查詢 topup 交易
+    q = (StoredValueTransaction.query
+         .filter(StoredValueTransaction.type == 'topup')
+         .filter(StoredValueTransaction.created_at >= start_utc)
+         .filter(StoredValueTransaction.created_at < end_utc)
+         .order_by(StoredValueTransaction.created_at.asc()))
+    txns = q.all()
+
+    # 明細與總計
+    total_amount = sum(t.amount or 0 for t in txns)
+    count = len(txns)
+    avg_amount = (total_amount // count) if count else 0
+
+    # 取得電話/姓名/代號與本地時間字串
+    rows = []
+    for t in txns:
+        wallet = StoredValueWallet.query.filter_by(id=t.wallet_id).first()
+        phone = wallet.phone if wallet else '—'
+        wl = None
+        nickname = '—'
+        code = '—'
+        if wallet and wallet.whitelist_id:
+            wl = Whitelist.query.filter_by(id=wallet.whitelist_id).first()
+            if wl:
+                nickname = wl.name or '—'
+                code = wl.id
+        # 本地時間字串
+        try:
+            import pytz as _p
+            utc = _p.utc
+            dt = t.created_at
+            if dt and dt.tzinfo is None:
+                dt = utc.localize(dt)
+            local_dt = dt.astimezone(tz) if dt else None
+            time_str = local_dt.strftime('%Y/%m/%d %H:%M') if local_dt else ''
+        except Exception:
+            time_str = t.created_at.strftime('%Y/%m/%d %H:%M') if t.created_at else ''
+        rows.append({
+            'id': t.id,
+            'time': time_str,
+            'phone': phone,
+            'nickname': nickname,
+            'code': code,
+            'amount': t.amount or 0,
+            'remark': (t.remark or '')[:120],
+        })
+
+    # 依 remark 分組（可用於現金/轉帳等對帳）
+    by_remark = {}
+    for r in rows:
+        k = r['remark'] or '—'
+        by_remark.setdefault(k, {'amount': 0, 'count': 0})
+        by_remark[k]['amount'] += r['amount']
+        by_remark[k]['count'] += 1
+
+    # 依日期（日）彙總
+    by_day = {}
+    for t in txns:
+        dt = t.created_at
+        if dt and dt.tzinfo is None:
+            dt = pytz.utc.localize(dt)
+        local_dt = dt.astimezone(tz) if dt else None
+        day_key = local_dt.strftime('%Y-%m-%d') if local_dt else '—'
+        by_day.setdefault(day_key, 0)
+        by_day[day_key] += (t.amount or 0)
+
+    # CSV 匯出
+    if export == 'csv':
+        import csv
+        from io import StringIO
+        si = StringIO()
+        cw = csv.writer(si)
+        cw.writerow(['ID', '時間(台北)', '手機', '名稱', '編號', '金額', '備註'])
+        for r in rows:
+            cw.writerow([r['id'], r['time'], r['phone'], r['nickname'], r['code'], r['amount'], r['remark']])
+        output = si.getvalue()
+        from flask import Response
+        filename = f"wallet_topups_{start_local.strftime('%Y%m%d')}_{(end_local - timedelta(days=1)).strftime('%Y%m%d')}.csv"
+        return Response(output, mimetype='text/csv', headers={'Content-Disposition': f'attachment; filename="{filename}"'})
+
+    # 今日總額（便捷顯示）
+    today_start_local = tz.localize(_dt(now_local.year, now_local.month, now_local.day))
+    today_end_local = today_start_local + timedelta(days=1)
+    today_q = (StoredValueTransaction.query
+               .filter(StoredValueTransaction.type == 'topup')
+               .filter(StoredValueTransaction.created_at >= today_start_local.astimezone(pytz.utc))
+               .filter(StoredValueTransaction.created_at < today_end_local.astimezone(pytz.utc)))
+    today_total = sum(t.amount or 0 for t in today_q.all())
+
+    return render_template('wallet_reconcile.html',
+                           rows=rows,
+                           total_amount=total_amount,
+                           count=count,
+                           avg_amount=avg_amount,
+                           by_remark=by_remark,
+                           by_day=by_day,
+                           preset=preset,
+                           start=start_str,
+                           end=end_str,
+                           today_total=today_total,
+                           start_local_display=(start_local.strftime('%Y-%m-%d')),
+                           end_local_display=((end_local - timedelta(days=1)).strftime('%Y-%m-%d')))
+
 
 def _get_or_create_wallet_by_phone(phone):
     phone = (phone or '').strip()

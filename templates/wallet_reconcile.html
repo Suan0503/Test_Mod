@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>儲值對帳</title>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body{font-family:'Zen Maru Gothic','微軟正黑體',sans-serif;background:#f7f9fb;margin:0;color:#333}
+    .header{padding:20px;text-align:center;background:#e3f2fd;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+    .header a{display:inline-block;margin:6px 8px;background:#2196f3;color:#fff;padding:8px 12px;border-radius:10px;text-decoration:none;font-size:.85rem}
+    .container{max-width:1200px;margin:24px auto;padding:0 18px}
+    .card{background:#fff;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.06);padding:16px;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse;font-size:.85rem}
+    th,td{border-bottom:1px solid #e0e0e0;padding:8px 10px;text-align:left}
+    thead tr{background:#1976d2;color:#fff}
+    tr:hover{background:#fafafa}
+    .summary{display:flex;gap:14px;flex-wrap:wrap}
+    .pill{background:#e3f2fd;color:#0d47a1;border-radius:999px;padding:6px 10px;font-size:.85rem}
+    input,select{padding:8px 10px;border:1px solid #cfd8dc;border-radius:8px}
+    button{background:#1976d2;border:none;color:#fff;border-radius:8px;padding:8px 12px;cursor:pointer}
+    .danger{background:#e57373}
+    .muted{color:#607d8b}
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>📒 儲值對帳</h2>
+    <a href="/admin/wallet/summary">儲值金總表</a>
+    <a href="/admin/wallet">單一查詢</a>
+    <a href="/admin/home">回後台主頁</a>
+  </div>
+  <div class="container">
+    <div class="card">
+      <div class="summary">
+        <div class="pill">今日儲值總額：<b>{{ today_total }}</b></div>
+        <div class="pill muted">查詢區間：{{ start_local_display }} ~ {{ end_local_display }}</div>
+        <div class="pill">筆數：<b>{{ count }}</b></div>
+        <div class="pill">總額：<b>{{ total_amount }}</b></div>
+        <div class="pill">平均：<b>{{ avg_amount }}</b></div>
+      </div>
+      <form method="get" action="/admin/wallet/reconcile" style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap">
+        <label>快速區間</label>
+        <select name="preset" onchange="this.form.submit()">
+          <option value="">自訂</option>
+          <option value="today" {% if preset=='today' %}selected{% endif %}>今日</option>
+          <option value="yesterday" {% if preset=='yesterday' %}selected{% endif %}>昨日</option>
+          <option value="thisweek" {% if preset=='thisweek' %}selected{% endif %}>本週</option>
+          <option value="thismonth" {% if preset=='thismonth' %}selected{% endif %}>本月</option>
+        </select>
+        <label>起</label>
+        <input type="date" name="start" value="{{ start or '' }}" />
+        <label>迄</label>
+        <input type="date" name="end" value="{{ end or '' }}" />
+        <button type="submit">查詢</button>
+        <a class="button" href="/admin/wallet/reconcile?start={{ start or '' }}&end={{ end or '' }}&export=csv" style="text-decoration:none"><button type="button">匯出 CSV</button></a>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 8px">明細</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>時間(台北)</th>
+            <th>手機</th>
+            <th>名稱</th>
+            <th>編號</th>
+            <th>金額</th>
+            <th>備註</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td>{{ r.id }}</td>
+            <td>{{ r.time }}</td>
+            <td><a href="/admin/wallet?q={{ r.phone }}" style="color:#1976d2;text-decoration:none">{{ r.phone }}</a></td>
+            <td>{{ r.nickname }}</td>
+            <td>{{ r.code }}</td>
+            <td>{{ r.amount }}</td>
+            <td>{{ r.remark }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 8px">彙總</h3>
+      <div style="display:flex;gap:20px;flex-wrap:wrap">
+        <div>
+          <h4 style="margin:4px 0">依備註</h4>
+          <table>
+            <thead><tr><th>備註</th><th>筆數</th><th>金額</th></tr></thead>
+            <tbody>
+              {% for k,v in by_remark.items() %}
+              <tr><td>{{ k }}</td><td>{{ v.count }}</td><td>{{ v.amount }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h4 style="margin:4px 0">依日期(日)</h4>
+          <table>
+            <thead><tr><th>日期</th><th>金額</th></tr></thead>
+            <tbody>
+              {% for d,amt in by_day.items() %}
+              <tr><td>{{ d }}</td><td>{{ amt }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
