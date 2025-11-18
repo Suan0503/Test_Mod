@@ -114,6 +114,7 @@
                 <td>{{ r.remark }}</td>
                 <td>
                   <form method="post" action="/admin/wallet/txn/delete" style="margin:0">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                     <input type="hidden" name="id" value="{{ r.id }}" />
                     <input type="hidden" name="q" value="" />
                     <input type="hidden" name="redirect_url" value="/admin/wallet/reconcile" />
@@ -140,6 +141,7 @@
                 <td>{{ r.remark }}</td>
                 <td>
                   <form method="post" action="/admin/wallet/txn/delete" style="margin:0">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                     <input type="hidden" name="id" value="{{ r.id }}" />
                     <input type="hidden" name="q" value="{{ r.phone }}" />
                     <input type="hidden" name="redirect_url" value="/admin/wallet/reconcile" />
