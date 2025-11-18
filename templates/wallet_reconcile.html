@@ -38,6 +38,7 @@
         <div class="pill">總額：<b>{{ total_amount }}</b></div>
         <div class="pill">平均：<b>{{ avg_amount }}</b></div>
         <div class="pill" title="依備註關鍵字（例如 TOPUP_CASH, 現金）判斷">現金應收：<b>{{ cash_total }}</b>（{{ cash_count }} 筆）</div>
+  <div class="pill" title="本查詢期間會員扣款總額">支出：<b>{{ consume_total }}</b>（{{ consume_count }} 筆）</div>
       </div>
       <form method="get" action="/admin/wallet/reconcile" style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap">
         <label>快速區間</label>
@@ -93,6 +94,64 @@
           {% endfor %}
         </tbody>
       </table>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 8px">問題紀錄</h3>
+      <div style="display:flex;gap:24px;flex-wrap:wrap">
+        <div style="flex:1;min-width:260px">
+          <h4 style="margin:4px 0">無效（無電話）</h4>
+          <p style="margin:4px 0;font-size:.75rem;color:#666">條件：電話為空且金額>0 且備註含『儲值』或 TOPUP_CASH。可考慮自動清理。</p>
+          <a href="/admin/wallet/reconcile?clean_invalid=1" style="text-decoration:none"><button type="button" class="danger">自動清理</button></a>
+          <table style="margin-top:8px">
+            <thead><tr><th>ID</th><th>時間</th><th>金額</th><th>備註</th><th></th></tr></thead>
+            <tbody>
+              {% for r in invalid_rows %}
+              <tr>
+                <td>{{ r.id }}</td>
+                <td>{{ r.time }}</td>
+                <td>{{ r.amount }}</td>
+                <td>{{ r.remark }}</td>
+                <td>
+                  <form method="post" action="/admin/wallet/txn/delete" style="margin:0">
+                    <input type="hidden" name="id" value="{{ r.id }}" />
+                    <input type="hidden" name="q" value="" />
+                    <input type="hidden" name="redirect_url" value="/admin/wallet/reconcile" />
+                    <button type="submit" class="danger" style="padding:4px 8px;font-size:.7rem" onclick="return confirm('刪除此無效交易？')">刪除</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div style="flex:1;min-width:260px">
+          <h4 style="margin:4px 0">重複（同手機+金額+備註）</h4>
+          <p style="margin:4px 0;font-size:.75rem;color:#666">僅列出需刪除的重複筆（保留第一筆）。</p>
+          <table style="margin-top:8px">
+            <thead><tr><th>ID</th><th>手機</th><th>時間</th><th>金額</th><th>備註</th><th></th></tr></thead>
+            <tbody>
+              {% for r in duplicate_rows %}
+              <tr>
+                <td>{{ r.id }}</td>
+                <td>{{ r.phone }}</td>
+                <td>{{ r.time }}</td>
+                <td>{{ r.amount }}</td>
+                <td>{{ r.remark }}</td>
+                <td>
+                  <form method="post" action="/admin/wallet/txn/delete" style="margin:0">
+                    <input type="hidden" name="id" value="{{ r.id }}" />
+                    <input type="hidden" name="q" value="{{ r.phone }}" />
+                    <input type="hidden" name="redirect_url" value="/admin/wallet/reconcile" />
+                    <button type="submit" class="danger" style="padding:4px 8px;font-size:.7rem" onclick="return confirm('刪除此重複交易？')">刪除</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <div class="card">

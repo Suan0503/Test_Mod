@@ -426,10 +426,19 @@ def wallet_reconcile():
          .order_by(StoredValueTransaction.created_at.asc()))
     txns = q.all()
 
-    # 明細與總計
+    # 明細與總計（儲值）
     total_amount = sum(t.amount or 0 for t in txns)
     count = len(txns)
     avg_amount = (total_amount // count) if count else 0
+
+    # 同時期間的支出（consume）統計
+    consume_q = (StoredValueTransaction.query
+                 .filter(StoredValueTransaction.type == 'consume')
+                 .filter(StoredValueTransaction.created_at >= start_utc)
+                 .filter(StoredValueTransaction.created_at < end_utc))
+    consume_txns = consume_q.all()
+    consume_total = sum(t.amount or 0 for t in consume_txns)
+    consume_count = len(consume_txns)
 
     # 取得電話/姓名/代號與本地時間字串（多重回填）
     rows = []
@@ -517,6 +526,55 @@ def wallet_reconcile():
     cash_total = sum(r['amount'] for r in rows if is_cash_remark(r['remark']))
     cash_count = sum(1 for r in rows if is_cash_remark(r['remark']))
 
+    # ====== 無效紀錄與重複紀錄偵測 ======
+    invalid_rows = []
+    for r in rows:
+        # 無電話且有金額且備註包含儲值關鍵字或 TOPUP_CASH
+        if (r['phone'] == '—' and r['amount'] > 0 and (
+            'TOPUP_CASH' in (r['remark'] or '') or '儲值' in (r['remark'] or '')
+        )):
+            invalid_rows.append(r)
+
+    # 重複判斷：相同 phone != '—'、amount、remark（移除時以最晚時間保留一筆）
+    dup_groups = {}
+    for r in rows:
+        if r['phone'] == '—':
+            continue
+        key = (r['phone'], r['amount'], r['remark'])
+        dup_groups.setdefault(key, []).append(r)
+    duplicate_rows = []
+    for key, group in dup_groups.items():
+        if len(group) > 1:
+            # 依時間排序保留第一筆，其餘視為重複
+            # 時間字串格式 '%Y/%m/%d %H:%M'
+            try:
+                group_sorted = sorted(group, key=lambda x: x['time'])
+            except Exception:
+                group_sorted = group
+            # 保留第一筆，其餘列出
+            for rr in group_sorted[1:]:
+                duplicate_rows.append(rr)
+
+    # 自動清理無效紀錄（選項）
+    clean_invalid = request.args.get('clean_invalid') == '1'
+    if clean_invalid and invalid_rows:
+        removed_ids = []
+        for r in invalid_rows:
+            tdel = StoredValueTransaction.query.filter_by(id=r['id']).first()
+            if tdel:
+                # 還原餘額（topup 則扣回）避免影響餘額
+                if tdel.type == 'topup' and tdel.amount:
+                    wallet = StoredValueWallet.query.filter_by(id=tdel.wallet_id).first()
+                    if wallet:
+                        wallet.balance -= tdel.amount
+                        wallet.updated_at = datetime.utcnow()
+                db.session.delete(tdel)
+                removed_ids.append(r['id'])
+        db.session.commit()
+        flash(f'已自動清理 {len(removed_ids)} 筆無效交易','info')
+        # 重新導向以刷新
+        return redirect(url_for('admin.wallet_reconcile'))
+
     # CSV 匯出
     if export == 'csv':
         import csv
@@ -553,6 +611,10 @@ def wallet_reconcile():
                            cash_kw=cash_kw,
                            cash_total=cash_total,
                            cash_count=cash_count,
+                           consume_total=consume_total,
+                           consume_count=consume_count,
+                           invalid_rows=invalid_rows,
+                           duplicate_rows=duplicate_rows,
                            today_total=today_total,
                            start_local_display=(start_local.strftime('%Y-%m-%d %H:%M')),
                            end_local_display=(end_local.strftime('%Y-%m-%d %H:%M')))
@@ -580,9 +642,12 @@ def wallet_topup():
     c500 = int(request.form.get('coupon_500_count') or 0)
     c300 = int(request.form.get('coupon_300_count') or 0)
     c100 = int(request.form.get('coupon_100_count') or 0)
-    if amount < 0:
-        flash('金額不可為負數','warning')
+    if amount <= 0:
+        flash('儲值金額必須大於 0','warning')
         return redirect(url_for('admin.wallet_home', q=phone))
+    if not phone:
+        flash('缺少有效手機號碼，無法儲值','danger')
+        return redirect(url_for('admin.wallet_home'))
     wallet = _get_or_create_wallet_by_phone(phone)
     wallet.balance += amount
     wallet.updated_at = datetime.utcnow()
@@ -640,6 +705,7 @@ def wallet_consume():
 def wallet_txn_delete():
     tid = request.form.get('id')
     q = request.form.get('q') or ''
+    redirect_url = (request.form.get('redirect_url') or '').strip()
     if not tid:
         flash('缺少交易 ID','warning')
         return redirect(url_for('admin.wallet_home', q=q))
@@ -668,4 +734,6 @@ def wallet_txn_delete():
     except Exception as e:
         db.session.rollback()
         flash(f'刪除失敗：{e}','danger')
+    if redirect_url:
+        return redirect(redirect_url)
     return redirect(url_for('admin.wallet_home', q=q))
