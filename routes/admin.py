@@ -348,9 +348,10 @@ def wallet_summary():
 # ========= 儲值對帳（今日與區間） =========
 @admin_bp.route('/wallet/reconcile')
 def wallet_reconcile():
-    """對帳報表：顯示今日儲值總額，並提供自訂日期區間查詢與明細、彙總。"""
+    """對帳報表：顯示本日時段（12:00~次日03:00）儲值總額，並提供自訂日期區間查詢與明細、彙總、現金應收。"""
     import pytz
     from datetime import datetime as _dt, timedelta
+    import re
     tz = pytz.timezone('Asia/Taipei')
 
     # 取得查詢參數
@@ -358,53 +359,62 @@ def wallet_reconcile():
     start_str = (request.args.get('start') or '').strip()
     end_str = (request.args.get('end') or '').strip()
     export = (request.args.get('export') or '').strip()  # csv
+    cash_kw = (request.args.get('cash_kw') or 'TOPUP_CASH,現金').strip()
+    cash_keywords = [k.strip() for k in cash_kw.split(',') if k.strip()]
 
     now_local = _dt.now(tz)
 
-    def day_bounds_local(d):
-        start_local = tz.localize(_dt(d.year, d.month, d.day, 0, 0, 0))
-        end_local = start_local + timedelta(days=1)
+    def business_day_window(base_date):
+        """回傳某個基準日期的會計日區間：當日 12:00 ~ 次日 03:00（半開區間）。"""
+        start_local = tz.localize(_dt(base_date.year, base_date.month, base_date.day, 12, 0, 0))
+        # 次日 03:00
+        next_day = start_local + timedelta(days=1)
+        end_local = tz.localize(_dt(next_day.year, next_day.month, next_day.day, 3, 0, 0))
         return start_local, end_local
 
-    # 預設為今日
-    if preset == 'yesterday':
-        y = now_local.date() - timedelta(days=1)
-        start_local, end_local = day_bounds_local(_dt(y.year, y.month, y.day))
-    elif preset == 'thisweek':
-        # 以週一為一週開始
-        weekday = now_local.date().weekday()  # Monday=0
-        monday = now_local.date() - timedelta(days=weekday)
-        start_local = tz.localize(_dt(monday.year, monday.month, monday.day))
-        end_local = tz.localize(_dt(now_local.year, now_local.month, now_local.day)) + timedelta(days=1)
-    elif preset == 'thismonth':
-        first = tz.localize(_dt(now_local.year, now_local.month, 1))
-        # 下月一號
-        if now_local.month == 12:
-            next_first = tz.localize(_dt(now_local.year+1, 1, 1))
-        else:
-            next_first = tz.localize(_dt(now_local.year, now_local.month+1, 1))
-        start_local, end_local = first, next_first
+    # 依現在時間決定「今日」基準（淩晨 00:00~03:00 視為前一會計日）
+    def current_business_base_date(now_dt):
+        if now_dt.hour < 3:  # 00:00~02:59 -> 前一日
+            return (now_dt - timedelta(days=1)).date()
+        return now_dt.date()
+
+    # 計算查詢區間
+    if preset in ('today', 'yesterday') and not start_str and not end_str:
+        base_date = current_business_base_date(now_local)
+        if preset == 'yesterday':
+            base_date = base_date - timedelta(days=1)
+        start_local, end_local = business_day_window(base_date)
+    elif preset == 'thisweek' and not start_str and not end_str:
+        # 本週（以週一為基準），使用會計日窗拼接至今
+        weekday = current_business_base_date(now_local).weekday()  # Monday=0
+        monday_date = current_business_base_date(now_local) - timedelta(days=weekday)
+        start_local, _ = business_day_window(monday_date)
+        _, end_local = business_day_window(current_business_base_date(now_local))
+    elif preset == 'thismonth' and not start_str and not end_str:
+        first_date = current_business_base_date(now_local).replace(day=1)
+        start_local, _ = business_day_window(first_date)
+        # 到當前會計日的結束
+        _, end_local = business_day_window(current_business_base_date(now_local))
     else:
-        # 若提供自訂起迄，採用自訂；否則今日
+        # 自訂日期以會計日窗解讀：起日的 12:00 到 迄日次日 03:00
         if start_str:
             try:
                 y, m, d = [int(x) for x in start_str.split('-')]
-                start_local = tz.localize(_dt(y, m, d))
+                start_local, _ = business_day_window(_dt(y, m, d).date())
             except Exception:
-                start_local = tz.localize(_dt(now_local.year, now_local.month, now_local.day))
+                start_local, _ = business_day_window(now_local.date())
         else:
-            start_local = tz.localize(_dt(now_local.year, now_local.month, now_local.day))
+            start_local, _ = business_day_window(now_local.date())
         if end_str:
             try:
                 y2, m2, d2 = [int(x) for x in end_str.split('-')]
-                # end 選擇的日子 +1 天（半開區間）
-                end_local = tz.localize(_dt(y2, m2, d2)) + timedelta(days=1)
+                _, end_local = business_day_window(_dt(y2, m2, d2).date())
             except Exception:
-                end_local = start_local + timedelta(days=1)
+                _, end_local = business_day_window(now_local.date())
         else:
-            end_local = start_local + timedelta(days=1)
+            _, end_local = business_day_window(now_local.date())
 
-    # 轉為 UTC 以過濾（DB 使用 utcnow 建立時間）
+    # 轉為 UTC 過濾
     start_utc = start_local.astimezone(pytz.utc)
     end_utc = end_local.astimezone(pytz.utc)
 
@@ -421,19 +431,34 @@ def wallet_reconcile():
     count = len(txns)
     avg_amount = (total_amount // count) if count else 0
 
-    # 取得電話/姓名/代號與本地時間字串
+    # 取得電話/姓名/代號與本地時間字串（多重回填）
     rows = []
+    phone_pattern = re.compile(r'(09\d{8})')
     for t in txns:
-        wallet = StoredValueWallet.query.filter_by(id=t.wallet_id).first()
-        phone = wallet.phone if wallet else '—'
-        wl = None
+        wallet = StoredValueWallet.query.filter_by(id=t.wallet_id).first() if t.wallet_id else None
+        phone = None
         nickname = '—'
         code = '—'
-        if wallet and wallet.whitelist_id:
-            wl = Whitelist.query.filter_by(id=wallet.whitelist_id).first()
-            if wl:
-                nickname = wl.name or '—'
-                code = wl.id
+        wl = None
+        if wallet:
+            phone = wallet.phone or None
+            if wallet.whitelist_id:
+                wl = Whitelist.query.filter_by(id=wallet.whitelist_id).first()
+                if wl:
+                    nickname = wl.name or nickname
+                    code = wl.id
+                    # 若 wallet.phone 缺失，嘗試用 whitelist.phone 回填顯示
+                    if not phone:
+                        phone = getattr(wl, 'phone', None) or phone
+        # 若仍無 phone，嘗試從備註解析
+        remark_text = (t.remark or '')
+        if not phone:
+            m = phone_pattern.search(remark_text)
+            if m:
+                phone = m.group(1)
+        # 顯示字串
+        phone_display = phone if phone else '—'
+
         # 本地時間字串
         try:
             import pytz as _p
@@ -445,17 +470,18 @@ def wallet_reconcile():
             time_str = local_dt.strftime('%Y/%m/%d %H:%M') if local_dt else ''
         except Exception:
             time_str = t.created_at.strftime('%Y/%m/%d %H:%M') if t.created_at else ''
+
         rows.append({
             'id': t.id,
             'time': time_str,
-            'phone': phone,
+            'phone': phone_display,
             'nickname': nickname,
             'code': code,
             'amount': t.amount or 0,
-            'remark': (t.remark or '')[:120],
+            'remark': remark_text[:120],
         })
 
-    # 依 remark 分組（可用於現金/轉帳等對帳）
+    # 依 remark 分組
     by_remark = {}
     for r in rows:
         k = r['remark'] or '—'
@@ -463,16 +489,33 @@ def wallet_reconcile():
         by_remark[k]['amount'] += r['amount']
         by_remark[k]['count'] += 1
 
-    # 依日期（日）彙總
+    # 依會計日（日）彙總：以 12:00~次日03:00 分群
     by_day = {}
     for t in txns:
         dt = t.created_at
         if dt and dt.tzinfo is None:
             dt = pytz.utc.localize(dt)
         local_dt = dt.astimezone(tz) if dt else None
-        day_key = local_dt.strftime('%Y-%m-%d') if local_dt else '—'
+        if local_dt is None:
+            day_key = '—'
+        else:
+            # 將 00:00~02:59 歸屬前一日
+            bd_date = (local_dt - timedelta(days=1)).date() if local_dt.hour < 3 else local_dt.date()
+            day_key = bd_date.strftime('%Y-%m-%d')
         by_day.setdefault(day_key, 0)
         by_day[day_key] += (t.amount or 0)
+
+    # 現金應收：以關鍵字（remark 含任一關鍵字）快速計算
+    def is_cash_remark(text):
+        if not cash_keywords:
+            return False
+        lower = text.lower() if text else ''
+        for kw in cash_keywords:
+            if kw and (kw in text or kw.lower() in lower):
+                return True
+        return False
+    cash_total = sum(r['amount'] for r in rows if is_cash_remark(r['remark']))
+    cash_count = sum(1 for r in rows if is_cash_remark(r['remark']))
 
     # CSV 匯出
     if export == 'csv':
@@ -485,12 +528,12 @@ def wallet_reconcile():
             cw.writerow([r['id'], r['time'], r['phone'], r['nickname'], r['code'], r['amount'], r['remark']])
         output = si.getvalue()
         from flask import Response
-        filename = f"wallet_topups_{start_local.strftime('%Y%m%d')}_{(end_local - timedelta(days=1)).strftime('%Y%m%d')}.csv"
+        filename = f"wallet_topups_{start_local.strftime('%Y%m%d_%H%M')}_{end_local.strftime('%Y%m%d_%H%M')}.csv"
         return Response(output, mimetype='text/csv', headers={'Content-Disposition': f'attachment; filename="{filename}"'})
 
-    # 今日總額（便捷顯示）
-    today_start_local = tz.localize(_dt(now_local.year, now_local.month, now_local.day))
-    today_end_local = today_start_local + timedelta(days=1)
+    # 本日時段總額（以會計日理解）
+    base_today = current_business_base_date(now_local)
+    today_start_local, today_end_local = business_day_window(base_today)
     today_q = (StoredValueTransaction.query
                .filter(StoredValueTransaction.type == 'topup')
                .filter(StoredValueTransaction.created_at >= today_start_local.astimezone(pytz.utc))
@@ -507,9 +550,12 @@ def wallet_reconcile():
                            preset=preset,
                            start=start_str,
                            end=end_str,
+                           cash_kw=cash_kw,
+                           cash_total=cash_total,
+                           cash_count=cash_count,
                            today_total=today_total,
-                           start_local_display=(start_local.strftime('%Y-%m-%d')),
-                           end_local_display=((end_local - timedelta(days=1)).strftime('%Y-%m-%d')))
+                           start_local_display=(start_local.strftime('%Y-%m-%d %H:%M')),
+                           end_local_display=(end_local.strftime('%Y-%m-%d %H:%M')))
 
 
 def _get_or_create_wallet_by_phone(phone):

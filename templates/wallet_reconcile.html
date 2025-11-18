@@ -32,11 +32,12 @@
   <div class="container">
     <div class="card">
       <div class="summary">
-        <div class="pill">今日儲值總額：<b>{{ today_total }}</b></div>
+        <div class="pill">本日時段總額(12:00~翌日03:00)：<b>{{ today_total }}</b></div>
         <div class="pill muted">查詢區間：{{ start_local_display }} ~ {{ end_local_display }}</div>
         <div class="pill">筆數：<b>{{ count }}</b></div>
         <div class="pill">總額：<b>{{ total_amount }}</b></div>
         <div class="pill">平均：<b>{{ avg_amount }}</b></div>
+        <div class="pill" title="依備註關鍵字（例如 TOPUP_CASH, 現金）判斷">現金應收：<b>{{ cash_total }}</b>（{{ cash_count }} 筆）</div>
       </div>
       <form method="get" action="/admin/wallet/reconcile" style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap">
         <label>快速區間</label>
@@ -51,8 +52,10 @@
         <input type="date" name="start" value="{{ start or '' }}" />
         <label>迄</label>
         <input type="date" name="end" value="{{ end or '' }}" />
+        <label>現金關鍵字</label>
+        <input type="text" name="cash_kw" value="{{ cash_kw or '' }}" placeholder="TOPUP_CASH,現金" />
         <button type="submit">查詢</button>
-        <a class="button" href="/admin/wallet/reconcile?start={{ start or '' }}&end={{ end or '' }}&export=csv" style="text-decoration:none"><button type="button">匯出 CSV</button></a>
+        <a class="button" href="/admin/wallet/reconcile?start={{ start or '' }}&end={{ end or '' }}&cash_kw={{ cash_kw or '' }}&export=csv" style="text-decoration:none"><button type="button">匯出 CSV</button></a>
       </form>
     </div>
 
@@ -75,7 +78,13 @@
           <tr>
             <td>{{ r.id }}</td>
             <td>{{ r.time }}</td>
-            <td><a href="/admin/wallet?q={{ r.phone }}" style="color:#1976d2;text-decoration:none">{{ r.phone }}</a></td>
+            <td>
+              {% if r.phone and r.phone != '—' %}
+                <a href="/admin/wallet?q={{ r.phone }}" style="color:#1976d2;text-decoration:none">{{ r.phone }}</a>
+              {% else %}
+                —
+              {% endif %}
+            </td>
             <td>{{ r.nickname }}</td>
             <td>{{ r.code }}</td>
             <td>{{ r.amount }}</td>
