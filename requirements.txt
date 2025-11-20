@@ -17,5 +17,3 @@ oauth2client
 Flask-Migrate
 Flask-WTF
 apscheduler
-Flask-Login
-boto3
