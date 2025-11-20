@@ -19,6 +19,7 @@ from flask_migrate import Migrate
 from routes.message import message_bp
 from routes.pending_verify import pending_bp
 from routes.admin import admin_bp
+from routes.site import site_bp
 from models import Whitelist, Blacklist, TempVerify, Coupon
 import secrets
 
@@ -95,6 +96,7 @@ app.register_blueprint(message_bp)
 csrf.exempt(message_bp)  # 豁免 LINE Webhook /callback 不使用 CSRF Token
 app.register_blueprint(pending_bp)
 app.register_blueprint(admin_bp)
+app.register_blueprint(site_bp)
 
 """admin 相關路由已移至 routes/admin.py 的 Blueprint"""
 
@@ -109,7 +111,7 @@ def home():
 
 @app.route('/')
 def index():
-    return redirect('/home')
+    return redirect(url_for('site.site_index'))
 
 @app.route('/search')
 def search():
@@ -212,6 +214,11 @@ with app.app_context():
         try:
             from flask_migrate import upgrade as _upgrade, stamp as _stamp
             _upgrade(migrations_path)
+            # 確保任何未納入遷移的新表會被建立（create_all 不會更動已存在的表）
+            try:
+                db.create_all()
+            except Exception:
+                pass
         except Exception as e:
             # upgrade 失敗則退回 create_all，之後 stamp head 讓未來 upgrade 可以接續
             db.create_all()
