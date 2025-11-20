@@ -94,7 +94,8 @@ def logout():
 def dashboard():
     posts = Post.query.order_by(Post.created_at.desc()).all()
     schedules = ScheduleEntry.query.order_by(ScheduleEntry.start_time.desc()).limit(100).all()
-    return render_template('site/dashboard.html', posts=posts, schedules=schedules, user=current_user())
+    assets = MediaAsset.query.order_by(MediaAsset.created_at.desc()).limit(100).all()
+    return render_template('site/dashboard.html', posts=posts, schedules=schedules, assets=assets, user=current_user())
 
 
 # ===== Posts CRUD =====
@@ -250,3 +251,36 @@ def upload():
         return jsonify({'url': url, 'id': m.id})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@site_bp.route('/media/<int:mid>/delete', methods=['POST'])
+@login_required
+def media_delete(mid):
+    asset = MediaAsset.query.filter_by(id=mid).first_or_404()
+    use_s3 = os.getenv('USE_S3', '0') == '1'
+    if use_s3 and asset.key:
+        try:
+            boto3 = __import__('boto3')
+            bucket = os.getenv('S3_BUCKET')
+            region = os.getenv('S3_REGION')
+            if bucket and region:
+                s3 = boto3.client('s3', region_name=region,
+                                  aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+                                  aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'))
+                s3.delete_object(Bucket=bucket, Key=asset.key)
+        except Exception:
+            pass  # 刪除失敗不阻斷流程
+    else:
+        # 本地檔案刪除
+        try:
+            if asset.filename:
+                local_path = os.path.join(os.path.dirname(__file__), '..', 'static', 'uploads', asset.filename)
+                local_path = os.path.abspath(local_path)
+                if os.path.isfile(local_path):
+                    os.remove(local_path)
+        except Exception:
+            pass
+    db.session.delete(asset)
+    db.session.commit()
+    flash('圖片已刪除','info')
+    return redirect(url_for('site.dashboard'))

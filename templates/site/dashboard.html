@@ -78,6 +78,22 @@
   <button type="submit">上傳</button>
 </form>
 <div id="upload-result"></div>
+<h4 style="margin-top:12px;">圖片列表 (最新 100)</h4>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;">
+  {% for a in assets %}
+  <div style="border:1px solid #444;padding:6px;border-radius:6px;">
+    <div style="height:120px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#111;">
+      <img src="{{ a.url }}" alt="asset" style="max-width:100%;max-height:120px;object-fit:cover;" loading="lazy">
+    </div>
+    <div style="font-size:12px;margin-top:4px;word-break:break-all;">{{ a.filename or '—' }}</div>
+    <form method="post" action="/media/{{ a.id }}/delete" onsubmit="return confirm('確定刪除？');" style="margin-top:4px;text-align:center;">
+      <button style="background:#e53935;color:#fff;border:none;padding:4px 8px;border-radius:4px;">刪除</button>
+    </form>
+  </div>
+  {% else %}
+    <p style="grid-column:1/-1;">尚無圖片</p>
+  {% endfor %}
+</div>
 <script>
 const f = document.getElementById('upload-form');
 const resBox = document.getElementById('upload-result');
