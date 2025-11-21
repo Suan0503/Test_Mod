@@ -94,6 +94,27 @@
             <input type="hidden" name="phone" value="{{ wallet.phone }}">
             <label>金額</label>
             <input name="amount" type="number" min="0" required />
+            <div style="display:flex;gap:10px;align-items:center;margin:6px 0 2px">
+              <div>
+                <label>付款方式</label>
+                <select name="payment_method" style="min-width:120px">
+                  <option value="">未選</option>
+                  <option value="CASH">現金</option>
+                  <option value="BANK">匯款</option>
+                  <option value="CARD">刷卡</option>
+                  <option value="TWQR">台灣Pay/掃碼</option>
+                  <option value="OTHER">其他</option>
+                </select>
+              </div>
+              <div>
+                <label>單號/後五碼</label>
+                <input type="text" name="reference_id" placeholder="交易序號或後五碼" style="min-width:160px" />
+              </div>
+              <div>
+                <label>經手人</label>
+                <input type="text" name="operator" placeholder="經手人" style="min-width:120px" />
+              </div>
+            </div>
             <label>備註</label>
             <textarea name="remark" rows="2" placeholder="備註（例如：現金、轉帳後五碼...）"></textarea>
             <div style="display:flex;gap:10px;margin-top:8px;align-items:flex-end">
@@ -147,13 +168,16 @@
     <div class="card">
       <h3>最近交易</h3>
       <table>
-        <thead><tr><th>時間</th><th>類型</th><th>金額</th><th>備註</th><th>500券</th><th>300券</th><th>100券</th><th>操作</th></tr></thead>
+  <thead><tr><th>時間</th><th>類型</th><th>金額</th><th>付款方式</th><th>單號</th><th>經手人</th><th>備註</th><th>500券</th><th>300券</th><th>100券</th><th>操作</th></tr></thead>
         <tbody>
           {% for t in txns %}
           <tr>
             <td>{{ t.local_time_str }}</td>
             <td>{{ t.type }}</td>
             <td>{{ t.amount }}</td>
+      <td>{{ t.payment_method or '—' }}</td>
+  <td>{{ t.reference_id or '—' }}</td>
+  <td>{{ t.operator or '—' }}</td>
             <td>{{ t.adjusted_remark or t.remark }}</td>
             <td>{{ t.coupon_500_count }}</td>
             <td>{{ t.coupon_300_count }}</td>

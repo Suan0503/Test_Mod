@@ -273,5 +273,32 @@ with app.app_context():
         except Exception:
             db.session.rollback()
 
+    # 兼容補丁：精準對帳欄位（payment_method, reference_id, operator）
+    try:
+        db.session.execute(text("ALTER TABLE stored_value_txn ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50)"))
+        db.session.execute(text("ALTER TABLE stored_value_txn ADD COLUMN IF NOT EXISTS reference_id VARCHAR(100)"))
+        db.session.execute(text("ALTER TABLE stored_value_txn ADD COLUMN IF NOT EXISTS operator VARCHAR(100)"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        try:
+            engine_name = db.get_engine().name
+            if engine_name == 'sqlite':
+                info = db.session.execute(text("PRAGMA table_info(stored_value_txn)")).fetchall()
+                cols = {row[1] for row in info}
+                alters = []
+                if 'payment_method' not in cols:
+                    alters.append("ALTER TABLE stored_value_txn ADD COLUMN payment_method VARCHAR(50)")
+                if 'reference_id' not in cols:
+                    alters.append("ALTER TABLE stored_value_txn ADD COLUMN reference_id VARCHAR(100)")
+                if 'operator' not in cols:
+                    alters.append("ALTER TABLE stored_value_txn ADD COLUMN operator VARCHAR(100)")
+                for sql in alters:
+                    db.session.execute(text(sql))
+                if alters:
+                    db.session.commit()
+        except Exception:
+            db.session.rollback()
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))

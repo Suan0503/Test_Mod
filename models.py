@@ -74,11 +74,12 @@ class StoredValueTransaction(db.Model):
     type = db.Column(db.String(20), nullable=False)  # topup / consume
     amount = db.Column(db.Integer, nullable=False)
     remark = db.Column(db.Text)  # 例如預約記錄
+    # 精準對帳欄位
+    payment_method = db.Column(db.String(50))  # CASH, BANK, CARD, TWQR, OTHER
+    reference_id = db.Column(db.String(100))   # 交易序號/匯款後五碼等
+    operator = db.Column(db.String(100))       # 經手人
     coupon_500_count = db.Column(db.Integer, default=0, nullable=False)
     coupon_300_count = db.Column(db.Integer, default=0, nullable=False)
     # 新增 100 券
     coupon_100_count = db.Column(db.Integer, default=0, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-
-
-

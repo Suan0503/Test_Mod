@@ -370,6 +370,8 @@ def wallet_reconcile():
     export = (request.args.get('export') or '').strip()  # csv
     cash_kw = (request.args.get('cash_kw') or 'TOPUP_CASH,現金').strip()
     remark_kw = (request.args.get('remark_kw') or '').strip()  # 額外備註篩選
+    payment_method_filter = (request.args.get('payment_method') or '').strip()
+    reference_kw = (request.args.get('reference_kw') or '').strip()
     cash_keywords = [k.strip() for k in cash_kw.split(',') if k.strip()]
 
     now_local = _dt.now(tz)
@@ -434,6 +436,8 @@ def wallet_reconcile():
          .filter(StoredValueTransaction.created_at >= start_utc)
          .filter(StoredValueTransaction.created_at < end_utc)
          .order_by(StoredValueTransaction.created_at.asc()))
+    if payment_method_filter:
+        q = q.filter(StoredValueTransaction.payment_method == payment_method_filter)
     txns = q.all()
 
     # 明細與總計（儲值）
@@ -506,11 +510,16 @@ def wallet_reconcile():
             'amount': t.amount or 0,
             'remark': remark_show,
             'coupon_only': coupon_only,
+            'payment_method': getattr(t,'payment_method',None),
+            'reference_id': getattr(t,'reference_id',None),
+            'operator': getattr(t,'operator',None),
         })
 
     # 備註過濾（若指定 remark_kw）
+    if reference_kw:
+        rows = [r for r in rows if reference_kw in (r.get('reference_id') or '')]
     if remark_kw:
-        rows = [r for r in rows if (remark_kw in (r['remark'] or ''))]
+        rows = [r for r in rows if (remark_kw in (r['remark'] or '') or remark_kw in (r.get('reference_id') or '') or remark_kw in (r.get('payment_method') or ''))]
 
     # 依 remark 分組
     by_remark = {}
@@ -551,11 +560,34 @@ def wallet_reconcile():
     # ====== 無效紀錄與重複紀錄偵測 ======
     invalid_rows = []
     for r in rows:
-        # 無電話且有金額且備註包含儲值關鍵字或 TOPUP_CASH
+        # 無電話且有金額且備註包含儲值關鍵字或 TOPUP_CASH -> 嘗試修復
         if (r['phone'] == '—' and r['amount'] > 0 and (
             'TOPUP_CASH' in (r['remark'] or '') or '儲值' in (r['remark'] or '')
         )):
-            invalid_rows.append(r)
+            # 嘗試由交易紀錄重新抓 wallet 並補 phone
+            tfix = StoredValueTransaction.query.filter_by(id=r['id']).first()
+            if tfix:
+                wfix = StoredValueWallet.query.filter_by(id=tfix.wallet_id).first()
+                repaired = False
+                if wfix and wfix.phone:
+                    r['phone'] = wfix.phone
+                    repaired = True
+                else:
+                    # 從 remark 解析手機
+                    import re as _re
+                    m2 = _re.search(r'(09\d{8})', tfix.remark or '')
+                    if m2:
+                        if wfix and not wfix.phone:
+                            wfix.phone = m2.group(1)
+                            wfix.updated_at = datetime.utcnow()
+                            db.session.commit()
+                        r['phone'] = m2.group(1)
+                        repaired = True
+                if not repaired:
+                    invalid_rows.append(r)
+            else:
+                # 交易不存在 -> 不呈現（幽靈 ID），跳過
+                continue
 
     # 重複判斷：相同 phone != '—'、amount、remark（移除時以最晚時間保留一筆）
     dup_groups = {}
@@ -620,6 +652,12 @@ def wallet_reconcile():
                .filter(StoredValueTransaction.created_at < today_end_local.astimezone(pytz.utc)))
     today_total = sum(t.amount or 0 for t in today_q.all())
 
+    # Debug 資訊：DB URL、交易數量、最大 ID
+    from config import DATABASE_URL as _DB_URL
+    txn_count = StoredValueTransaction.query.count()
+    last_txn = StoredValueTransaction.query.order_by(StoredValueTransaction.id.desc()).first()
+    last_txn_id = last_txn.id if last_txn else None
+
     return render_template('wallet_reconcile.html',
                            rows=rows,
                            total_amount=total_amount,
@@ -632,6 +670,8 @@ def wallet_reconcile():
                            end=end_str,
                            cash_kw=cash_kw,
                            remark_kw=remark_kw,
+                           payment_method_filter=payment_method_filter,
+                           reference_kw=reference_kw,
                            cash_total=cash_total,
                            cash_count=cash_count,
                            consume_total=consume_total,
@@ -640,7 +680,10 @@ def wallet_reconcile():
                            duplicate_rows=duplicate_rows,
                            today_total=today_total,
                            start_local_display=(start_local.strftime('%Y-%m-%d %H:%M')),
-                           end_local_display=(end_local.strftime('%Y-%m-%d %H:%M')))
+                           end_local_display=(end_local.strftime('%Y-%m-%d %H:%M')),
+                           db_url=_DB_URL,
+                           txn_count=txn_count,
+                           last_txn_id=last_txn_id)
 
 @admin_bp.route('/wallet/reconcile/consume')
 def wallet_reconcile_consume():
@@ -758,6 +801,10 @@ def wallet_reconcile_consume():
         rows = [r for r in rows if remark_kw in (r['remark'] or '')]
     stored_count = sum(1 for r in rows if not r['coupon_only'])
     coupon_only_count = sum(1 for r in rows if r['coupon_only'])
+    from config import DATABASE_URL as _DB_URL
+    txn_count = StoredValueTransaction.query.filter_by(type='consume').count()
+    last_txn = StoredValueTransaction.query.order_by(StoredValueTransaction.id.desc()).first()
+    last_txn_id = last_txn.id if last_txn else None
     return render_template('wallet_reconcile_consume.html',
                            rows=rows,
                            stored_sum=stored_sum,
@@ -767,7 +814,140 @@ def wallet_reconcile_consume():
                            preset=preset,
                            remark_kw=remark_kw,
                            start_local_display=start_local.strftime('%Y-%m-%d %H:%M'),
-                           end_local_display=end_local.strftime('%Y-%m-%d %H:%M'))
+                           end_local_display=end_local.strftime('%Y-%m-%d %H:%M'),
+                           db_url=_DB_URL,
+                           txn_count=txn_count,
+                           last_txn_id=last_txn_id)
+
+@admin_bp.route('/wallet/txn/<int:tid>')
+def wallet_txn_detail(tid):
+    """單筆交易檢視，協助比對前端顯示 ID 與資料庫真實內容。"""
+    t = StoredValueTransaction.query.filter_by(id=tid).first()
+    if not t:
+        return {'error': 'not found', 'id': tid}, 404
+    w = StoredValueWallet.query.filter_by(id=t.wallet_id).first()
+    wl = None
+    if w and w.whitelist_id:
+        wl = Whitelist.query.filter_by(id=w.whitelist_id).first()
+    data = {
+        'id': t.id,
+        'wallet_id': t.wallet_id,
+        'type': t.type,
+        'amount': t.amount,
+        'remark': t.remark,
+        'coupon_500_count': getattr(t,'coupon_500_count',0),
+        'coupon_300_count': getattr(t,'coupon_300_count',0),
+        'coupon_100_count': getattr(t,'coupon_100_count',0),
+        'created_at': t.created_at.isoformat() if t.created_at else None,
+        'wallet_phone': w.phone if w else None,
+        'whitelist_id': w.whitelist_id if w else None,
+        'whitelist_name': wl.name if wl else None,
+    }
+    return data
+
+@admin_bp.route('/wallet/transactions/export')
+def wallet_transactions_export():
+    """匯出交易：支援 type(topup/consume/all)、日期區間(會計日 12:00~次日03:00)與格式(csv/json)。"""
+    import pytz
+    from datetime import datetime as _dt, timedelta
+    fmt = (request.args.get('fmt') or 'csv').lower()
+    tx_type = (request.args.get('type') or 'all').lower()
+    start_str = (request.args.get('start') or '').strip()
+    end_str = (request.args.get('end') or '').strip()
+    tz = pytz.timezone('Asia/Taipei')
+
+    def business_window(d):
+        s = tz.localize(_dt(d.year, d.month, d.day, 12, 0, 0))
+        e = s + timedelta(days=1, hours=15)  # +1天+15小時 = 次日03:00
+        return s, e
+    now_local = _dt.now(tz)
+    if start_str:
+        try:
+            y,m,d = [int(x) for x in start_str.split('-')]
+            start_local,_ = business_window(_dt(y,m,d).date())
+        except Exception:
+            start_local,_ = business_window(now_local.date())
+    else:
+        start_local,_ = business_window(now_local.date())
+    if end_str:
+        try:
+            y2,m2,d2 = [int(x) for x in end_str.split('-')]
+            _,end_local = business_window(_dt(y2,m2,d2).date())
+        except Exception:
+            _,end_local = business_window(now_local.date())
+    else:
+        _,end_local = business_window(now_local.date())
+    su = start_local.astimezone(pytz.utc)
+    eu = end_local.astimezone(pytz.utc)
+    base_q = StoredValueTransaction.query.filter(StoredValueTransaction.created_at >= su).filter(StoredValueTransaction.created_at < eu)
+    if tx_type in ('topup','consume'):
+        base_q = base_q.filter(StoredValueTransaction.type == tx_type)
+    txns = base_q.order_by(StoredValueTransaction.id.asc()).all()
+
+    # 組資料列
+    rows = []
+    for t in txns:
+        w = StoredValueWallet.query.filter_by(id=t.wallet_id).first()
+        wl = None
+        name = None
+        phone = None
+        if w:
+            phone = w.phone
+            if w.whitelist_id:
+                wl = Whitelist.query.filter_by(id=w.whitelist_id).first()
+                if wl:
+                    name = wl.name
+                    if not phone:
+                        phone = wl.phone
+        coupon_used = (getattr(t,'coupon_500_count',0) or 0) + (getattr(t,'coupon_300_count',0) or 0) + (getattr(t,'coupon_100_count',0) or 0)
+        rows.append({
+            'id': t.id,
+            'created_at': t.created_at.isoformat() if t.created_at else None,
+            'type': t.type,
+            'wallet_id': t.wallet_id,
+            'phone': phone,
+            'name': name,
+            'amount': t.amount,
+            'remark': t.remark,
+            'payment_method': getattr(t, 'payment_method', None),
+            'reference_id': getattr(t, 'reference_id', None),
+            'operator': getattr(t, 'operator', None),
+            'coupon_500_count': getattr(t,'coupon_500_count',0),
+            'coupon_300_count': getattr(t,'coupon_300_count',0),
+            'coupon_100_count': getattr(t,'coupon_100_count',0),
+            'coupon_used_total': coupon_used,
+        })
+    if fmt == 'json':
+        return {'start': start_local.isoformat(), 'end': end_local.isoformat(), 'count': len(rows), 'rows': rows}
+    # CSV
+    import csv
+    from io import StringIO
+    si = StringIO()
+    cw = csv.writer(si)
+    cw.writerow(['id','time','type','wallet_id','phone','name','amount','remark','payment_method','reference_id','operator','c500','c300','c100','coupon_used_total'])
+    for r in rows:
+        cw.writerow([r['id'], r['created_at'], r['type'], r['wallet_id'], r['phone'], r['name'], r['amount'], r['remark'], r.get('payment_method') or '', r.get('reference_id') or '', r.get('operator') or '', r['coupon_500_count'], r['coupon_300_count'], r['coupon_100_count'], r['coupon_used_total']])
+    out = si.getvalue()
+    from flask import Response
+    fname = f"transactions_{start_local.strftime('%Y%m%d_%H%M')}_{end_local.strftime('%Y%m%d_%H%M')}_{tx_type}.csv"
+    return Response(out, mimetype='text/csv', headers={'Content-Disposition': f'attachment; filename="{fname}"'})
+
+@admin_bp.route('/wallet/txn/dump')
+def wallet_txn_dump():
+    """輸出前 N 筆交易 JSON，用於快速對比 ID。"""
+    limit = int(request.args.get('limit') or 100)
+    txns = StoredValueTransaction.query.order_by(StoredValueTransaction.id.asc()).limit(limit).all()
+    data = []
+    for t in txns:
+        data.append({
+            'id': t.id,
+            'type': t.type,
+            'amount': t.amount,
+            'remark': t.remark,
+            'wallet_id': t.wallet_id,
+            'created_at': t.created_at.isoformat() if t.created_at else None,
+        })
+    return {'count': len(data), 'rows': data}
 
 
 def _get_or_create_wallet_by_phone(phone):
@@ -789,6 +969,9 @@ def wallet_topup():
     phone = (request.form.get('phone') or '').strip()
     amount = int(request.form.get('amount') or 0)
     raw_remark = (request.form.get('remark') or '').strip()
+    payment_method = (request.form.get('payment_method') or '').strip() or None
+    reference_id = (request.form.get('reference_id') or '').strip() or None
+    operator = (request.form.get('operator') or '').strip() or None
     c500 = int(request.form.get('coupon_500_count') or 0)
     c300 = int(request.form.get('coupon_300_count') or 0)
     c100 = int(request.form.get('coupon_100_count') or 0)
@@ -806,6 +989,19 @@ def wallet_topup():
     txn.type = 'topup'
     txn.amount = amount
     txn.remark = raw_remark if raw_remark else 'TOPUP_CASH'
+    # 精準對帳欄位
+    try:
+        txn.payment_method = payment_method
+    except Exception:
+        pass
+    try:
+        txn.reference_id = reference_id
+    except Exception:
+        pass
+    try:
+        txn.operator = operator
+    except Exception:
+        pass
     txn.coupon_500_count = c500
     txn.coupon_300_count = c300
     try:
