@@ -26,7 +26,6 @@
   <div class="header">
     <h2>📒 儲值對帳</h2>
     <a href="/admin/wallet/summary">儲值金總表</a>
-  <a href="/admin/wallet/consume/reconcile">扣款對帳</a>
     <a href="/admin/wallet">單一查詢</a>
     <a href="/admin/home">回後台主頁</a>
   </div>
@@ -56,6 +55,8 @@
         <input type="date" name="end" value="{{ end or '' }}" />
         <label>現金關鍵字</label>
         <input type="text" name="cash_kw" value="{{ cash_kw or '' }}" placeholder="TOPUP_CASH,現金" />
+  <label>備註關鍵字</label>
+  <input type="text" name="remark_kw" value="{{ remark_kw or '' }}" placeholder="輸入備註過濾" />
         <button type="submit">查詢</button>
         <a class="button" href="/admin/wallet/reconcile?start={{ start or '' }}&end={{ end or '' }}&cash_kw={{ cash_kw or '' }}&export=csv" style="text-decoration:none"><button type="button">匯出 CSV</button></a>
       </form>

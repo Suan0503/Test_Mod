@@ -267,6 +267,15 @@ def wallet_home():
                 except Exception:
                     for _t in txns:
                         _t.local_time_str = _t.created_at.strftime('%Y/%m/%d %H:%M') if _t.created_at else ''
+                # 調整備註：topup 金額=0 且有任一折價券 → 使用折價券
+                for _t in txns:
+                    try:
+                        if (_t.type == 'topup' and (_t.amount or 0) == 0 and ((getattr(_t,'coupon_500_count',0) or 0) or (getattr(_t,'coupon_300_count',0) or 0) or (getattr(_t,'coupon_100_count',0) or 0))):
+                            _t.adjusted_remark = '使用折價券'
+                        else:
+                            _t.adjusted_remark = _t.remark
+                    except Exception:
+                        _t.adjusted_remark = _t.remark
                 # 折價券總數（全量計算避免被limit影響）
                 all_txns = StoredValueTransaction.query.filter_by(wallet_id=wallet.id).all()
                 c500 = c300 = c100 = 0
@@ -360,6 +369,7 @@ def wallet_reconcile():
     end_str = (request.args.get('end') or '').strip()
     export = (request.args.get('export') or '').strip()  # csv
     cash_kw = (request.args.get('cash_kw') or 'TOPUP_CASH,現金').strip()
+    remark_kw = (request.args.get('remark_kw') or '').strip()  # 額外備註篩選
     cash_keywords = [k.strip() for k in cash_kw.split(',') if k.strip()]
 
     now_local = _dt.now(tz)
@@ -480,6 +490,13 @@ def wallet_reconcile():
         except Exception:
             time_str = t.created_at.strftime('%Y/%m/%d %H:%M') if t.created_at else ''
 
+        # 判斷是否屬於券使用（amount=0 且有任一 coupon 欄位）
+        coupon_only = False
+        if (t.type == 'topup' and (t.amount or 0) == 0 and (
+            getattr(t, 'coupon_500_count', 0) or getattr(t, 'coupon_300_count', 0) or getattr(t, 'coupon_100_count', 0)
+        )):
+            coupon_only = True
+        remark_show = '使用折價券' if coupon_only else remark_text[:120]
         rows.append({
             'id': t.id,
             'time': time_str,
@@ -487,8 +504,13 @@ def wallet_reconcile():
             'nickname': nickname,
             'code': code,
             'amount': t.amount or 0,
-            'remark': remark_text[:120],
+            'remark': remark_show,
+            'coupon_only': coupon_only,
         })
+
+    # 備註過濾（若指定 remark_kw）
+    if remark_kw:
+        rows = [r for r in rows if (remark_kw in (r['remark'] or ''))]
 
     # 依 remark 分組
     by_remark = {}
@@ -609,6 +631,7 @@ def wallet_reconcile():
                            start=start_str,
                            end=end_str,
                            cash_kw=cash_kw,
+                           remark_kw=remark_kw,
                            cash_total=cash_total,
                            cash_count=cash_count,
                            consume_total=consume_total,
@@ -618,6 +641,133 @@ def wallet_reconcile():
                            today_total=today_total,
                            start_local_display=(start_local.strftime('%Y-%m-%d %H:%M')),
                            end_local_display=(end_local.strftime('%Y-%m-%d %H:%M')))
+
+@admin_bp.route('/wallet/reconcile/consume')
+def wallet_reconcile_consume():
+    """扣款對帳：顯示 consume 交易，區分使用儲值金與使用折價券（僅券），同會計時段與篩選。"""
+    import pytz
+    from datetime import datetime as _dt, timedelta
+    tz = pytz.timezone('Asia/Taipei')
+    preset = (request.args.get('preset') or '').strip()
+    start_str = (request.args.get('start') or '').strip()
+    end_str = (request.args.get('end') or '').strip()
+    remark_kw = (request.args.get('remark_kw') or '').strip()
+
+    now_local = _dt.now(tz)
+    def business_day_window(base_date):
+        start_local = tz.localize(_dt(base_date.year, base_date.month, base_date.day, 12, 0, 0))
+        next_day = start_local + timedelta(days=1)
+        end_local = tz.localize(_dt(next_day.year, next_day.month, next_day.day, 3, 0, 0))
+        return start_local, end_local
+    def current_business_base_date(now_dt):
+        if now_dt.hour < 3:
+            return (now_dt - timedelta(days=1)).date()
+        return now_dt.date()
+    if preset in ('today','yesterday') and not start_str and not end_str:
+        base_date = current_business_base_date(now_local)
+        if preset=='yesterday':
+            base_date = base_date - timedelta(days=1)
+        start_local, end_local = business_day_window(base_date)
+    elif preset=='thisweek' and not start_str and not end_str:
+        weekday = current_business_base_date(now_local).weekday()
+        monday_date = current_business_base_date(now_local) - timedelta(days=weekday)
+        start_local,_ = business_day_window(monday_date)
+        _,end_local = business_day_window(current_business_base_date(now_local))
+    elif preset=='thismonth' and not start_str and not end_str:
+        first_date = current_business_base_date(now_local).replace(day=1)
+        start_local,_ = business_day_window(first_date)
+        _,end_local = business_day_window(current_business_base_date(now_local))
+    else:
+        if start_str:
+            try:
+                y,m,d = [int(x) for x in start_str.split('-')]
+                start_local,_ = business_day_window(_dt(y,m,d).date())
+            except Exception:
+                start_local,_ = business_day_window(now_local.date())
+        else:
+            start_local,_ = business_day_window(now_local.date())
+        if end_str:
+            try:
+                y2,m2,d2 = [int(x) for x in end_str.split('-')]
+                _,end_local = business_day_window(_dt(y2,m2,d2).date())
+            except Exception:
+                _,end_local = business_day_window(now_local.date())
+        else:
+            _,end_local = business_day_window(now_local.date())
+    start_utc = start_local.astimezone(pytz.utc)
+    end_utc = end_local.astimezone(pytz.utc)
+    txns = (StoredValueTransaction.query
+            .filter(StoredValueTransaction.type=='consume')
+            .filter(StoredValueTransaction.created_at>=start_utc)
+            .filter(StoredValueTransaction.created_at<end_utc)
+            .order_by(StoredValueTransaction.created_at.asc()).all())
+    rows = []
+    stored_sum = 0
+    coupon_only_sum = 0
+    import re
+    phone_pattern = re.compile(r'(09\d{8})')
+    for t in txns:
+        wallet = StoredValueWallet.query.filter_by(id=t.wallet_id).first() if t.wallet_id else None
+        phone = wallet.phone if wallet and wallet.phone else None
+        wl = None
+        nickname = '—'
+        code = '—'
+        if wallet and wallet.whitelist_id:
+            wl = Whitelist.query.filter_by(id=wallet.whitelist_id).first()
+            if wl:
+                nickname = wl.name or nickname
+                code = wl.id
+                if not phone:
+                    phone = getattr(wl,'phone',None) or phone
+        if not phone and t.remark:
+            m = phone_pattern.search(t.remark)
+            if m:
+                phone = m.group(1)
+        phone_display = phone if phone else '—'
+        # 判斷使用儲值金或使用折價券
+        coupon_used = (getattr(t,'coupon_500_count',0) or 0) + (getattr(t,'coupon_300_count',0) or 0) + (getattr(t,'coupon_100_count',0) or 0)
+        is_coupon_only = (t.amount or 0) == 0 and coupon_used > 0
+        if is_coupon_only:
+            coupon_only_sum += coupon_used  # 以券面值顯示總量? 暫記張數合計
+        else:
+            stored_sum += (t.amount or 0)
+        # 顯示 remark
+        remark_show = '使用折價券' if is_coupon_only else (t.remark or '')
+        # 本地時間
+        try:
+            import pytz as _p
+            dt = t.created_at
+            if dt and dt.tzinfo is None:
+                dt = _p.utc.localize(dt)
+            local_dt = dt.astimezone(tz) if dt else None
+            time_str = local_dt.strftime('%Y/%m/%d %H:%M') if local_dt else ''
+        except Exception:
+            time_str = t.created_at.strftime('%Y/%m/%d %H:%M') if t.created_at else ''
+        rows.append({
+            'id': t.id,
+            'time': time_str,
+            'phone': phone_display,
+            'nickname': nickname,
+            'code': code,
+            'amount': t.amount or 0,
+            'remark': remark_show,
+            'coupon_only': is_coupon_only,
+            'coupon_used': coupon_used,
+        })
+    if remark_kw:
+        rows = [r for r in rows if remark_kw in (r['remark'] or '')]
+    stored_count = sum(1 for r in rows if not r['coupon_only'])
+    coupon_only_count = sum(1 for r in rows if r['coupon_only'])
+    return render_template('wallet_reconcile_consume.html',
+                           rows=rows,
+                           stored_sum=stored_sum,
+                           stored_count=stored_count,
+                           coupon_only_sum=coupon_only_sum,
+                           coupon_only_count=coupon_only_count,
+                           preset=preset,
+                           remark_kw=remark_kw,
+                           start_local_display=start_local.strftime('%Y-%m-%d %H:%M'),
+                           end_local_display=end_local.strftime('%Y-%m-%d %H:%M'))
 
 
 def _get_or_create_wallet_by_phone(phone):
@@ -737,175 +887,3 @@ def wallet_txn_delete():
     if redirect_url:
         return redirect(redirect_url)
     return redirect(url_for('admin.wallet_home', q=q))
-
-
-# ========= 扣款對帳（12:00~次日03:00） =========
-@admin_bp.route('/wallet/consume/reconcile')
-def wallet_consume_reconcile():
-    """扣款對帳：顯示本日時段（12:00~次日03:00）扣款總額，並提供自訂日期區間查詢與明細/彙總，時間皆以台北時區。"""
-    import pytz
-    from datetime import datetime as _dt, timedelta
-    import re
-    tz = pytz.timezone('Asia/Taipei')
-
-    preset = (request.args.get('preset') or '').strip()
-    start_str = (request.args.get('start') or '').strip()
-    end_str = (request.args.get('end') or '').strip()
-    export = (request.args.get('export') or '').strip()
-
-    now_local = _dt.now(tz)
-
-    def business_day_window(base_date):
-        start_local = tz.localize(_dt(base_date.year, base_date.month, base_date.day, 12, 0, 0))
-        next_day = start_local + timedelta(days=1)
-        end_local = tz.localize(_dt(next_day.year, next_day.month, next_day.day, 3, 0, 0))
-        return start_local, end_local
-
-    def current_business_base_date(now_dt):
-        if now_dt.hour < 3:
-            return (now_dt - timedelta(days=1)).date()
-        return now_dt.date()
-
-    # 計算查詢窗口
-    if preset in ('today', 'yesterday') and not start_str and not end_str:
-        base_date = current_business_base_date(now_local)
-        if preset == 'yesterday':
-            base_date = base_date - timedelta(days=1)
-        start_local, end_local = business_day_window(base_date)
-    elif preset == 'thisweek' and not start_str and not end_str:
-        weekday = current_business_base_date(now_local).weekday()
-        monday_date = current_business_base_date(now_local) - timedelta(days=weekday)
-        start_local, _ = business_day_window(monday_date)
-        _, end_local = business_day_window(current_business_base_date(now_local))
-    elif preset == 'thismonth' and not start_str and not end_str:
-        first_date = current_business_base_date(now_local).replace(day=1)
-        start_local, _ = business_day_window(first_date)
-        _, end_local = business_day_window(current_business_base_date(now_local))
-    else:
-        if start_str:
-            try:
-                y, m, d = [int(x) for x in start_str.split('-')]
-                start_local, _ = business_day_window(_dt(y, m, d).date())
-            except Exception:
-                start_local, _ = business_day_window(now_local.date())
-        else:
-            start_local, _ = business_day_window(now_local.date())
-        if end_str:
-            try:
-                y2, m2, d2 = [int(x) for x in end_str.split('-')]
-                _, end_local = business_day_window(_dt(y2, m2, d2).date())
-            except Exception:
-                _, end_local = business_day_window(now_local.date())
-        else:
-            _, end_local = business_day_window(now_local.date())
-
-    start_utc = start_local.astimezone(pytz.utc)
-    end_utc = end_local.astimezone(pytz.utc)
-
-    # 查扣款（consume）
-    q = (StoredValueTransaction.query
-         .filter(StoredValueTransaction.type == 'consume')
-         .filter(StoredValueTransaction.created_at >= start_utc)
-         .filter(StoredValueTransaction.created_at < end_utc)
-         .order_by(StoredValueTransaction.created_at.asc()))
-    txns = q.all()
-
-    total_amount = sum(t.amount or 0 for t in txns)
-    count = len(txns)
-    avg_amount = (total_amount // count) if count else 0
-
-    # 列表資料
-    rows = []
-    phone_pattern = re.compile(r'(09\d{8})')
-    for t in txns:
-        wallet = StoredValueWallet.query.filter_by(id=t.wallet_id).first() if t.wallet_id else None
-        phone = None
-        nickname = '—'
-        code = '—'
-        wl = None
-        if wallet:
-            phone = wallet.phone or None
-            if wallet.whitelist_id:
-                wl = Whitelist.query.filter_by(id=wallet.whitelist_id).first()
-                if wl:
-                    nickname = wl.name or nickname
-                    code = wl.id
-                    if not phone:
-                        phone = getattr(wl, 'phone', None) or phone
-        if not phone:
-            m = phone_pattern.search(t.remark or '')
-            if m:
-                phone = m.group(1)
-        phone_display = phone if phone else '—'
-
-        try:
-            import pytz as _p
-            utc = _p.utc
-            dt = t.created_at
-            if dt and dt.tzinfo is None:
-                dt = utc.localize(dt)
-            local_dt = dt.astimezone(tz) if dt else None
-            time_str = local_dt.strftime('%Y/%m/%d %H:%M') if local_dt else ''
-        except Exception:
-            time_str = t.created_at.strftime('%Y/%m/%d %H:%M') if t.created_at else ''
-
-        rows.append({
-            'id': t.id,
-            'time': time_str,
-            'phone': phone_display,
-            'nickname': nickname,
-            'code': code,
-            'amount': t.amount or 0,
-            'remark': (t.remark or '')[:120],
-        })
-
-    # 依會計日（日）彙總
-    by_day = {}
-    for t in txns:
-        dt = t.created_at
-        if dt and dt.tzinfo is None:
-            dt = pytz.utc.localize(dt)
-        local_dt = dt.astimezone(tz) if dt else None
-        if local_dt is None:
-            day_key = '—'
-        else:
-            bd_date = (local_dt - timedelta(days=1)).date() if local_dt.hour < 3 else local_dt.date()
-            day_key = bd_date.strftime('%Y-%m-%d')
-        by_day.setdefault(day_key, 0)
-        by_day[day_key] += (t.amount or 0)
-
-    # CSV 匯出
-    if export == 'csv':
-        import csv
-        from io import StringIO
-        si = StringIO()
-        cw = csv.writer(si)
-        cw.writerow(['ID', '時間(台北)', '手機', '名稱', '編號', '金額', '備註'])
-        for r in rows:
-            cw.writerow([r['id'], r['time'], r['phone'], r['nickname'], r['code'], r['amount'], r['remark']])
-        output = si.getvalue()
-        from flask import Response
-        filename = f"wallet_consumes_{start_local.strftime('%Y%m%d_%H%M')}_{end_local.strftime('%Y%m%d_%H%M')}.csv"
-        return Response(output, mimetype='text/csv', headers={'Content-Disposition': f'attachment; filename="{filename}"'})
-
-    # 本日時段總額
-    base_today = current_business_base_date(now_local)
-    today_start_local, today_end_local = business_day_window(base_today)
-    today_q = (StoredValueTransaction.query
-               .filter(StoredValueTransaction.type == 'consume')
-               .filter(StoredValueTransaction.created_at >= today_start_local.astimezone(pytz.utc))
-               .filter(StoredValueTransaction.created_at < today_end_local.astimezone(pytz.utc)))
-    today_total = sum(t.amount or 0 for t in today_q.all())
-
-    return render_template('wallet_consume_reconcile.html',
-                           rows=rows,
-                           total_amount=total_amount,
-                           count=count,
-                           avg_amount=avg_amount,
-                           by_day=by_day,
-                           preset=preset,
-                           start=start_str,
-                           end=end_str,
-                           today_total=today_total,
-                           start_local_display=(start_local.strftime('%Y-%m-%d %H:%M')),
-                           end_local_display=(end_local.strftime('%Y-%m-%d %H:%M')))

@@ -64,6 +64,11 @@
     </div>
 
     {% if wallet %}
+      <div style="margin-bottom:18px;display:flex;gap:8px;flex-wrap:wrap">
+        <a href="/admin/wallet/reconcile" style="background:#5e35b1;color:#fff;padding:6px 10px;border-radius:8px;text-decoration:none;font-size:.75rem">儲值對帳</a>
+        <a href="/admin/wallet/reconcile/consume" style="background:#3949ab;color:#fff;padding:6px 10px;border-radius:8px;text-decoration:none;font-size:.75rem">扣款對帳</a>
+        <a href="/admin/wallet/summary" style="background:#283593;color:#fff;padding:6px 10px;border-radius:8px;text-decoration:none;font-size:.75rem">儲值記錄</a>
+      </div>
     <div class="row">
       <div class="col">
         <div class="card">
@@ -149,7 +154,7 @@
             <td>{{ t.local_time_str }}</td>
             <td>{{ t.type }}</td>
             <td>{{ t.amount }}</td>
-            <td>{{ t.remark }}</td>
+            <td>{{ t.adjusted_remark or t.remark }}</td>
             <td>{{ t.coupon_500_count }}</td>
             <td>{{ t.coupon_300_count }}</td>
             <td>{{ t.coupon_100_count if t.coupon_100_count is not none else 0 }}</td>
