@@ -845,6 +845,31 @@ def wallet_txn_detail(tid):
     }
     return data
 
+@admin_bp.route('/richmenu/switch', methods=['POST'])
+def admin_richmenu_switch():
+    """管理員手動切換使用者 RichMenu 狀態。參數: line_user_id, state"""
+    from storage import ADMIN_IDS
+    from utils.richmenu import switch_rich_menu, RICHMENU_STATES
+    uid = (request.form.get('line_user_id') or '').strip()
+    state = (request.form.get('state') or '').strip().upper()
+    admin_hint = (request.form.get('admin_id') or '').strip()  # 可選：操作者ID
+    if not uid or not state:
+        flash('缺少必要參數 line_user_id 或 state','warning')
+        return redirect(url_for('admin.wallet_home'))
+    if state not in RICHMENU_STATES:
+        flash('state 不在允許列表','danger')
+        return redirect(url_for('admin.wallet_home'))
+    # 管理員驗證（簡單）
+    if admin_hint and admin_hint not in ADMIN_IDS:
+        flash('操作者不是管理員','danger')
+        return redirect(url_for('admin.wallet_home'))
+    ok = switch_rich_menu(uid, state)
+    if ok:
+        flash(f'已切換 {uid} 的 RichMenu 狀態為 {state}','info')
+    else:
+        flash('切換失敗','danger')
+    return redirect(url_for('admin.wallet_home'))
+
 @admin_bp.route('/wallet/transactions/export')
 def wallet_transactions_export():
     """匯出交易：支援 type(topup/consume/all)、日期區間(會計日 12:00~次日03:00)與格式(csv/json)。"""

@@ -4,6 +4,7 @@ from linebot.models import (
     QuickReply, QuickReplyButton, MessageAction, ImageSendMessage
 )
 from extensions import handler, line_bot_api, db
+from utils.richmenu import switch_rich_menu
 from models import Blacklist, Whitelist, TempVerify, StoredValueWallet, StoredValueTransaction
 from utils.temp_users import get_temp_user, set_temp_user, pop_temp_user
 
@@ -337,6 +338,10 @@ def handle_text(event):
             nickname = user_text.replace("手動驗證 - ", "").strip()
             admin_manual_flow[user_id] = {"step": "awaiting_phone", "nickname": nickname}
             reply_basic(event, f"開始手動驗證（暱稱：{nickname}）。請輸入手機號碼（09開頭）。")
+            try:
+                switch_rich_menu(user_id, "ADMIN")
+            except Exception:
+                logging.exception("switch ADMIN richmenu failed at manual verify start")
             return
 
         if user_id in admin_manual_flow and admin_manual_flow[user_id].get("step") == "awaiting_phone":
@@ -381,6 +386,10 @@ def handle_text(event):
             target = parts[1].strip()
             ok, msg = admin_approve_manual_verify(user_id, target)
             reply_basic(event, msg)
+            try:
+                switch_rich_menu(user_id, "ADMIN")
+            except Exception:
+                logging.exception("switch ADMIN after approve failed")
             return
 
         if user_text.startswith("拒絕 "):
@@ -391,6 +400,10 @@ def handle_text(event):
             target = parts[1].strip()
             ok, msg = admin_reject_manual_verify(user_id, target)
             reply_basic(event, msg)
+            try:
+                switch_rich_menu(user_id, "ADMIN")
+            except Exception:
+                logging.exception("switch ADMIN after reject failed")
             return
 
     # 非管理員 / 一般流程處理
@@ -549,6 +562,11 @@ def handle_text(event):
                 line_bot_api.push_message(user_id, TextSendMessage(text=EXTRA_NOTICE))
             except Exception:
                 logging.exception("push EXTRA_NOTICE after existing whitelist view failed")
+            # 切換為 VERIFIED RichMenu
+            try:
+                switch_rich_menu(user_id, "VERIFIED")
+            except Exception:
+                logging.exception("switch_rich_menu VERIFIED after whitelist view failed")
             try:
                 maybe_push_coupon_expiry_notice(user_id)
             except Exception:
