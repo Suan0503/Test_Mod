@@ -919,12 +919,36 @@ def admin_richmenu_panel():
     # Upload/replace image
     if action == 'upload_image' and target_state in menus and file is not None and line_api:
         try:
-            content_type = 'image/png'
-            fname = (getattr(file, 'filename', '') or '').lower()
-            if fname.endswith('.jpg') or fname.endswith('.jpeg'):
-                content_type = 'image/jpeg'
-            line_api.set_rich_menu_image(menus[target_state], content_type, file.stream)
-            flash(f'Uploaded image for {target_state}','success')
+            fname = (getattr(file, 'filename', '') or 'upload').lower()
+            # 允許的副檔名與 MIME
+            allowed = {
+                '.png': 'image/png',
+                '.jpg': 'image/jpeg',
+                '.jpeg': 'image/jpeg'
+            }
+            ext = None
+            for k in allowed.keys():
+                if fname.endswith(k):
+                    ext = k
+                    break
+            resolved_mime = None
+            if file.mimetype in allowed.values():
+                resolved_mime = file.mimetype
+            elif ext:
+                resolved_mime = allowed.get(ext)
+            if not resolved_mime:
+                resolved_mime = 'image/png'
+            mime = resolved_mime
+            if ext is None and file.mimetype not in allowed.values():
+                flash('只接受 PNG / JPG 圖片','warning')
+                return redirect(url_for('admin.admin_richmenu_panel'))
+            # 讀取大小（若可）
+            file.stream.seek(0, os.SEEK_END)
+            size = file.stream.tell()
+            file.stream.seek(0)
+            line_api.set_rich_menu_image(menus[target_state], mime, file.stream)
+            kb = round(size/1024,1)
+            flash(f'{target_state} 圖片已更新：{fname} ({kb} KB, {mime})','success')
         except Exception as e:
             flash(f'Upload failed: {e}','danger')
         return redirect(url_for('admin.admin_richmenu_panel'))
