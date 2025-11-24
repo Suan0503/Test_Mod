@@ -870,6 +870,124 @@ def admin_richmenu_switch():
         flash('切換失敗','danger')
     return redirect(url_for('admin.wallet_home'))
 
+# ================= RichMenu 管理介面 =================
+@admin_bp.route('/richmenu', methods=['GET', 'POST'])
+def admin_richmenu_panel():
+    from utils.richmenu import ensure_rich_menus, switch_rich_menu, RICHMENU_STATES
+    from models import RichMenuBinding
+    from linebot import LineBotApi
+    from extensions import ACCESS_TOKEN
+    import os
+    line_api = LineBotApi(ACCESS_TOKEN) if ACCESS_TOKEN else None
+    menus = ensure_rich_menus()
+
+    action = (request.form.get('action') or '').strip()
+    target_state = (request.form.get('state') or '').strip().upper()
+    user_id = (request.form.get('user_id') or '').strip()
+    file = request.files.get('image')
+    q = (request.args.get('q') or request.form.get('q') or '').strip()
+
+    # Recreate menu
+    if action == 'recreate' and target_state in RICHMENU_STATES and line_api:
+        try:
+            # 刪除舊的（若存在）
+            old_id = menus.get(target_state)
+            if old_id:
+                try:
+                    line_api.delete_rich_menu(old_id)
+                except Exception:
+                    pass
+            from utils.richmenu import _build_menu_definition
+            rm_def = _build_menu_definition(target_state)
+            new_id = line_api.create_rich_menu(rm_def)
+            menus[target_state] = new_id
+            flash(f'Recreated RichMenu {target_state} -> {new_id}','info')
+        except Exception as e:
+            flash(f'Recreate failed: {e}','danger')
+        return redirect(url_for('admin.admin_richmenu_panel'))
+
+    # Delete menu
+    if action == 'delete' and target_state in menus and line_api:
+        try:
+            line_api.delete_rich_menu(menus[target_state])
+            flash(f'Deleted RichMenu {target_state}','info')
+            menus.pop(target_state, None)
+        except Exception as e:
+            flash(f'Delete failed: {e}','danger')
+        return redirect(url_for('admin.admin_richmenu_panel'))
+
+    # Upload/replace image
+    if action == 'upload_image' and target_state in menus and file is not None and line_api:
+        try:
+            content_type = 'image/png'
+            fname = (getattr(file, 'filename', '') or '').lower()
+            if fname.endswith('.jpg') or fname.endswith('.jpeg'):
+                content_type = 'image/jpeg'
+            line_api.set_rich_menu_image(menus[target_state], content_type, file.stream)
+            flash(f'Uploaded image for {target_state}','success')
+        except Exception as e:
+            flash(f'Upload failed: {e}','danger')
+        return redirect(url_for('admin.admin_richmenu_panel'))
+
+    # Link user
+    if action == 'link_user' and user_id and target_state in menus:
+        ok = switch_rich_menu(user_id, target_state)
+        if ok:
+            flash(f'Linked {user_id} to {target_state}','info')
+        else:
+            flash('Link failed','danger')
+        return redirect(url_for('admin.admin_richmenu_panel'))
+
+    # Bulk rebind (rebind_missing)
+    if action == 'rebind_missing':
+        count = 0
+        for b in RichMenuBinding.query.all():
+            if b.state not in menus:
+                continue
+            # 嘗試重新綁定
+            if switch_rich_menu(b.line_user_id, b.state):
+                count += 1
+        flash(f'Rebound {count} users','info')
+        return redirect(url_for('admin.admin_richmenu_panel'))
+
+    # Clear cache & re-ensure
+    if action == 'clear_cache':
+        try:
+            from utils import richmenu as rm_mod
+            rm_mod._richmenu_cache = {}
+            menus = ensure_rich_menus()
+            flash('RichMenu cache 已清除並重新載入','info')
+        except Exception as e:
+            flash(f'Clear cache failed: {e}','danger')
+        return redirect(url_for('admin.admin_richmenu_panel'))
+
+    # Render panel
+    base_bind_q = RichMenuBinding.query
+    if q:
+        like = f"%{q}%"
+        base_bind_q = base_bind_q.filter((RichMenuBinding.line_user_id.like(like)) | (RichMenuBinding.state.like(like)))
+    bindings = base_bind_q.order_by(RichMenuBinding.updated_at.desc()).limit(200).all()
+    return render_template('admin_richmenu.html', menus=menus, states=RICHMENU_STATES, bindings=bindings, q=q)
+
+@admin_bp.route('/richmenu/image/<state>')
+def admin_richmenu_image(state):
+    from utils.richmenu import ensure_rich_menus, RICHMENU_STATES
+    from extensions import ACCESS_TOKEN
+    from linebot import LineBotApi
+    if state.upper() not in RICHMENU_STATES:
+        return {'error': 'invalid state'}, 404
+    menus = ensure_rich_menus()
+    rm_id = menus.get(state.upper())
+    if not rm_id:
+        return {'error': 'not found'}, 404
+    try:
+        api = LineBotApi(ACCESS_TOKEN)
+        content = api.get_rich_menu_image(rm_id)
+        from flask import Response
+        return Response(content.content, mimetype='image/png')
+    except Exception as e:
+        return {'error': str(e)}, 500
+
 @admin_bp.route('/wallet/transactions/export')
 def wallet_transactions_export():
     """匯出交易：支援 type(topup/consume/all)、日期區間(會計日 12:00~次日03:00)與格式(csv/json)。"""
