@@ -85,6 +85,20 @@ def ensure_rich_menus():
                 rich_menu_id = line_bot_api.create_rich_menu(rm_def)
                 mapping[state] = rich_menu_id
                 logging.info(f"Created RichMenu for state={state} id={rich_menu_id}")
+                # 建立後嘗試上傳一張占位圖（純色）避免後續 400 錯誤
+                try:
+                    from PIL import Image, ImageDraw, ImageFont
+                    img = Image.new('RGB', (2500, 843), (245, 247, 250))
+                    d = ImageDraw.Draw(img)
+                    title = f"{state} MENU"
+                    d.text((40,40), title, fill=(30,30,30))
+                    tmp_path = f"/tmp/richmenu_{state.lower()}_placeholder.png"
+                    img.save(tmp_path, format='PNG')
+                    with open(tmp_path,'rb') as f:
+                        line_bot_api.set_rich_menu_image(rich_menu_id, 'image/png', f)
+                    logging.info(f"Uploaded placeholder image for state={state}")
+                except Exception:
+                    logging.exception(f"upload placeholder image failed for state={state}")
         _richmenu_cache = mapping
         return mapping
     except Exception:
@@ -101,8 +115,29 @@ def switch_rich_menu(line_user_id: str, state: str):
     if not rich_menu_id:
         logging.warning(f"No rich_menu_id for state={state}")
         return False
-    try:
+    def _link():
         line_bot_api.link_rich_menu_to_user(line_user_id, rich_menu_id)
+    try:
+        try:
+            _link()
+        except Exception as e:
+            msg = str(e)
+            if 'must upload richmenu image' in msg:
+                # 嘗試補上一張占位圖再重試
+                try:
+                    from PIL import Image
+                    img = Image.new('RGB', (2500,843), (240,240,240))
+                    tmp_path = f"/tmp/richmenu_retry_{state.lower()}.png"
+                    img.save(tmp_path, format='PNG')
+                    with open(tmp_path,'rb') as f:
+                        line_bot_api.set_rich_menu_image(rich_menu_id, 'image/png', f)
+                    logging.info(f"Uploaded retry image for state={state}, retry link")
+                    _link()
+                except Exception:
+                    logging.exception("retry upload image failed")
+                    raise
+            else:
+                raise
         # 記錄/更新 DB 綁定
         rec = RichMenuBinding.query.filter_by(line_user_id=line_user_id).first()
         if not rec:

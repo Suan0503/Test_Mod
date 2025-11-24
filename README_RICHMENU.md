@@ -12,6 +12,8 @@
 1. 讀取現有 RichMenu 列表。
 2. 無對應名稱（`RM_DEFAULT`, `RM_VERIFIED`, `RM_ADMIN`）則自動建立。
 3. 只建立結構，不自動上傳背景圖片（可後續於 LINE Console 替換）。
+ 4. 現在新增：建立後自動上傳一張占位 PNG（灰白底+狀態文字），避免發生 `must upload richmenu image before applying it to user` 錯誤。
+ 5. 若仍出現 400 需圖片錯誤，`switch_rich_menu` 會再嘗試補一張重試圖片後再次綁定。
 
 ## 切換邏輯
 - FollowEvent：綁定 DEFAULT。
@@ -44,6 +46,7 @@ Form 參數：
 ## 注意
 - 初次啟動需確保 LINE Channel Access Token 有建立 RichMenu 權限。
 - 若建立失敗 `_richmenu_cache` 會是空 dict，不影響其他功能，但不會執行綁定。
+- 若需要換成正式設計圖片，於 LINE Console 上傳覆蓋即可，或自行修改 `utils/richmenu.py` 的占位產生邏輯。
 
 ## 回滾
 若要回到純文字模式：
