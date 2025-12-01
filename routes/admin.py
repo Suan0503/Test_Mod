@@ -364,7 +364,7 @@ def wallet_reconcile():
     tz = pytz.timezone('Asia/Taipei')
 
     # 取得查詢參數
-    preset = (request.args.get('preset') or '').strip()  # today, yesterday, thisweek, thismonth
+    preset = (request.args.get('preset') or '').strip()  # today, yesterday, thisweek, thismonth, lastmonth
     start_str = (request.args.get('start') or '').strip()
     end_str = (request.args.get('end') or '').strip()
     export = (request.args.get('export') or '').strip()  # csv
@@ -407,6 +407,14 @@ def wallet_reconcile():
         start_local, _ = business_day_window(first_date)
         # 到當前會計日的結束
         _, end_local = business_day_window(current_business_base_date(now_local))
+    elif preset == 'lastmonth' and not start_str and not end_str:
+        # 上個月：從上個月1日到上個月最後一天（以會計日窗包住）
+        base = current_business_base_date(now_local)
+        first_this = base.replace(day=1)
+        last_month_end = first_this - timedelta(days=1)
+        first_last = last_month_end.replace(day=1)
+        start_local, _ = business_day_window(first_last)
+        _, end_local = business_day_window(last_month_end)
     else:
         # 自訂日期以會計日窗解讀：起日的 12:00 到 迄日次日 03:00
         if start_str:
@@ -812,6 +820,8 @@ def wallet_reconcile_consume():
                            coupon_only_sum=coupon_only_sum,
                            coupon_only_count=coupon_only_count,
                            preset=preset,
+                           start=start_str,
+                           end=end_str,
                            remark_kw=remark_kw,
                            start_local_display=start_local.strftime('%Y-%m-%d %H:%M'),
                            end_local_display=end_local.strftime('%Y-%m-%d %H:%M'),
@@ -844,173 +854,6 @@ def wallet_txn_detail(tid):
         'whitelist_name': wl.name if wl else None,
     }
     return data
-
-@admin_bp.route('/richmenu/switch', methods=['POST'])
-def admin_richmenu_switch():
-    """管理員手動切換使用者 RichMenu 狀態。參數: line_user_id, state"""
-    from storage import ADMIN_IDS
-    from utils.richmenu import switch_rich_menu, RICHMENU_STATES
-    uid = (request.form.get('line_user_id') or '').strip()
-    state = (request.form.get('state') or '').strip().upper()
-    admin_hint = (request.form.get('admin_id') or '').strip()  # 可選：操作者ID
-    if not uid or not state:
-        flash('缺少必要參數 line_user_id 或 state','warning')
-        return redirect(url_for('admin.wallet_home'))
-    if state not in RICHMENU_STATES:
-        flash('state 不在允許列表','danger')
-        return redirect(url_for('admin.wallet_home'))
-    # 管理員驗證（簡單）
-    if admin_hint and admin_hint not in ADMIN_IDS:
-        flash('操作者不是管理員','danger')
-        return redirect(url_for('admin.wallet_home'))
-    ok = switch_rich_menu(uid, state)
-    if ok:
-        flash(f'已切換 {uid} 的 RichMenu 狀態為 {state}','info')
-    else:
-        flash('切換失敗','danger')
-    return redirect(url_for('admin.wallet_home'))
-
-# ================= RichMenu 管理介面 =================
-@admin_bp.route('/richmenu', methods=['GET', 'POST'])
-def admin_richmenu_panel():
-    from utils.richmenu import ensure_rich_menus, switch_rich_menu, RICHMENU_STATES
-    from models import RichMenuBinding
-    from linebot import LineBotApi
-    from extensions import ACCESS_TOKEN
-    import os
-    line_api = LineBotApi(ACCESS_TOKEN) if ACCESS_TOKEN else None
-    menus = ensure_rich_menus()
-
-    action = (request.form.get('action') or '').strip()
-    target_state = (request.form.get('state') or '').strip().upper()
-    user_id = (request.form.get('user_id') or '').strip()
-    file = request.files.get('image')
-    q = (request.args.get('q') or request.form.get('q') or '').strip()
-
-    # Recreate menu
-    if action == 'recreate' and target_state in RICHMENU_STATES and line_api:
-        try:
-            # 刪除舊的（若存在）
-            old_id = menus.get(target_state)
-            if old_id:
-                try:
-                    line_api.delete_rich_menu(old_id)
-                except Exception:
-                    pass
-            from utils.richmenu import _build_menu_definition
-            rm_def = _build_menu_definition(target_state)
-            new_id = line_api.create_rich_menu(rm_def)
-            menus[target_state] = new_id
-            flash(f'Recreated RichMenu {target_state} -> {new_id}','info')
-        except Exception as e:
-            flash(f'Recreate failed: {e}','danger')
-        return redirect(url_for('admin.admin_richmenu_panel'))
-
-    # Delete menu
-    if action == 'delete' and target_state in menus and line_api:
-        try:
-            line_api.delete_rich_menu(menus[target_state])
-            flash(f'Deleted RichMenu {target_state}','info')
-            menus.pop(target_state, None)
-        except Exception as e:
-            flash(f'Delete failed: {e}','danger')
-        return redirect(url_for('admin.admin_richmenu_panel'))
-
-    # Upload/replace image
-    if action == 'upload_image' and target_state in menus and file is not None and line_api:
-        try:
-            fname = (getattr(file, 'filename', '') or 'upload').lower()
-            # 允許的副檔名與 MIME
-            allowed = {
-                '.png': 'image/png',
-                '.jpg': 'image/jpeg',
-                '.jpeg': 'image/jpeg'
-            }
-            ext = None
-            for k in allowed.keys():
-                if fname.endswith(k):
-                    ext = k
-                    break
-            resolved_mime = None
-            if file.mimetype in allowed.values():
-                resolved_mime = file.mimetype
-            elif ext:
-                resolved_mime = allowed.get(ext)
-            if not resolved_mime:
-                resolved_mime = 'image/png'
-            mime = resolved_mime
-            if ext is None and file.mimetype not in allowed.values():
-                flash('只接受 PNG / JPG 圖片','warning')
-                return redirect(url_for('admin.admin_richmenu_panel'))
-            # 讀取大小（若可）
-            file.stream.seek(0, os.SEEK_END)
-            size = file.stream.tell()
-            file.stream.seek(0)
-            line_api.set_rich_menu_image(menus[target_state], mime, file.stream)
-            kb = round(size/1024,1)
-            flash(f'{target_state} 圖片已更新：{fname} ({kb} KB, {mime})','success')
-        except Exception as e:
-            flash(f'Upload failed: {e}','danger')
-        return redirect(url_for('admin.admin_richmenu_panel'))
-
-    # Link user
-    if action == 'link_user' and user_id and target_state in menus:
-        ok = switch_rich_menu(user_id, target_state)
-        if ok:
-            flash(f'Linked {user_id} to {target_state}','info')
-        else:
-            flash('Link failed','danger')
-        return redirect(url_for('admin.admin_richmenu_panel'))
-
-    # Bulk rebind (rebind_missing)
-    if action == 'rebind_missing':
-        count = 0
-        for b in RichMenuBinding.query.all():
-            if b.state not in menus:
-                continue
-            # 嘗試重新綁定
-            if switch_rich_menu(b.line_user_id, b.state):
-                count += 1
-        flash(f'Rebound {count} users','info')
-        return redirect(url_for('admin.admin_richmenu_panel'))
-
-    # Clear cache & re-ensure
-    if action == 'clear_cache':
-        try:
-            from utils import richmenu as rm_mod
-            rm_mod._richmenu_cache = {}
-            menus = ensure_rich_menus()
-            flash('RichMenu cache 已清除並重新載入','info')
-        except Exception as e:
-            flash(f'Clear cache failed: {e}','danger')
-        return redirect(url_for('admin.admin_richmenu_panel'))
-
-    # Render panel
-    base_bind_q = RichMenuBinding.query
-    if q:
-        like = f"%{q}%"
-        base_bind_q = base_bind_q.filter((RichMenuBinding.line_user_id.like(like)) | (RichMenuBinding.state.like(like)))
-    bindings = base_bind_q.order_by(RichMenuBinding.updated_at.desc()).limit(200).all()
-    return render_template('admin_richmenu.html', menus=menus, states=RICHMENU_STATES, bindings=bindings, q=q)
-
-@admin_bp.route('/richmenu/image/<state>')
-def admin_richmenu_image(state):
-    from utils.richmenu import ensure_rich_menus, RICHMENU_STATES
-    from extensions import ACCESS_TOKEN
-    from linebot import LineBotApi
-    if state.upper() not in RICHMENU_STATES:
-        return {'error': 'invalid state'}, 404
-    menus = ensure_rich_menus()
-    rm_id = menus.get(state.upper())
-    if not rm_id:
-        return {'error': 'not found'}, 404
-    try:
-        api = LineBotApi(ACCESS_TOKEN)
-        content = api.get_rich_menu_image(rm_id)
-        from flask import Response
-        return Response(content.content, mimetype='image/png')
-    except Exception as e:
-        return {'error': str(e)}, 500
 
 @admin_bp.route('/wallet/transactions/export')
 def wallet_transactions_export():
@@ -1250,3 +1093,38 @@ def wallet_txn_delete():
     if redirect_url:
         return redirect(redirect_url)
     return redirect(url_for('admin.wallet_home', q=q))
+
+
+@admin_bp.route('/wallet/adjust', methods=['POST'])
+def wallet_adjust():
+    """手動沖正/調整：建立一筆 type='adjust' 的交易，金額可正可負，並同步調整餘額。
+    輸入：phone, amount(+/-), remark, operator
+    注意：這是管理用途，請務必保留清楚備註與經手人。
+    """
+    phone = (request.form.get('phone') or '').strip()
+    amount = int(request.form.get('amount') or 0)
+    remark = (request.form.get('remark') or '').strip()
+    operator = (request.form.get('operator') or '').strip() or None
+    if not phone:
+        flash('缺少手機號碼','warning')
+        return redirect(url_for('admin.wallet_home'))
+    if amount == 0:
+        flash('調整金額不可為 0','warning')
+        return redirect(url_for('admin.wallet_home', q=phone))
+    wallet = _get_or_create_wallet_by_phone(phone)
+    # 調整餘額（可正可負）
+    wallet.balance = (wallet.balance or 0) + amount
+    wallet.updated_at = datetime.utcnow()
+    t = StoredValueTransaction()
+    t.wallet_id = wallet.id
+    t.type = 'adjust'
+    t.amount = amount
+    t.remark = remark if remark else 'MANUAL_ADJUST'
+    try:
+        t.operator = operator
+    except Exception:
+        pass
+    db.session.add(t)
+    db.session.commit()
+    flash(f'已調整 {phone} 餘額 {amount} 元，目前餘額 {wallet.balance}','info')
+    return redirect(url_for('admin.wallet_home', q=phone))

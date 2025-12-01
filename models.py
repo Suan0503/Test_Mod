@@ -83,13 +83,3 @@ class StoredValueTransaction(db.Model):
     # 新增 100 券
     coupon_100_count = db.Column(db.Integer, default=0, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-
-
-# Rich Menu 綁定紀錄：用於記錄使用者目前綁定的功能菜單狀態與對應 rich_menu_id
-class RichMenuBinding(db.Model):
-    __tablename__ = "rich_menu_binding"
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    line_user_id = db.Column(db.String(255), index=True, nullable=False)
-    state = db.Column(db.String(50), index=True, nullable=False)  # DEFAULT / VERIFIED / ADMIN / etc.
-    rich_menu_id = db.Column(db.String(255), nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)

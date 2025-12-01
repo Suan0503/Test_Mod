@@ -1,7 +1,6 @@
 from linebot.models import FollowEvent, TextSendMessage
 import logging
 from extensions import line_bot_api as _default_line_bot_api
-from utils.richmenu import switch_rich_menu
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -29,11 +28,6 @@ def handle_follow(event, line_bot_api=None):
         api.reply_message(event.reply_token, TextSendMessage(text=msg))
     except Exception:
         logger.exception("回覆 FollowEvent 時發生錯誤")
-    # 綁定 DEFAULT 菜單
-    try:
-        switch_rich_menu(event.source.user_id, "DEFAULT")
-    except Exception:
-        logger.exception("RichMenu DEFAULT 綁定失敗")
 
 def follow_step2(event, line_bot_api=None):
     api = line_bot_api or _default_line_bot_api

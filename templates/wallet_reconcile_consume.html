@@ -35,13 +35,17 @@
       </div>
       <form method="get" action="/admin/wallet/reconcile/consume" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px">
         <label>快速區間</label>
-        <select name="preset" onchange="this.form.submit()">
+  <select name="preset" onchange="this.form.submit()">
           <option value="">自訂</option>
           <option value="today" {% if preset=='today' %}selected{% endif %}>今日</option>
           <option value="yesterday" {% if preset=='yesterday' %}selected{% endif %}>昨日</option>
           <option value="thisweek" {% if preset=='thisweek' %}selected{% endif %}>本週</option>
           <option value="thismonth" {% if preset=='thismonth' %}selected{% endif %}>本月</option>
         </select>
+  <label>起</label>
+  <input type="date" name="start" value="{{ start or '' }}" />
+  <label>迄</label>
+  <input type="date" name="end" value="{{ end or '' }}" />
         <label>備註關鍵字</label>
         <input type="text" name="remark_kw" value="{{ remark_kw or '' }}" placeholder="輸入關鍵字" />
         <button type="submit">查詢</button>

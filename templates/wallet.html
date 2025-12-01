@@ -162,6 +162,24 @@
             <div style="margin-top:10px"><button type="submit" class="danger">扣款</button></div>
           </form>
         </div>
+        <div class="card">
+          <h3>手動沖正 / 調整</h3>
+          <form method="post" action="/admin/wallet/adjust" onsubmit="return confirm('確認執行手動調整？')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="phone" value="{{ wallet.phone }}">
+            <label>金額（可正可負）</label>
+            <input name="amount" type="number" step="1" required />
+            <div style="display:flex;gap:10px;align-items:center;margin:6px 0 2px">
+              <div>
+                <label>經手人</label>
+                <input type="text" name="operator" placeholder="經手人" style="min-width:120px" />
+              </div>
+            </div>
+            <label>備註</label>
+            <textarea name="remark" rows="2" placeholder="請填寫調整原因"></textarea>
+            <div style="margin-top:10px"><button type="submit">執行調整</button></div>
+          </form>
+        </div>
       </div>
     </div>
 

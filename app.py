@@ -20,7 +20,6 @@ from routes.message import message_bp
 from routes.pending_verify import pending_bp
 from routes.admin import admin_bp
 from models import Whitelist, Blacklist, TempVerify, Coupon
-from utils.richmenu import ensure_rich_menus, switch_rich_menu
 import secrets
 
 app = Flask(__name__)
@@ -39,13 +38,6 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)
 migrate = Migrate(app, db, directory=os.path.join(os.path.dirname(__file__), 'migrations'))
-
-# 啟動時預先建立/載入 RichMenu（若失敗不影響主要功能）
-try:
-    with app.app_context():
-        ensure_rich_menus()
-except Exception:
-    pass
 
 # APScheduler：每日清除過期優惠券（若有殘留未查詢）
 try:

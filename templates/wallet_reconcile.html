@@ -50,6 +50,7 @@
           <option value="yesterday" {% if preset=='yesterday' %}selected{% endif %}>昨日</option>
           <option value="thisweek" {% if preset=='thisweek' %}selected{% endif %}>本週</option>
           <option value="thismonth" {% if preset=='thismonth' %}selected{% endif %}>本月</option>
+          <option value="lastmonth" {% if preset=='lastmonth' %}selected{% endif %}>上個月</option>
         </select>
         <label>起</label>
         <input type="date" name="start" value="{{ start or '' }}" />
