@@ -1164,3 +1164,102 @@ def wallet_adjust():
     db.session.commit()
     flash(f'已調整 {phone} 餘額 {amount} 元，目前餘額 {wallet.balance}','info')
     return redirect(url_for('admin.wallet_home', q=phone))
+
+
+@admin_bp.route('/wallet/reconcile/adjusted')
+def wallet_reconcile_adjusted():
+    """隱密沖帳總報表：僅顯示調整後的總額/支出/剩餘，不改動資料庫。
+    參數：preset/start/end（同會計窗），total_offset、consume_offset（預設0）。
+    顯示：
+      - 總額：原始儲值總額 + total_offset
+      - 支出：原始支出總額 + consume_offset（未提供則顯示原始）
+      - 剩餘：上述兩者相減
+    """
+    import pytz
+    from datetime import datetime as _dt, timedelta
+    tz = pytz.timezone('Asia/Taipei')
+    preset = (request.args.get('preset') or '').strip()
+    start_str = (request.args.get('start') or '').strip()
+    end_str = (request.args.get('end') or '').strip()
+    total_offset = int(request.args.get('total_offset') or 0)
+    consume_offset = int(request.args.get('consume_offset') or 0)
+
+    now_local = _dt.now(tz)
+    def business_day_window(base_date):
+        start_local = tz.localize(_dt(base_date.year, base_date.month, base_date.day, 12, 0, 0))
+        next_day = start_local + timedelta(days=1)
+        end_local = tz.localize(_dt(next_day.year, next_day.month, next_day.day, 3, 0, 0))
+        return start_local, end_local
+    def current_business_base_date(now_dt):
+        if now_dt.hour < 3:
+            return (now_dt - timedelta(days=1)).date()
+        return now_dt.date()
+    if preset in ('today','yesterday') and not start_str and not end_str:
+        base_date = current_business_base_date(now_local)
+        if preset=='yesterday':
+            base_date = base_date - timedelta(days=1)
+        start_local, end_local = business_day_window(base_date)
+    elif preset=='thisweek' and not start_str and not end_str:
+        weekday = current_business_base_date(now_local).weekday()
+        monday_date = current_business_base_date(now_local) - timedelta(days=weekday)
+        start_local,_ = business_day_window(monday_date)
+        _,end_local = business_day_window(current_business_base_date(now_local))
+    elif preset=='thismonth' and not start_str and not end_str:
+        first_date = current_business_base_date(now_local).replace(day=1)
+        start_local,_ = business_day_window(first_date)
+        _,end_local = business_day_window(current_business_base_date(now_local))
+    elif preset=='lastmonth' and not start_str and not end_str:
+        first_this = current_business_base_date(now_local).replace(day=1)
+        last_month_end = first_this - timedelta(days=1)
+        first_last = last_month_end.replace(day=1)
+        start_local,_ = business_day_window(first_last)
+        _,end_local = business_day_window(last_month_end)
+    else:
+        if start_str:
+            try:
+                y,m,d = [int(x) for x in start_str.split('-')]
+                start_local,_ = business_day_window(_dt(y,m,d).date())
+            except Exception:
+                start_local,_ = business_day_window(now_local.date())
+        else:
+            start_local,_ = business_day_window(now_local.date())
+        if end_str:
+            try:
+                y2,m2,d2 = [int(x) for x in end_str.split('-')]
+                _,end_local = business_day_window(_dt(y2,m2,d2).date())
+            except Exception:
+                _,end_local = business_day_window(now_local.date())
+        else:
+            _,end_local = business_day_window(now_local.date())
+
+    # 原始金額
+    su = start_local.astimezone(pytz.utc)
+    eu = end_local.astimezone(pytz.utc)
+    topup_total = (db.session.query(db.func.sum(StoredValueTransaction.amount))
+                   .filter(StoredValueTransaction.type=='topup')
+                   .filter(StoredValueTransaction.created_at>=su)
+                   .filter(StoredValueTransaction.created_at<eu)
+                   .scalar()) or 0
+    consume_total = (db.session.query(db.func.sum(StoredValueTransaction.amount))
+                     .filter(StoredValueTransaction.type=='consume')
+                     .filter(StoredValueTransaction.created_at>=su)
+                     .filter(StoredValueTransaction.created_at<eu)
+                     .scalar()) or 0
+
+    adj_total = topup_total + total_offset
+    adj_consume = consume_total + consume_offset
+    adj_remaining = adj_total - adj_consume
+
+    return render_template('wallet_reconcile_adjusted.html',
+                           start_local_display=start_local.strftime('%Y-%m-%d %H:%M'),
+                           end_local_display=end_local.strftime('%Y-%m-%d %H:%M'),
+                           preset=preset,
+                           start=start_str,
+                           end=end_str,
+                           topup_total=topup_total,
+                           consume_total=consume_total,
+                           adj_total=adj_total,
+                           adj_consume=adj_consume,
+                           adj_remaining=adj_remaining,
+                           total_offset=total_offset,
+                           consume_offset=consume_offset)
