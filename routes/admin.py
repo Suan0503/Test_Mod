@@ -452,6 +452,10 @@ def wallet_reconcile():
     total_amount = sum(t.amount or 0 for t in txns)
     count = len(txns)
     avg_amount = (total_amount // count) if count else 0
+    # 顯示沖正：僅影響頁面展示，不改動資料庫
+    display_offset = int(request.args.get('offset') or 0)
+    adj_total_amount = total_amount + display_offset
+    adj_avg_amount = (adj_total_amount // count) if count else 0
 
     # 同時期間的支出（consume）統計
     consume_q = (StoredValueTransaction.query
@@ -461,6 +465,9 @@ def wallet_reconcile():
     consume_txns = consume_q.all()
     consume_total = sum(t.amount or 0 for t in consume_txns)
     consume_count = len(consume_txns)
+
+    # 顯示剩餘金額（顯示總額 - 本期間支出）
+    adj_remaining = adj_total_amount - consume_total
 
     # 取得電話/姓名/代號與本地時間字串（多重回填）
     rows = []
@@ -669,8 +676,11 @@ def wallet_reconcile():
     return render_template('wallet_reconcile.html',
                            rows=rows,
                            total_amount=total_amount,
+                           adj_total_amount=adj_total_amount,
                            count=count,
                            avg_amount=avg_amount,
+                           adj_avg_amount=adj_avg_amount,
+                           adj_remaining=adj_remaining,
                            by_remark=by_remark,
                            by_day=by_day,
                            preset=preset,
@@ -699,10 +709,11 @@ def wallet_reconcile_consume():
     import pytz
     from datetime import datetime as _dt, timedelta
     tz = pytz.timezone('Asia/Taipei')
-    preset = (request.args.get('preset') or '').strip()
+    preset = (request.args.get('preset') or '').strip()  # today,yesterday,thisweek,thismonth,lastmonth
     start_str = (request.args.get('start') or '').strip()
     end_str = (request.args.get('end') or '').strip()
     remark_kw = (request.args.get('remark_kw') or '').strip()
+    only = (request.args.get('only') or '').strip()  # 'stored' or 'coupon'
 
     now_local = _dt.now(tz)
     def business_day_window(base_date):
@@ -728,6 +739,13 @@ def wallet_reconcile_consume():
         first_date = current_business_base_date(now_local).replace(day=1)
         start_local,_ = business_day_window(first_date)
         _,end_local = business_day_window(current_business_base_date(now_local))
+    elif preset=='lastmonth' and not start_str and not end_str:
+        base = current_business_base_date(now_local)
+        first_this = base.replace(day=1)
+        last_month_end = first_this - timedelta(days=1)
+        first_last = last_month_end.replace(day=1)
+        start_local,_ = business_day_window(first_last)
+        _,end_local = business_day_window(last_month_end)
     else:
         if start_str:
             try:
@@ -755,6 +773,7 @@ def wallet_reconcile_consume():
     rows = []
     stored_sum = 0
     coupon_only_sum = 0
+    coupon_value_total = 0
     import re
     phone_pattern = re.compile(r'(09\d{8})')
     for t in txns:
@@ -776,12 +795,22 @@ def wallet_reconcile_consume():
                 phone = m.group(1)
         phone_display = phone if phone else '—'
         # 判斷使用儲值金或使用折價券
-        coupon_used = (getattr(t,'coupon_500_count',0) or 0) + (getattr(t,'coupon_300_count',0) or 0) + (getattr(t,'coupon_100_count',0) or 0)
+        c500 = (getattr(t,'coupon_500_count',0) or 0)
+        c300 = (getattr(t,'coupon_300_count',0) or 0)
+        c100 = (getattr(t,'coupon_100_count',0) or 0)
+        coupon_used = c500 + c300 + c100
         is_coupon_only = (t.amount or 0) == 0 and coupon_used > 0
+        # 篩選：只看使用儲值 or 只看折價券
+        if only == 'stored' and is_coupon_only:
+            continue
+        if only == 'coupon' and not is_coupon_only:
+            continue
         if is_coupon_only:
-            coupon_only_sum += coupon_used  # 以券面值顯示總量? 暫記張數合計
+            coupon_only_sum += coupon_used  # 以券張數合計
         else:
             stored_sum += (t.amount or 0)
+        # 折價券金額（含非純券也計算券值）
+        coupon_value_total += c500*500 + c300*300 + c100*100
         # 顯示 remark
         remark_show = '使用折價券' if is_coupon_only else (t.remark or '')
         # 本地時間
@@ -809,6 +838,9 @@ def wallet_reconcile_consume():
         rows = [r for r in rows if remark_kw in (r['remark'] or '')]
     stored_count = sum(1 for r in rows if not r['coupon_only'])
     coupon_only_count = sum(1 for r in rows if r['coupon_only'])
+    # 顯示沖正（扣款頁）：僅影響顯示，不改資料庫；用於調整顯示的使用儲值金總額
+    display_offset = int(request.args.get('offset') or 0)
+    adj_stored_sum = stored_sum + display_offset
     from config import DATABASE_URL as _DB_URL
     txn_count = StoredValueTransaction.query.filter_by(type='consume').count()
     last_txn = StoredValueTransaction.query.order_by(StoredValueTransaction.id.desc()).first()
@@ -816,10 +848,14 @@ def wallet_reconcile_consume():
     return render_template('wallet_reconcile_consume.html',
                            rows=rows,
                            stored_sum=stored_sum,
+                           adj_stored_sum=adj_stored_sum,
                            stored_count=stored_count,
                            coupon_only_sum=coupon_only_sum,
                            coupon_only_count=coupon_only_count,
+                           coupon_value_total=coupon_value_total,
                            preset=preset,
+                           only=only,
+                           offset=display_offset,
                            start=start_str,
                            end=end_str,
                            remark_kw=remark_kw,
