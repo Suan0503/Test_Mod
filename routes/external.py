@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from extensions import db
-from models import ExternalUser, FeatureFlag
+from models import ExternalUser, FeatureFlag, Company, CompanyUser
+from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 
 external_bp = Blueprint('external', __name__, url_prefix='/MT_System')
@@ -37,6 +38,11 @@ def external_register():
         u.email = email
         u.password_hash = generate_password_hash(password)
         u.is_active = True
+        # default role & membership
+        if not getattr(u, 'role', None):
+            u.role = 'user'
+        if not getattr(u, 'expires_at', None):
+            u.expires_at = datetime.utcnow() + timedelta(days=30)
         db.session.add(u)
         db.session.commit()
         flash('註冊成功，請登入','success')
@@ -61,7 +67,181 @@ def features():
         db.session.commit()
         flash('已更新功能開關','success')
     flags = FeatureFlag.query.order_by(FeatureFlag.name.asc()).all()
-    return render_template('external_features.html', flags=flags)
+    # Remaining days countdown
+    uid = session.get('ext_user_id')
+    user = ExternalUser.query.get(uid) if uid else None
+    remaining_days = None
+    if user and getattr(user, 'expires_at', None):
+        try:
+            remaining_days = max(0, (user.expires_at - datetime.utcnow()).days)
+        except Exception:
+            remaining_days = None
+    return render_template('external_features.html', flags=flags, remaining_days=remaining_days, user=user)
+
+@external_bp.route('/admin', methods=['GET','POST'])
+def admin_dashboard():
+    # Placeholder: super admin dashboard (company & users management)
+    if not _require_ext_login():
+        return redirect(url_for('external.external_login'))
+    uid = session.get('ext_user_id')
+    u = ExternalUser.query.get(uid)
+    if not u or getattr(u, 'role', 'user') != 'super_admin':
+        flash('需要超級管理員權限','warning')
+        return redirect(url_for('external.features'))
+    companies = Company.query.order_by(Company.name.asc()).all()
+    users = ExternalUser.query.order_by(ExternalUser.created_at.desc()).all()
+    return render_template('external_admin.html', companies=companies, users=users)
+
+@external_bp.route('/company', methods=['GET','POST'])
+def company_dashboard():
+    # Placeholder: company admin dashboard
+    if not _require_ext_login():
+        return redirect(url_for('external.external_login'))
+    uid = session.get('ext_user_id')
+    u = ExternalUser.query.get(uid)
+    if not u or getattr(u, 'role', 'user') not in ('super_admin','paid_admin','operator'):
+        flash('需要公司權限','warning')
+        return redirect(url_for('external.features'))
+    # 目前以使用者的 company_id 為主
+    companies = Company.query.order_by(Company.name.asc()).all()
+    members = ExternalUser.query.filter_by(company_id=u.company_id).order_by(ExternalUser.created_at.desc()).all() if u.company_id else []
+    return render_template('external_company.html', companies=companies, members=members, me=u)
+
+@external_bp.route('/admin/embed')
+def admin_embed():
+    """將內部 /admin 子頁嵌入外部頁面 via iframe。
+    安全措施：僅允許白名單的子路徑，並且不帶危險查詢參數。
+    """
+    if not _require_ext_login():
+        return redirect(url_for('external.external_login'))
+    uid = session.get('ext_user_id')
+    u = ExternalUser.query.get(uid)
+    if not u or getattr(u, 'role', 'user') not in ('super_admin','paid_admin','operator'):
+        flash('需要管理員或操作員權限','warning')
+        return redirect(url_for('external.features'))
+    path = (request.args.get('path') or 'home').strip()
+    # 白名單：允許嵌入的 /admin 子路徑
+    allowed = {
+        'home': '/admin/home',
+        'dashboard': '/admin/dashboard',
+        'schedule': '/admin/schedule/',
+        'wallet': '/admin/wallet',
+        'wallet_summary': '/admin/wallet/summary',
+        'wallet_reconcile': '/admin/wallet/reconcile',
+        'wallet_reconcile_consume': '/admin/wallet/reconcile_consume',
+        'wallet_reconcile_adjusted': '/admin/wallet/reconcile_adjusted',
+        'whitelist_search': '/admin/whitelist/search',
+        'blacklist_search': '/admin/blacklist/search',
+        # 可逐步擴充
+    }
+    target = allowed.get(path)
+    if not target:
+        flash('不支援的內部頁面','warning')
+        return redirect(url_for('external.features'))
+    # 組合絕對 URL（同站域名）
+    origin = request.host_url.rstrip('/')
+    embed_url = origin + target
+    return render_template('external_embed.html', embed_url=embed_url, path=path)
+
+@external_bp.route('/admin/company/create', methods=['POST'])
+def admin_company_create():
+    if not _require_ext_login():
+        return redirect(url_for('external.external_login'))
+    uid = session.get('ext_user_id')
+    u = ExternalUser.query.get(uid)
+    if not u or getattr(u, 'role', 'user') != 'super_admin':
+        flash('需要超級管理員權限','warning')
+        return redirect(url_for('external.features'))
+    name = (request.form.get('name') or '').strip()
+    if not name:
+        flash('公司名稱必填','danger')
+        return redirect(url_for('external.admin_dashboard'))
+    if Company.query.filter_by(name=name).first():
+        flash('公司名稱已存在','danger')
+        return redirect(url_for('external.admin_dashboard'))
+    c = Company()
+    c.name = name
+    db.session.add(c)
+    db.session.commit()
+    flash('已建立公司','success')
+    return redirect(url_for('external.admin_dashboard'))
+
+@external_bp.route('/admin/user/role', methods=['POST'])
+def admin_user_role():
+    if not _require_ext_login():
+        return redirect(url_for('external.external_login'))
+    uid = session.get('ext_user_id')
+    u = ExternalUser.query.get(uid)
+    if not u or getattr(u, 'role', 'user') != 'super_admin':
+        flash('需要超級管理員權限','warning')
+        return redirect(url_for('external.features'))
+    user_id = request.form.get('user_id')
+    role = (request.form.get('role') or '').strip()
+    target = ExternalUser.query.get(user_id)
+    if target:
+        target.role = role if role in ('super_admin','paid_admin','operator','user') else 'user'
+        db.session.commit()
+        flash('已更新使用者角色','success')
+    return redirect(url_for('external.admin_dashboard'))
+
+@external_bp.route('/admin/user/company', methods=['POST'])
+def admin_user_company():
+    if not _require_ext_login():
+        return redirect(url_for('external.external_login'))
+    uid = session.get('ext_user_id')
+    u = ExternalUser.query.get(uid)
+    if not u or getattr(u, 'role', 'user') != 'super_admin':
+        flash('需要超級管理員權限','warning')
+        return redirect(url_for('external.features'))
+    user_id = request.form.get('user_id')
+    company_id = request.form.get('company_id')
+    target = ExternalUser.query.get(user_id)
+    if target:
+        target.company_id = int(company_id) if company_id else None
+        db.session.commit()
+        flash('已更新使用者公司','success')
+    return redirect(url_for('external.admin_dashboard'))
+
+@external_bp.route('/company/user/role', methods=['POST'])
+def company_user_role():
+    if not _require_ext_login():
+        return redirect(url_for('external.external_login'))
+    uid = session.get('ext_user_id')
+    u = ExternalUser.query.get(uid)
+    if not u or getattr(u, 'role', 'user') not in ('super_admin','paid_admin','operator'):
+        flash('需要公司權限','warning')
+        return redirect(url_for('external.features'))
+    user_id = request.form.get('user_id')
+    role = (request.form.get('role') or '').strip()
+    target = ExternalUser.query.get(user_id)
+    if target and target.company_id == u.company_id:
+        target.role = role if role in ('paid_admin','operator','user') else 'user'
+        db.session.commit()
+        flash('已更新公司成員角色','success')
+    return redirect(url_for('external.company_dashboard'))
+
+@external_bp.route('/company/user/membership', methods=['POST'])
+def company_user_membership():
+    if not _require_ext_login():
+        return redirect(url_for('external.external_login'))
+    uid = session.get('ext_user_id')
+    u = ExternalUser.query.get(uid)
+    if not u or getattr(u, 'role', 'user') not in ('super_admin','paid_admin','operator'):
+        flash('需要公司權限','warning')
+        return redirect(url_for('external.features'))
+    user_id = request.form.get('user_id')
+    action = (request.form.get('action') or '').strip()  # add/deduct
+    days = int(request.form.get('days') or 0)
+    target = ExternalUser.query.get(user_id)
+    if target and target.company_id == u.company_id and days:
+        base = target.expires_at or datetime.utcnow()
+        if action == 'add':
+            target.expires_at = base + timedelta(days=days)
+        elif action == 'deduct':
+            target.expires_at = base - timedelta(days=days)
+        db.session.commit()
+        flash('已更新會員天數','success')
+    return redirect(url_for('external.company_dashboard'))
 
 @external_bp.route('/logout')
 def external_logout():

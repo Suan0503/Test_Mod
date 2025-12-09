@@ -1,5 +1,5 @@
 from extensions import db
-from datetime import datetime
+from datetime import datetime, timedelta
 
 class TempVerify(db.Model):
     __tablename__ = "temp_verify"
@@ -90,6 +90,27 @@ class ExternalUser(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
+    # Multi-company & roles
+    role = db.Column(db.String(50), nullable=False, default='user')  # super_admin | paid_admin | operator | user
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True)
+    # Membership expiration (default +30 days from creation)
+    expires_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=db.func.now())
+    updated_at = db.Column(db.DateTime, onupdate=db.func.now())
+
+class Company(db.Model):
+    __tablename__ = 'company'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.now())
+    updated_at = db.Column(db.DateTime, onupdate=db.func.now())
+
+class CompanyUser(db.Model):
+    __tablename__ = 'company_user'
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('external_user.id'), nullable=False)
+    role = db.Column(db.String(50), nullable=False, default='user')
     created_at = db.Column(db.DateTime, default=db.func.now())
 
 class FeatureFlag(db.Model):
@@ -100,3 +121,10 @@ class FeatureFlag(db.Model):
     enabled = db.Column(db.Boolean, default=False)
     description = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, default=db.func.now())
+    # Optional scoping per company (null = global)
+    company_id = db.Column(db.Integer, db.ForeignKey('company.id'), nullable=True)
+
+def ensure_external_user_defaults(user: ExternalUser):
+    """Ensure expires_at default if missing."""
+    if user and user.expires_at is None:
+        user.expires_at = datetime.utcnow() + timedelta(days=30)
