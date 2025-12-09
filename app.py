@@ -95,7 +95,8 @@ except Exception:
 app.register_blueprint(message_bp)
 csrf.exempt(message_bp)  # 豁免 LINE Webhook /callback 不使用 CSRF Token
 app.register_blueprint(pending_bp)
-app.register_blueprint(admin_bp)
+# 僅在 MT_System 之下提供後台
+app.register_blueprint(admin_bp, url_prefix='/MT_System')
 app.register_blueprint(external_bp)
 
 """admin 相關路由已移至 routes/admin.py 的 Blueprint"""
