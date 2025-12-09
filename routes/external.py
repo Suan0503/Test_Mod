@@ -21,6 +21,28 @@ def external_login():
         flash('登入失敗','danger')
     return render_template('external_login.html')
 
+@external_bp.route('/register', methods=['GET','POST'])
+def external_register():
+    if request.method == 'POST':
+        email = (request.form.get('email') or '').strip().lower()
+        password = (request.form.get('password') or '').strip()
+        if not email or not password:
+            flash('缺少必要欄位','warning')
+            return redirect(url_for('external.external_register'))
+        exists = ExternalUser.query.filter_by(email=email).first()
+        if exists:
+            flash('Email 已被註冊','danger')
+            return redirect(url_for('external.external_register'))
+        u = ExternalUser()
+        u.email = email
+        u.password_hash = generate_password_hash(password)
+        u.is_active = True
+        db.session.add(u)
+        db.session.commit()
+        flash('註冊成功，請登入','success')
+        return redirect(url_for('external.external_login'))
+    return render_template('external_register.html')
+
 def _require_ext_login():
     uid = session.get('ext_user_id')
     if not uid:
@@ -40,6 +62,12 @@ def features():
         flash('已更新功能開關','success')
     flags = FeatureFlag.query.order_by(FeatureFlag.name.asc()).all()
     return render_template('external_features.html', flags=flags)
+
+@external_bp.route('/logout')
+def external_logout():
+    session.pop('ext_user_id', None)
+    flash('已登出','info')
+    return redirect(url_for('external.external_login'))
 
 @external_bp.route('/seed')
 def external_seed():
