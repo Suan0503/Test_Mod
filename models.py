@@ -96,7 +96,6 @@ class ExternalUser(db.Model):
     # Membership expiration (default +30 days from creation)
     expires_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=db.func.now())
-    updated_at = db.Column(db.DateTime, onupdate=db.func.now())
 
 class Company(db.Model):
     __tablename__ = 'company'

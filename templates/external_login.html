@@ -16,8 +16,8 @@
   <p style="text-align:center"><a href="/MT_System/register" style="color:#1976d2;text-decoration:none">註冊新帳號</a></p>
     <form method="post">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-      <label>Email</label>
-      <input type="email" name="email" required />
+  <label>帳號（Email 或使用者名稱）</label>
+  <input type="text" name="email" />
       <label>密碼</label>
       <input type="password" name="password" required />
       <button type="submit">登入</button>

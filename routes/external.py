@@ -16,6 +16,9 @@ def external_login():
         email = (request.form.get('email') or '').strip().lower()
         password = (request.form.get('password') or '').strip()
         user = ExternalUser.query.filter_by(email=email, is_active=True).first()
+        if not user:
+            # 允許以使用者名稱（非 email）登入，匹配我們預設的管理員帳號
+            user = ExternalUser.query.filter_by(email=(request.form.get('email') or '').strip()).first()
         if user and check_password_hash(user.password_hash, password):
             session['ext_user_id'] = user.id
             return redirect(url_for('external.features'))
