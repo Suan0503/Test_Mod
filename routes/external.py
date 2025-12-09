@@ -141,9 +141,20 @@ def admin_embed():
     if not target:
         flash('不支援的內部頁面','warning')
         return redirect(url_for('external.features'))
+    # 可選安全查詢參數（只允許少數鍵）
+    params = {}
+    safe_keys = {'q','preset','start','end'}
+    for k in safe_keys:
+        v = request.args.get(k)
+        if v:
+            params[k] = v
     # 組合絕對 URL（同站域名）
     origin = request.host_url.rstrip('/')
-    embed_url = origin + target
+    if params:
+        from urllib.parse import urlencode
+        embed_url = origin + target + '?' + urlencode(params)
+    else:
+        embed_url = origin + target
     return render_template('external_embed.html', embed_url=embed_url, path=path)
 
 @external_bp.route('/admin/company/create', methods=['POST'])

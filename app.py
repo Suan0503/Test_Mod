@@ -147,6 +147,15 @@ def line_status():
         'hint': '請在 LINE Developers 將 Webhook 指向 /callback 並開啟。'
     }
 
+# 允許同源 iframe 嵌入
+@app.after_request
+def set_frame_options(resp):
+    try:
+        resp.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    except Exception:
+        pass
+    return resp
+
 @app.route('/api/wallet')
 def api_wallet():
     from models import StoredValueWallet, StoredValueTransaction
