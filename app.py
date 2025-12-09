@@ -148,6 +148,15 @@ def line_status():
         'hint': '請在 LINE Developers 將 Webhook 指向 /callback 並開啟。'
     }
 
+# 舊版 /admin* 入口導向新位址，避免 404
+@app.route('/admin')
+def legacy_admin_root():
+    return redirect('/MT_System/admin/home')
+
+@app.route('/admin/<path:subpath>')
+def legacy_admin_redirect(subpath):
+    return redirect(f'/MT_System/admin/{subpath}')
+
 # 允許同源 iframe 嵌入
 @app.after_request
 def set_frame_options(resp):
