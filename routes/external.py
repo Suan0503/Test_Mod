@@ -195,11 +195,9 @@ def _redirect_to_admin(path_key, extra_params=None):
         target += '?' + urlencode(params)
     return redirect(target)
 
-@external_bp.route('/admin/embed')
-def admin_embed():
-    """將內部 /admin 子頁嵌入外部頁面 via iframe。
-    安全措施：僅允許白名單的子路徑，並且不帶危險查詢參數。
-    """
+@external_bp.route('/admin/customer')
+def admin_customer():
+    """客人管理介面：集中入口，連到所有後台功能（已移至 /MT_System/admin/*）。"""
     if not _require_ext_login():
         return redirect(url_for('external.external_login'))
     uid = session.get('ext_user_id')
@@ -207,40 +205,12 @@ def admin_embed():
     if not u or getattr(u, 'role', 'user') not in ('super_admin','paid_admin','operator'):
         flash('需要管理員或操作員權限','warning')
         return redirect(url_for('external.features'))
-    path = (request.args.get('path') or 'home').strip()
-    # 白名單：允許嵌入的 /admin 子路徑
-    allowed = {
-        'home': '/admin/home',
-        'dashboard': '/admin/dashboard',
-        'schedule': '/admin/schedule/',
-        'wallet': '/admin/wallet',
-        'wallet_summary': '/admin/wallet/summary',
-        'wallet_reconcile': '/admin/wallet/reconcile',
-        'wallet_reconcile_consume': '/admin/wallet/reconcile_consume',
-        'wallet_reconcile_adjusted': '/admin/wallet/reconcile_adjusted',
-        'whitelist_search': '/admin/whitelist/search',
-        'blacklist_search': '/admin/blacklist/search',
-        # 可逐步擴充
-    }
-    target = allowed.get(path)
-    if not target:
-        flash('不支援的內部頁面','warning')
-        return redirect(url_for('external.features'))
-    # 可選安全查詢參數（只允許少數鍵）
-    params = {}
-    safe_keys = {'q','preset','start','end','active_tab'}
-    for k in safe_keys:
-        v = request.args.get(k)
-        if v:
-            params[k] = v
-    # 組合絕對 URL（同站域名）
-    origin = request.host_url.rstrip('/')
-    if params:
-        from urllib.parse import urlencode
-        embed_url = origin + target + '?' + urlencode(params)
-    else:
-        embed_url = origin + target
-    return render_template('external_embed.html', embed_url=embed_url, path=path)
+    return render_template('external_customer.html')
+
+# 舊的嵌入頁導向到客人管理
+@external_bp.route('/admin/embed')
+def admin_embed():
+    return redirect(url_for('external.admin_customer'))
 
 # 友善整合網址：將內部管理直接掛在 /MT_System/admin/*
 @external_bp.route('/admin')
