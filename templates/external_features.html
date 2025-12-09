@@ -1,19 +1,6 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-  <meta charset="UTF-8" />
-  <title>功能開關</title>
-  <style>
-    body{font-family:sans-serif;background:#fafafa;margin:0}
-    .wrap{max-width:800px;margin:30px auto;padding:0 18px}
-    .card{background:#fff;border-radius:10px;padding:16px;box-shadow:0 4px 16px rgba(0,0,0,.06);margin-bottom:16px}
-    table{width:100%;border-collapse:collapse}
-    th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
-    thead tr{background:#1976d2;color:#fff}
-    button{padding:8px 12px;background:#1976d2;color:#fff;border:none;border-radius:8px}
-  </style>
-</head>
-<body>
+{% extends 'base_modern.html' %}
+{% block title %}功能開關{% endblock %}
+{% block content %}
   <div class="wrap">
     <div class="card">
       <h2 style="margin-top:0">外部功能開關</h2>
@@ -21,13 +8,11 @@
       {% if remaining_days is not none %}
       <p>會員剩餘天數：<strong>{{ remaining_days }}</strong> 天</p>
       {% endif %}
-      <p>
+  <p>
         <a href="{{ url_for('external.admin_dashboard') }}">超級管理員儀表板</a> |
         <a href="{{ url_for('external.company_dashboard') }}">公司管理儀表板</a>
   |
   <a href="{{ url_for('external.admin_embed') }}">嵌入管理頁</a>
-  |
-  <a href="{{ url_for('external.admin_customer') }}">客人管理介面</a>
       </p>
       <form method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
@@ -53,5 +38,4 @@
       </form>
     </div>
   </div>
-</body>
-</html>
+{% endblock %}

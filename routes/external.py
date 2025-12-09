@@ -4,11 +4,14 @@ from models import ExternalUser, FeatureFlag, Company, CompanyUser
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 
-external_bp = Blueprint('external', __name__, url_prefix='/MT_System')
+external_bp = Blueprint('external', __name__)
 
 @external_bp.route('/')
 def external_home():
-    return redirect(url_for('external.external_login'))
+    uid = session.get('ext_user_id')
+    user = ExternalUser.query.get(uid) if uid else None
+    from datetime import datetime as _dt
+    return render_template('home_modern.html', user=user, now=_dt.now)
 
 @external_bp.route('/login', methods=['GET','POST'])
 def external_login():
@@ -110,7 +113,11 @@ def company_dashboard():
     members = ExternalUser.query.filter_by(company_id=u.company_id).order_by(ExternalUser.created_at.desc()).all() if u.company_id else []
     return render_template('external_company.html', companies=companies, members=members, me=u)
 
-def _render_embed_for(path_key, extra_params=None):
+@external_bp.route('/admin/embed')
+def admin_embed():
+    """將內部 /admin 子頁嵌入外部頁面 via iframe。
+    安全措施：僅允許白名單的子路徑，並且不帶危險查詢參數。
+    """
     if not _require_ext_login():
         return redirect(url_for('external.external_login'))
     uid = session.get('ext_user_id')
@@ -118,6 +125,8 @@ def _render_embed_for(path_key, extra_params=None):
     if not u or getattr(u, 'role', 'user') not in ('super_admin','paid_admin','operator'):
         flash('需要管理員或操作員權限','warning')
         return redirect(url_for('external.features'))
+    path = (request.args.get('path') or 'home').strip()
+    # 白名單：允許嵌入的 /admin 子路徑
     allowed = {
         'home': '/admin/home',
         'dashboard': '/admin/dashboard',
@@ -127,139 +136,18 @@ def _render_embed_for(path_key, extra_params=None):
         'wallet_reconcile': '/admin/wallet/reconcile',
         'wallet_reconcile_consume': '/admin/wallet/reconcile_consume',
         'wallet_reconcile_adjusted': '/admin/wallet/reconcile_adjusted',
-        'whitelist': '/admin/home',
-        'blacklist': '/admin/home',
-        'pending': '/admin/home',
+        'whitelist_search': '/admin/whitelist/search',
+        'blacklist_search': '/admin/blacklist/search',
+        # 可逐步擴充
     }
-    base = allowed.get(path_key)
-    if not base:
+    target = allowed.get(path)
+    if not target:
         flash('不支援的內部頁面','warning')
         return redirect(url_for('external.features'))
-    # 簡單參數白名單
-    from urllib.parse import urlencode
-    params = {}
-    safe_keys = {'q','preset','start','end','active_tab'}
-    # 預設 active_tab 對應
-    if path_key in ('whitelist','blacklist','pending'):
-        params['active_tab'] = path_key
-    # 合併額外參數
-    extra_params = extra_params or {}
-    for k in safe_keys:
-        v = extra_params.get(k) if k in extra_params else request.args.get(k)
-        if v:
-            params[k] = v
+    # 組合絕對 URL（同站域名）
     origin = request.host_url.rstrip('/')
-    embed_url = origin + base
-    if params:
-        embed_url += '?' + urlencode(params)
-    return render_template('external_embed.html', embed_url=embed_url, path=path_key)
-
-def _redirect_to_admin(path_key, extra_params=None):
-    if not _require_ext_login():
-        return redirect(url_for('external.external_login'))
-    uid = session.get('ext_user_id')
-    u = ExternalUser.query.get(uid)
-    if not u or getattr(u, 'role', 'user') not in ('super_admin','paid_admin','operator'):
-        flash('需要管理員或操作員權限','warning')
-        return redirect(url_for('external.features'))
-    mapping = {
-        'home': '/admin/home',
-        'dashboard': '/admin/dashboard',
-        'schedule': '/admin/schedule/',
-        'wallet': '/admin/wallet',
-        'wallet_summary': '/admin/wallet/summary',
-        'wallet_reconcile': '/admin/wallet/reconcile',
-        'wallet_reconcile_consume': '/admin/wallet/reconcile_consume',
-        'wallet_reconcile_adjusted': '/admin/wallet/reconcile_adjusted',
-        'whitelist': '/admin/home',
-        'blacklist': '/admin/home',
-        'pending': '/admin/home',
-    }
-    base = mapping.get(path_key)
-    if not base:
-        flash('不支援的內部頁面','warning')
-        return redirect(url_for('external.features'))
-    # 允許的查詢參數
-    from urllib.parse import urlencode
-    params = {}
-    safe_keys = {'q','preset','start','end','active_tab'}
-    if path_key in ('whitelist','blacklist','pending'):
-        params['active_tab'] = path_key
-    extra_params = extra_params or {}
-    for k in safe_keys:
-        v = extra_params.get(k) if k in extra_params else request.args.get(k)
-        if v:
-            params[k] = v
-    target = base
-    if params:
-        target += '?' + urlencode(params)
-    return redirect(target)
-
-@external_bp.route('/admin/customer')
-def admin_customer():
-    """客人管理介面：集中入口，連到所有後台功能（已移至 /MT_System/admin/*）。"""
-    if not _require_ext_login():
-        return redirect(url_for('external.external_login'))
-    uid = session.get('ext_user_id')
-    u = ExternalUser.query.get(uid)
-    if not u or getattr(u, 'role', 'user') not in ('super_admin','paid_admin','operator'):
-        flash('需要管理員或操作員權限','warning')
-        return redirect(url_for('external.features'))
-    return render_template('external_customer.html')
-
-# 舊的嵌入頁導向到客人管理
-@external_bp.route('/admin/embed')
-def admin_embed():
-    return redirect(url_for('external.admin_customer'))
-
-# 友善整合網址：將內部管理直接掛在 /MT_System/admin/*
-@external_bp.route('/admin')
-def ext_admin_root():
-    return _redirect_to_admin('home')
-
-@external_bp.route('/admin/home')
-def ext_admin_home():
-    return _redirect_to_admin('home')
-
-@external_bp.route('/admin/dashboard')
-def ext_admin_dashboard():
-    return _redirect_to_admin('dashboard')
-
-@external_bp.route('/admin/schedule')
-def ext_admin_schedule():
-    return _redirect_to_admin('schedule')
-
-@external_bp.route('/admin/wallet')
-def ext_admin_wallet():
-    return _redirect_to_admin('wallet')
-
-@external_bp.route('/admin/wallet/summary')
-def ext_admin_wallet_summary():
-    return _redirect_to_admin('wallet_summary')
-
-@external_bp.route('/admin/wallet/reconcile')
-def ext_admin_wallet_reconcile():
-    return _redirect_to_admin('wallet_reconcile')
-
-@external_bp.route('/admin/wallet/reconcile_consume')
-def ext_admin_wallet_reconcile_consume():
-    return _redirect_to_admin('wallet_reconcile_consume')
-
-@external_bp.route('/admin/wallet/reconcile_adjusted')
-def ext_admin_wallet_reconcile_adjusted():
-    return _redirect_to_admin('wallet_reconcile_adjusted')
-
-@external_bp.route('/admin/whitelist')
-def ext_admin_whitelist():
-    return _redirect_to_admin('whitelist', {'active_tab':'whitelist'})
-
-@external_bp.route('/admin/blacklist')
-def ext_admin_blacklist():
-    return _redirect_to_admin('blacklist', {'active_tab':'blacklist'})
-
-@external_bp.route('/admin/pending')
-def ext_admin_pending():
-    return _redirect_to_admin('pending', {'active_tab':'pending'})
+    embed_url = origin + target
+    return render_template('external_embed.html', embed_url=embed_url, path=path)
 
 @external_bp.route('/admin/company/create', methods=['POST'])
 def admin_company_create():
@@ -366,6 +254,35 @@ def external_logout():
     session.pop('ext_user_id', None)
     flash('已登出','info')
     return redirect(url_for('external.external_login'))
+
+# ===== Legacy redirects to keep old /MT_System URLs working =====
+@external_bp.route('/MT_System/')
+def legacy_root():
+    return redirect(url_for('external.external_home'))
+
+@external_bp.route('/MT_System/login')
+def legacy_login():
+    return redirect(url_for('external.external_login'))
+
+@external_bp.route('/MT_System/register')
+def legacy_register():
+    return redirect(url_for('external.external_register'))
+
+@external_bp.route('/MT_System/features')
+def legacy_features():
+    return redirect(url_for('external.features'))
+
+@external_bp.route('/MT_System/admin')
+def legacy_admin():
+    return redirect(url_for('external.admin_dashboard'))
+
+@external_bp.route('/MT_System/company')
+def legacy_company():
+    return redirect(url_for('external.company_dashboard'))
+
+@external_bp.route('/MT_System/admin/embed')
+def legacy_embed():
+    return redirect(url_for('external.admin_embed'))
 
 @external_bp.route('/seed')
 def external_seed():
