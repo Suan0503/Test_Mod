@@ -95,8 +95,7 @@ except Exception:
 app.register_blueprint(message_bp)
 csrf.exempt(message_bp)  # 豁免 LINE Webhook /callback 不使用 CSRF Token
 app.register_blueprint(pending_bp)
-# 僅在 MT_System 之下提供後台
-app.register_blueprint(admin_bp, url_prefix='/MT_System')
+app.register_blueprint(admin_bp)
 app.register_blueprint(external_bp)
 
 """admin 相關路由已移至 routes/admin.py 的 Blueprint"""
@@ -130,6 +129,13 @@ def search():
             results.append({'type':'抽獎券','line_user_id':c.line_user_id,'report_no':c.report_no,'amount':c.amount})
     return render_template('search_result.html', q=q, results=results)
 
+@app.errorhandler(404)
+def not_found(e):
+    try:
+        return render_template('404_modern.html'), 404
+    except Exception:
+        return 'Not Found', 404
+
 @app.route('/line_status')
 def line_status():
     from extensions import ACCESS_TOKEN, CHANNEL_SECRET, line_bot_api
@@ -147,24 +153,6 @@ def line_status():
         'webhook': '/callback',
         'hint': '請在 LINE Developers 將 Webhook 指向 /callback 並開啟。'
     }
-
-# 舊版 /admin* 入口導向新位址，避免 404
-@app.route('/admin')
-def legacy_admin_root():
-    return redirect('/MT_System/admin/home')
-
-@app.route('/admin/<path:subpath>')
-def legacy_admin_redirect(subpath):
-    return redirect(f'/MT_System/admin/{subpath}')
-
-# 允許同源 iframe 嵌入
-@app.after_request
-def set_frame_options(resp):
-    try:
-        resp.headers['X-Frame-Options'] = 'SAMEORIGIN'
-    except Exception:
-        pass
-    return resp
 
 @app.route('/api/wallet')
 def api_wallet():
