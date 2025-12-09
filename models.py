@@ -83,3 +83,20 @@ class StoredValueTransaction(db.Model):
     # 新增 100 券
     coupon_100_count = db.Column(db.Integer, default=0, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+class ExternalUser(db.Model):
+    __tablename__ = 'external_user'
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=db.func.now())
+
+class FeatureFlag(db.Model):
+    __tablename__ = 'feature_flag'
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(100), unique=True, nullable=False)
+    name = db.Column(db.String(150), nullable=False)
+    enabled = db.Column(db.Boolean, default=False)
+    description = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=db.func.now())

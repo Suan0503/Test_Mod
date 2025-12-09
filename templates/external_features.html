@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>功能開關</title>
+  <style>
+    body{font-family:sans-serif;background:#fafafa;margin:0}
+    .wrap{max-width:800px;margin:30px auto;padding:0 18px}
+    .card{background:#fff;border-radius:10px;padding:16px;box-shadow:0 4px 16px rgba(0,0,0,.06);margin-bottom:16px}
+    table{width:100%;border-collapse:collapse}
+    th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
+    thead tr{background:#1976d2;color:#fff}
+    button{padding:8px 12px;background:#1976d2;color:#fff;border:none;border-radius:8px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h2 style="margin-top:0">外部功能開關</h2>
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <table>
+          <thead>
+            <tr><th>功能</th><th>描述</th><th>狀態</th></tr>
+          </thead>
+          <tbody>
+            {% for f in flags %}
+            <tr>
+              <td>{{ f.name }}</td>
+              <td>{{ f.description or '—' }}</td>
+              <td>
+                <label>
+                  <input type="checkbox" name="flag_{{ f.key }}" {% if f.enabled %}checked{% endif %} /> 啟用
+                </label>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <div style="margin-top:12px"><button type="submit">儲存</button></div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

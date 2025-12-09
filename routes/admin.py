@@ -7,6 +7,9 @@ from linebot.models import TextSendMessage
 from extensions import line_bot_api
 from extensions import db
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
+from models import ExternalUser, FeatureFlag
+from flask import session
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
