@@ -1,4 +1,5 @@
 import os
+import requests
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from models import Whitelist, Blacklist, TempVerify, StoredValueWallet, StoredValueTransaction
 from utils.db_utils import update_or_create_whitelist_from_data
@@ -10,6 +11,7 @@ from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import ExternalUser, FeatureFlag
 from flask import session
+from config import LINE_CHANNEL_ACCESS_TOKEN
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -205,6 +207,74 @@ def tempverify_delete():
 @admin_bp.route('/schedule/')
 def admin_schedule():
     return render_template('schedule.html')
+
+
+def fetch_line_richmenus():
+    """呼叫 LINE API 取得 Rich Menu 清單，回傳 (list, error_message)。"""
+    access_token = LINE_CHANNEL_ACCESS_TOKEN or os.getenv('LINE_CHANNEL_ACCESS_TOKEN', '')
+    if not access_token:
+        return [], '尚未設定 LINE_CHANNEL_ACCESS_TOKEN，無法取得 Rich Menu 清單'
+    try:
+        url = 'https://api.line.me/v2/bot/richmenu/list'
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+        }
+        resp = requests.get(url, headers=headers, timeout=10)
+        if 200 <= resp.status_code < 300:
+            data = resp.json() or {}
+            return data.get('richmenus', []) or [], None
+        try:
+            detail = resp.json().get('message') or resp.text
+        except Exception:
+            detail = resp.text
+        return [], f'LINE API 讀取 Rich Menu 清單失敗（{resp.status_code}）：{detail}'
+    except Exception as e:
+        return [], f'呼叫 LINE Rich Menu 清單 API 發生錯誤：{e}'
+
+
+# ========= LINE Rich Menu 圖片更新 =========
+@admin_bp.route('/richmenu', methods=['GET', 'POST'])
+def admin_richmenu():
+    if request.method == 'POST':
+        rich_menu_id = (request.form.get('rich_menu_id') or '').strip()
+        file = request.files.get('image')
+
+        if not rich_menu_id or not file:
+            flash('請輸入 Rich Menu ID 並選擇圖片檔案', 'warning')
+            return redirect(url_for('admin.admin_richmenu'))
+
+        if not (file.mimetype or '').startswith('image/'):
+            flash('上傳檔案必須為圖片格式', 'danger')
+            return redirect(url_for('admin.admin_richmenu'))
+
+        access_token = LINE_CHANNEL_ACCESS_TOKEN or os.getenv('LINE_CHANNEL_ACCESS_TOKEN', '')
+        if not access_token:
+            flash('環境尚未設定 LINE_CHANNEL_ACCESS_TOKEN，無法呼叫 LINE API', 'danger')
+            return redirect(url_for('admin.admin_richmenu'))
+
+        try:
+            image_bytes = file.stream.read()
+            url = f"https://api.line.me/v2/bot/richmenu/{rich_menu_id}/content"
+            headers = {
+                'Authorization': f'Bearer {access_token}',
+                'Content-Type': file.mimetype,
+            }
+            resp = requests.post(url, data=image_bytes, headers=headers, timeout=15)
+            if 200 <= resp.status_code < 300:
+                flash('Rich Menu 圖片更新成功', 'success')
+            else:
+                try:
+                    detail = resp.json().get('message') or resp.text
+                except Exception:
+                    detail = resp.text
+                flash(f'LINE API 回應錯誤（{resp.status_code}）：{detail}', 'danger')
+        except Exception as e:
+            flash(f'上傳至 LINE 時發生錯誤：{e}', 'danger')
+
+        return redirect(url_for('admin.admin_richmenu'))
+
+    richmenus, richmenus_error = fetch_line_richmenus()
+    return render_template('admin_richmenu.html', richmenus=richmenus, richmenus_error=richmenus_error)
 
 
 # ========= 儲值金專區 =========
