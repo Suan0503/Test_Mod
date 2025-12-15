@@ -87,6 +87,23 @@ try:
                 except Exception:
                     db.session.rollback()
     scheduler.add_job(expire_coupons_job, 'cron', hour=0, minute=10, id='expire_coupons_daily')
+
+    # 每日 02:00 自動清除「待驗證名單」（temp_verify 狀態為 pending）
+    def clear_pending_verify_job():
+        from models import TempVerify
+        try:
+            # 僅刪除仍為 pending 的暫存驗證資料
+            pending = TempVerify.query.filter_by(status='pending').all()
+            for item in pending:
+                db.session.delete(item)
+            if pending:
+                db.session.commit()
+            else:
+                db.session.rollback()
+        except Exception:
+            db.session.rollback()
+
+    scheduler.add_job(clear_pending_verify_job, 'cron', hour=2, minute=0, id='clear_pending_verify_daily')
     scheduler.start()
 except Exception:
     pass  # 若未安裝 apscheduler 則略過排程功能
