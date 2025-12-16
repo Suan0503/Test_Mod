@@ -3,7 +3,7 @@ from extensions import handler, line_bot_api, db
 from utils.menu_helpers import reply_with_menu, notify_admins, reply_with_ad_menu
 from hander.report import handle_report, handle_report_postback
 from hander.admin import handle_admin
-from hander.verify import handle_verify, EXTRA_NOTICE, maybe_push_coupon_expiry_notice
+from hander.verify import handle_verify, maybe_push_coupon_expiry_notice
 from utils.temp_users import temp_users
 from models import Whitelist, Coupon
 from utils.draw_utils import draw_coupon, has_drawn_today, save_coupon_record, get_today_coupon_flex
@@ -41,10 +41,6 @@ def on_follow(event):
             f"🌟 加入密碼：ming666"
         )
         reply_with_menu(event.reply_token, reply)
-        try:
-            line_bot_api.push_message(user_id, TextSendMessage(text=EXTRA_NOTICE))
-        except Exception:
-            logging.exception("push EXTRA_NOTICE in on_follow failed")
         try:
             maybe_push_coupon_expiry_notice(user_id)
         except Exception:
