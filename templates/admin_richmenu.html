@@ -2,7 +2,14 @@
 
 {% block title %}Rich Menu 圖片更新{% endblock %}
 
-{% block content %}
+{% block header_card %}
+<div class="card p-4 mb-4">
+	<h2 class="mb-2 font-weight-bold" style="color:#2d3a4b;"><i class="fa fa-image"></i> Rich Menu 圖片更新專用頁面</h2>
+	<p class="mb-0" style="color:#555;">此頁面僅提供 LINE Rich Menu 圖片上傳與預覽，不包含其他後台功能。</p>
+</div>
+{% endblock %}
+
+{% block body %}
 <div class="container py-4">
 	<div class="mb-3">
 		<a href="{{ url_for('admin.home') }}" class="btn btn-outline-secondary btn-sm">← 回管理首頁</a>
