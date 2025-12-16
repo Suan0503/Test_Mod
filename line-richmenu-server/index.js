@@ -34,7 +34,8 @@ async function uploadRichMenuImageToLine(richMenuId, imageBuffer, mimeType) {
     throw new Error('LINE_CHANNEL_ACCESS_TOKEN is not set in environment');
   }
 
-  const url = `https://api.line.me/v2/bot/richmenu/${encodeURIComponent(richMenuId)}/content`;
+  // 上傳 Rich Menu 圖片需使用 api-data.line.me
+  const url = `https://api-data.line.me/v2/bot/richmenu/${encodeURIComponent(richMenuId)}/content`;
 
   await axios.post(url, imageBuffer, {
     headers: {

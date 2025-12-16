@@ -254,7 +254,8 @@ def admin_richmenu():
 
         try:
             image_bytes = file.stream.read()
-            url = f"https://api.line.me/v2/bot/richmenu/{rich_menu_id}/content"
+            # 根據 LINE 官方文件，上傳 Rich Menu 圖片需使用 api-data.line.me 網域
+            url = f"https://api-data.line.me/v2/bot/richmenu/{rich_menu_id}/content"
             headers = {
                 'Authorization': f'Bearer {access_token}',
                 'Content-Type': file.mimetype,
