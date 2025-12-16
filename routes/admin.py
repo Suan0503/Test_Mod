@@ -268,7 +268,14 @@ def admin_richmenu():
                     detail = resp.json().get('message') or resp.text
                 except Exception:
                     detail = resp.text
-                flash(f'LINE API 回應錯誤（{resp.status_code}）：{detail}', 'danger')
+
+                # 特別處理「圖片已存在」的情況，給出更清楚的中文說明
+                if 'An image has already been uploaded to the richmenu' in str(detail):
+                    human_msg = 'LINE 回覆：這個 Rich Menu 已經有設定圖片，官方規則不允許覆蓋。若要換圖，必須建立新的 Rich Menu 再上傳圖片。'
+                else:
+                    human_msg = f'LINE API 回應錯誤（{resp.status_code}）：{detail}'
+
+                flash(human_msg, 'danger')
         except Exception as e:
             flash(f'上傳至 LINE 時發生錯誤：{e}', 'danger')
 
