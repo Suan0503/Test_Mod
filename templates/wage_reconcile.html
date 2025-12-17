@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>妹妹薪水對帳工具</title>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body{font-family:'Zen Maru Gothic','微軟正黑體',sans-serif;background:#f7f9fb;margin:0;color:#333}
+    .header{padding:16px 20px;text-align:center;background:#e3f2fd;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+    .header h2{margin:0;font-size:1.4rem}
+    .header-links{margin-top:8px}
+    .header-links a{display:inline-block;margin:4px 6px;background:#2196f3;color:#fff;padding:6px 10px;border-radius:999px;text-decoration:none;font-size:.8rem}
+    .container{max-width:1100px;margin:20px auto 32px;padding:0 18px}
+    .card{background:#fff;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.06);padding:18px 18px 20px;margin-bottom:18px}
+    .card h3{margin:0 0 10px;font-size:1.1rem}
+    .form-grid{display:grid;grid-template-columns:1.1fr 1.6fr;gap:16px}
+    @media(max-width:840px){.form-grid{grid-template-columns:1fr}}
+    textarea{width:100%;min-height:80px;font-family:inherit;font-size:.85rem;padding:8px 10px;border-radius:8px;border:1px solid #cfd8dc;resize:vertical}
+    label{font-size:.85rem;font-weight:600;color:#455a64;display:block;margin-bottom:4px}
+    .hint{font-size:.75rem;color:#78909c;margin-top:4px;line-height:1.5}
+    .actions{margin-top:10px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+    .btn{background:#1976d2;border:none;color:#fff;border-radius:8px;padding:8px 16px;font-size:.9rem;cursor:pointer}
+    .checkbox{font-size:.85rem;color:#455a64;display:flex;align-items:center;gap:6px}
+    .summary-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+    .pill{background:#e3f2fd;color:#0d47a1;border-radius:999px;padding:6px 12px;font-size:.85rem}
+    .pill strong{font-weight:700}
+    .errors{margin:6px 0 0;padding:8px 10px;border-radius:8px;background:#ffebee;color:#c62828;font-size:.8rem}
+    table{width:100%;border-collapse:collapse;font-size:.82rem;margin-top:8px}
+    th,td{border-bottom:1px solid #e0e0e0;padding:6px 8px;text-align:left}
+    thead tr{background:#eceff1}
+    tr:nth-child(even){background:#fafafa}
+    tr:hover{background:#f1f5f9}
+    .note{font-size:.75rem;color:#ef6c00}
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>📒 妹妹薪水對帳工具</h2>
+    <div class="header-links">
+      <a href="/admin/home">回後台主頁</a>
+      <a href="/admin/wallet">儲值金專區</a>
+      <a href="/admin/wallet/reconcile">儲值對帳</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <h3>輸入資料</h3>
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="form-grid">
+          <div>
+            <label>妹妹薪資設定</label>
+            <textarea name="salary_config" rows="4" placeholder="例如：&#10;安希 1100=40 1400=60 2400=90&#10;小美 1100=40 1400=60 2400=90">{{ salary_config_text }}</textarea>
+            <div class="hint">
+              一行一位妹妹：<br>
+              「姓名 空格 金額=分鐘 金額=分鐘 ...」<br>
+              例如：安希 1100=40 1400=60 2400=90 代表：40 分給 1100，60 分給 1400，90 分給 2400。
+            </div>
+          </div>
+          <div>
+            <label>當日紀錄貼上</label>
+            <textarea name="records" rows="10" placeholder="例如：&#10;12/13&#10;12:00泰2700/60/1&#10;15:30幸3200/60/1&#10;18:00泰3500/90/2&#10;19:30泰2700/60/1&#10;21:30泰2700/60/1">{{ records_text }}</textarea>
+            <div class="hint">
+              支援你平常貼上的格式：<br>
+              日期行（如：12/13）會自動忽略。<br>
+              每筆格式：時間+姓名+金額/分鐘數/人數，例如：12:00泰2700/60/1。<br>
+              系統會依「姓名 + 分鐘數」去找上方設定的薪水，一行算一份薪水。
+            </div>
+          </div>
+        </div>
+        <div class="actions">
+          <label class="checkbox">
+            <input type="checkbox" name="include_meal" value="1" {% if include_meal %}checked{% endif %} />
+            飯錢 200 元（有飯錢就勾選）
+          </label>
+          <button type="submit" class="btn">計算</button>
+        </div>
+      </form>
+    </div>
+
+    {% if errors %}
+    <div class="card">
+      <h3>注意事項</h3>
+      <div class="errors">
+        {% for e in errors %}
+          <div>・{{ e }}</div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if result %}
+    <div class="card">
+      <h3>對帳結果</h3>
+      <div class="summary-row">
+        <div class="pill">今日總收：<strong>{{ result.total_revenue }}</strong></div>
+        <div class="pill">妹妹薪水合計：<strong>{{ result.total_salary }}</strong></div>
+        <div class="pill">飯錢：<strong>{{ result.meal_fee }}</strong></div>
+        <div class="pill">總收（今日總收 − 妹妹薪水 − 飯錢）：<strong>{{ result.net }}</strong></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>明細檢查</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>原始文字</th>
+            <th>時間</th>
+            <th>妹妹</th>
+            <th>金額</th>
+            <th>分鐘數</th>
+            <th>人數</th>
+            <th>計入總收</th>
+            <th>此筆薪水</th>
+            <th>備註</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in entries %}
+          <tr>
+            <td>{{ r.raw }}</td>
+            <td>{{ r.time }}</td>
+            <td>{{ r.name }}</td>
+            <td>{{ r.amount }}</td>
+            <td>{{ r.length }}</td>
+            <td>{{ r.count }}</td>
+            <td>{{ r.revenue }}</td>
+            <td>{{ r.salary }}</td>
+            <td class="note">{{ r.note }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+</body>
+</html>

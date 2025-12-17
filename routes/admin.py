@@ -1344,3 +1344,126 @@ def wallet_reconcile_adjusted():
                            adj_remaining=adj_remaining,
                            total_offset=total_offset,
                            consume_offset=consume_offset)
+
+
+# ========= 妹妹薪水對帳工具 =========
+@admin_bp.route('/wage/reconcile', methods=['GET', 'POST'])
+def wage_reconcile():
+    """簡易對帳工具：貼上當日紀錄與妹妹薪資設定，自動計算今日總收 / 妹妹薪水 / 飯錢 / 淨收。"""
+    import re as _re
+
+    salary_config_text = ''
+    records_text = ''
+    include_meal = False
+    entries = []
+    errors = []
+    result = None
+
+    if request.method == 'POST':
+        salary_config_text = (request.form.get('salary_config') or '').strip()
+        records_text = (request.form.get('records') or '').strip()
+        include_meal = bool(request.form.get('include_meal'))
+
+        # 解析妹妹薪資設定：例如「安希 1100=40 1400=60 2400=90」
+        salary_map = {}  # { name: { minutes: salary } }
+        for raw in salary_config_text.splitlines():
+            line = raw.strip()
+            if not line:
+                continue
+            parts = line.split()
+            if len(parts) < 2:
+                errors.append(f"薪資設定格式不完整：{raw}")
+                continue
+            name = parts[0]
+            mapping = {}
+            for token in parts[1:]:
+                token = token.strip()
+                if not token or '=' not in token:
+                    continue
+                left, right = token.split('=', 1)
+                try:
+                    salary_val = int(left)
+                    minutes_val = int(right)
+                    mapping[minutes_val] = salary_val
+                except ValueError:
+                    errors.append(f"無法解析薪資設定片段：{token}（行：{raw}）")
+            if mapping:
+                salary_map[name] = mapping
+
+        # 解析當日紀錄行
+        total_revenue = 0
+        total_salary = 0
+        meal_fee = 200 if include_meal else 0
+
+        pattern = _re.compile(r'(?P<time>\d{1,2}:\d{2})(?P<name>[^0-9\s/]+)?(?P<amount>\d+)\s*/\s*(?P<len>\d+)\s*/\s*(?P<count>\d+)')
+
+        for raw in records_text.splitlines():
+            raw_line = raw.rstrip('\n')
+            line = raw_line.strip()
+            if not line:
+                continue
+            # 跳過只有日期的行，例如「12/13」
+            if _re.fullmatch(r'\d{1,2}/\d{1,2}', line):
+                continue
+
+            m = pattern.search(line)
+            if not m:
+                # 若完全無法辨識，記錄為錯誤但不中斷
+                errors.append(f"無法識別的紀錄行：{raw_line}")
+                continue
+
+            time_str = m.group('time')
+            name = (m.group('name') or '').strip()
+            try:
+                amount = int(m.group('amount'))
+                length = int(m.group('len'))
+                count = int(m.group('count'))
+            except ValueError:
+                errors.append(f"金額或分鐘數格式錯誤：{raw_line}")
+                continue
+
+            revenue = amount
+            total_revenue += revenue
+
+            salary_each = 0
+            note = ''
+            cfg = salary_map.get(name)
+            if cfg:
+                salary_each = cfg.get(length, 0)
+                if salary_each == 0:
+                    note = '⚠️ 未找到對應分鐘數的薪水設定'
+            else:
+                note = '⚠️ 未設定此妹妹的薪水'
+
+            total_salary += salary_each
+
+            entries.append({
+                'raw': raw_line,
+                'time': time_str,
+                'name': name,
+                'amount': amount,
+                'length': length,
+                'count': count,
+                'revenue': revenue,
+                'salary': salary_each,
+                'note': note,
+            })
+
+        net = total_revenue - (total_salary + meal_fee)
+        result = {
+            'total_revenue': total_revenue,
+            'total_salary': total_salary,
+            'meal_fee': meal_fee,
+            'net': net,
+        }
+
+    return render_template(
+        'wage_reconcile.html',
+        salary_config_text=salary_config_text,
+        records_text=records_text,
+        include_meal=include_meal,
+        entries=entries,
+        errors=errors,
+        result=result,
+    )
+
