@@ -44,40 +44,71 @@
   </div>
 
   <div class="container">
-    <div class="card">
-      <h3>輸入資料</h3>
-      <form method="post">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <input type="hidden" name="salary_config" value="{{ salary_config_text }}" />
+
+      <div class="card">
+        <h3>妹妹薪資設定</h3>
         <div class="form-grid">
           <div>
-            <label>妹妹薪資設定</label>
-            <textarea name="salary_config" rows="4" placeholder="例如：&#10;安希 1100=40 1400=60 2400=90&#10;小美 1100=40 1400=60 2400=90">{{ salary_config_text }}</textarea>
+            <label>新增妹妹</label>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+              <input type="text" name="new_name" placeholder="妹妹名稱" style="flex:1 1 80px" />
+              <input type="number" name="salary_90" placeholder="90分薪水" style="width:110px" />
+              <input type="number" name="salary_60" placeholder="60分薪水" style="width:110px" />
+              <input type="number" name="salary_40" placeholder="40分薪水" style="width:110px" />
+              <button type="submit" name="action" value="add_config" class="btn">新增</button>
+            </div>
             <div class="hint">
-              一行一位妹妹：<br>
-              「姓名 空格 金額=分鐘 金額=分鐘 ...」<br>
-              例如：安希 1100=40 1400=60 2400=90 代表：40 分給 1100，60 分給 1400，90 分給 2400。
+              例：多多 90 分 2400、60 分 1400、40 分 1100，就依序填入三個金額後按「新增」。
             </div>
           </div>
           <div>
-            <label>當日紀錄貼上</label>
-            <textarea name="records" rows="10" placeholder="例如：&#10;12/13&#10;12:00泰2700/60/1&#10;15:30幸3200/60/1&#10;18:00泰3500/90/2&#10;19:30泰2700/60/1&#10;21:30泰2700/60/1">{{ records_text }}</textarea>
-            <div class="hint">
-              支援你平常貼上的格式：<br>
-              日期行（如：12/13）會自動忽略。<br>
-              每筆格式：時間+姓名+金額/分鐘數/人數，例如：12:00泰2700/60/1。<br>
-              系統會依「姓名 + 分鐘數」去找上方設定的薪水，一行算一份薪水。
+            <label>已設定的妹妹（點選要計算的對象）</label>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              {% for g in salary_list %}
+                <label class="checkbox" style="background:#e3f2fd;border-radius:999px;padding:4px 10px;cursor:pointer">
+                  <input type="radio" name="selected_name" value="{{ g.name }}" {% if selected_name==g.name %}checked{% endif %} />
+                  {{ g.name }}
+                  <span class="hint" style="margin-left:4px">(40:{{ g.s40 or '-' }} / 60:{{ g.s60 or '-' }} / 90:{{ g.s90 or '-' }})</span>
+                </label>
+              {% else %}
+                <div class="hint">尚未新增任何妹妹，請先在左側輸入一位妹妹的薪資再按「新增」。</div>
+              {% endfor %}
             </div>
           </div>
         </div>
-        <div class="actions">
-          <label class="checkbox">
-            <input type="checkbox" name="include_meal" value="1" {% if include_meal %}checked{% endif %} />
-            飯錢 200 元（有飯錢就勾選）
-          </label>
-          <button type="submit" class="btn">計算</button>
+      </div>
+
+      <div class="card">
+        <h3>計算區</h3>
+        <div class="form-grid">
+          <div>
+            <label>當日紀錄貼上（目前計算：{% if selected_name %}{{ selected_name }}{% else %}尚未選擇妹妹{% endif %}）</label>
+            <textarea name="records" rows="10" placeholder="例如：&#10;12/16&#10;13:00茗2000/60/1(儲值扣&#10;15:00多2300/60/1&#10;...">{{ records_text }}</textarea>
+            <div class="hint">
+              貼上你整天的紀錄即可，日期行（如：12/16）會自動忽略。<br>
+              每筆格式：時間+姓名+金額/分鐘數/人數，例如：15:00多2300/60/1。<br>
+              系統只會用「選取的妹妹」那幾行來算薪水，其它行只計入「今日總收」。<br>
+              含「儲值扣」文字的行，會在明細備註中標記方便你人工檢查。
+            </div>
+          </div>
+          <div>
+            <label>其他設定</label>
+            <div class="actions" style="margin-top:0">
+              <label class="checkbox">
+                <input type="checkbox" name="include_meal" value="1" {% if include_meal %}checked{% endif %} />
+                飯錢 200 元（有飯錢就勾選）
+              </label>
+            </div>
+            <div class="actions" style="margin-top:10px">
+              <button type="submit" name="action" value="calculate" class="btn">計算目前選取的妹妹</button>
+            </div>
+          </div>
         </div>
-      </form>
-    </div>
+      </div>
+    </form>
 
     {% if errors %}
     <div class="card">
@@ -94,8 +125,8 @@
     <div class="card">
       <h3>對帳結果</h3>
       <div class="summary-row">
-        <div class="pill">今日總收：<strong>{{ result.total_revenue }}</strong></div>
-        <div class="pill">妹妹薪水合計：<strong>{{ result.total_salary }}</strong></div>
+        <div class="pill">今日總收（全部）：<strong>{{ result.total_revenue }}</strong></div>
+        <div class="pill">{% if selected_name %}{{ selected_name }}{% else %}妹妹{% endif %} 薪水合計：<strong>{{ result.total_salary }}</strong></div>
         <div class="pill">飯錢：<strong>{{ result.meal_fee }}</strong></div>
         <div class="pill">總收（今日總收 − 妹妹薪水 − 飯錢）：<strong>{{ result.net }}</strong></div>
       </div>
