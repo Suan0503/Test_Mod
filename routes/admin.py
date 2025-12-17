@@ -1361,6 +1361,12 @@ def wage_reconcile():
     errors = []
     result = None
 
+    # 給前端「輸出區」使用的簡易公式字串
+    summary_revenue_expr = ''  # 例如：2300+3000+...=15700
+    summary_salary_expr = ''   # 例如：1300*6=7800（若薪水單價一致）
+    summary_meal = None        # 例如：2000
+    summary_net_expr = ''      # 例如：15700-9800=5900
+
     action = request.form.get('action') if request.method == 'POST' else ''
 
     if request.method == 'POST':
@@ -1498,6 +1504,35 @@ def wage_reconcile():
                 'net': net,
             }
 
+            # 構造給「輸出區」用的簡易公式
+            # 1) 今日總收：金額相加表達式
+            revenue_terms = []
+            for e in entries:
+                try:
+                    revenue_terms.append(str(e.get('revenue') or 0))
+                except Exception:
+                    pass
+            if revenue_terms and total_revenue is not None:
+                summary_revenue_expr = "+".join(revenue_terms) + f"={total_revenue}"
+
+            # 2) 妹妹薪水：若所有有薪水的筆數單價一致，顯示「單價*筆數=總額」
+            salary_values = [e.get('salary') for e in entries if (e.get('salary') or 0) > 0]
+            if salary_values and total_salary is not None:
+                unique_units = set(salary_values)
+                if len(unique_units) == 1:
+                    unit = unique_units.pop()
+                    count = len(salary_values)
+                    summary_salary_expr = f"{unit}*{count}={total_salary}"
+                else:
+                    # 若單價不一致，僅顯示總額
+                    summary_salary_expr = str(total_salary)
+
+            # 3) 飯錢與總收的公式
+            summary_meal = meal_fee if meal_fee else None
+            if total_revenue is not None and total_salary is not None:
+                subtotal = total_salary + meal_fee
+                summary_net_expr = f"{total_revenue}-{subtotal}={net}"
+
     return render_template(
         'wage_reconcile.html',
         salary_config_text=salary_config_text,
@@ -1508,5 +1543,9 @@ def wage_reconcile():
         entries=entries,
         errors=errors,
         result=result,
+        summary_revenue_expr=summary_revenue_expr,
+        summary_salary_expr=summary_salary_expr,
+        summary_meal=summary_meal,
+        summary_net_expr=summary_net_expr,
     )
 

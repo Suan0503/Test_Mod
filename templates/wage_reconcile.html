@@ -123,6 +123,27 @@
 
     {% if result %}
     <div class="card">
+      <h3>輸出區</h3>
+      <div class="hint" style="margin-bottom:6px">以下會先列出你貼上的原始紀錄，接著顯示今天的加總公式與總收：</div>
+      <pre style="background:#f5f5f5;border-radius:8px;padding:10px;font-size:.8rem;white-space:pre-wrap;overflow-x:auto">{{ records_text }}</pre>
+      <div style="margin-top:10px;font-size:.85rem;line-height:1.6">
+        {% if summary_revenue_expr %}
+          <div>{{ summary_revenue_expr }}</div>
+        {% endif %}
+        {% if summary_salary_expr %}
+          <div>{{ summary_salary_expr }}</div>
+        {% endif %}
+        {% if summary_meal is not none %}
+          <div>{{ summary_meal }}</div>
+        {% endif %}
+        {% if summary_net_expr %}
+          <div style="margin-top:6px">{{ summary_net_expr }}</div>
+          <div>總收({{ result.net }})</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
       <h3>對帳結果</h3>
       <div class="summary-row">
         <div class="pill">今日總收（全部）：<strong>{{ result.total_revenue }}</strong></div>
