@@ -1,7 +1,7 @@
 import os
 import requests
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from models import Whitelist, Blacklist, TempVerify, StoredValueWallet, StoredValueTransaction
+from models import Whitelist, Blacklist, TempVerify, StoredValueWallet, StoredValueTransaction, WageConfig
 from utils.db_utils import update_or_create_whitelist_from_data
 from hander.verify import EXTRA_NOTICE
 from linebot.models import TextSendMessage
@@ -1349,10 +1349,11 @@ def wallet_reconcile_adjusted():
 # ========= 妹妹薪水對帳工具 =========
 @admin_bp.route('/wage/reconcile', methods=['GET', 'POST'])
 def wage_reconcile():
-    """妹妹薪水對帳工具：先設定每位妹妹的 90/60/40 分薪水，再選擇妹妹貼上當日紀錄進行計算。"""
+    """妹妹薪水對帳工具：使用資料庫中的 WageConfig 設定每位妹妹的 90/60/40 分薪水。"""
     import re as _re
 
-    salary_config_text = ''
+    # 前端表單顯示/回填用變數
+    salary_config_text = ''  # 已改由資料庫儲存，僅保留給模板 hidden 欄位，不再解析
     records_text = ''
     include_meal = False
     selected_name = ''
@@ -1363,12 +1364,11 @@ def wage_reconcile():
     action = request.form.get('action') if request.method == 'POST' else ''
 
     if request.method == 'POST':
-        salary_config_text = (request.form.get('salary_config') or '').strip()
         records_text = (request.form.get('records') or '').strip()
         include_meal = bool(request.form.get('include_meal'))
         selected_name = (request.form.get('selected_name') or '').strip()
 
-        # 新增妹妹薪資設定：姓名 + 90/60/40 分金額
+        # 新增或更新妹妹薪資設定：姓名 + 90/60/40 分金額
         if action == 'add_config':
             new_name = (request.form.get('new_name') or '').strip()
             s90 = (request.form.get('salary_90') or '').strip()
@@ -1381,136 +1381,122 @@ def wage_reconcile():
                     v90 = int(s90)
                     v60 = int(s60)
                     v40 = int(s40)
-                    line = f"{new_name} {v90}=90 {v60}=60 {v40}=40"
-                    if salary_config_text:
-                        salary_config_text += "\n" + line
-                    else:
-                        salary_config_text = line
-                    # 新增完自動選取該妹妹
-                    selected_name = new_name
                 except ValueError:
                     errors.append("90/60/40 分薪水金額必須為數字。")
-
-        # 解析妹妹薪資設定：例如「安希 1100=40 1400=60 2400=90」
-        salary_map = {}  # { name: { minutes: salary } }
-        for raw in salary_config_text.splitlines():
-            line = raw.strip()
-            if not line:
-                continue
-            parts = line.split()
-            if len(parts) < 2:
-                errors.append(f"薪資設定格式不完整：{raw}")
-                continue
-            name = parts[0]
-            mapping = {}
-            for token in parts[1:]:
-                token = token.strip()
-                if not token or '=' not in token:
-                    continue
-                left, right = token.split('=', 1)
-                try:
-                    salary_val = int(left)
-                    minutes_val = int(right)
-                    mapping[minutes_val] = salary_val
-                except ValueError:
-                    errors.append(f"無法解析薪資設定片段：{token}（行：{raw}）")
-            if mapping:
-                salary_map[name] = mapping
-
-        # 建立給前端顯示用的薪資列表
-        salary_list = []
-        for name, mapping in salary_map.items():
-            salary_list.append({
-                'name': name,
-                's40': mapping.get(40),
-                's60': mapping.get(60),
-                's90': mapping.get(90),
-            })
-        salary_list = sorted(salary_list, key=lambda x: x['name'])
-
-        # 僅在按下「計算」時進行明細與結果計算
-        if action == 'calculate' and records_text:
-            if not selected_name:
-                errors.append("請先在左側選擇要計算的妹妹。")
-            else:
-                total_revenue = 0
-                total_salary = 0
-                meal_fee = 200 if include_meal else 0
-
-                pattern = _re.compile(r'(?P<time>\d{1,2}:\d{2})(?P<name>[^0-9\s/]+)?(?P<amount>\d+)\s*/\s*(?P<len>\d+)\s*/\s*(?P<count>\d+)')
-
-                for raw in records_text.splitlines():
-                    raw_line = raw.rstrip('\n')
-                    line = raw_line.strip()
-                    if not line:
-                        continue
-                    # 跳過只有日期的行，例如「12/13」
-                    if _re.fullmatch(r'\d{1,2}/\d{1,2}', line):
-                        continue
-
-                    m = pattern.search(line)
-                    if not m:
-                        errors.append(f"無法識別的紀錄行：{raw_line}")
-                        continue
-
-                    time_str = m.group('time')
-                    name = (m.group('name') or '').strip()
+                else:
                     try:
-                        amount = int(m.group('amount'))
-                        length = int(m.group('len'))
-                        count = int(m.group('count'))
-                    except ValueError:
-                        errors.append(f"金額或分鐘數格式錯誤：{raw_line}")
-                        continue
+                        cfg = WageConfig.query.filter_by(name=new_name).first()
+                        if not cfg:
+                            cfg = WageConfig(name=new_name)
+                            db.session.add(cfg)
+                        cfg.wage_90 = v90
+                        cfg.wage_60 = v60
+                        cfg.wage_40 = v40
+                        db.session.commit()
+                        # 新增或更新完自動選取該妹妹
+                        selected_name = new_name
+                    except Exception as e:
+                        db.session.rollback()
+                        errors.append(f"儲存妹妹薪資設定時發生錯誤：{e}")
 
-                    revenue = amount
-                    total_revenue += revenue
+    # 無論 GET 或 POST，都從資料庫載入所有妹妹薪資設定
+    salary_list = []
+    salary_map = {}  # { name: { minutes: salary } }
+    try:
+        configs = WageConfig.query.order_by(WageConfig.name.asc()).all()
+        for cfg in configs:
+            salary_map[cfg.name] = {
+                40: cfg.wage_40 or 0,
+                60: cfg.wage_60 or 0,
+                90: cfg.wage_90 or 0,
+            }
+            salary_list.append({
+                'name': cfg.name,
+                's40': cfg.wage_40,
+                's60': cfg.wage_60,
+                's90': cfg.wage_90,
+            })
+    except Exception as e:
+        errors.append(f"讀取妹妹薪資設定時發生錯誤，可能尚未執行遷移：{e}")
 
-                    salary_each = 0
-                    note = ''
-                    # 依「選取的妹妹」之薪水表，對當日每一筆 40/60/90 分鐘紀錄都套用同一套標準，
-                    # 不再依照行內顯示的姓名分配。
-                    cfg = salary_map.get(selected_name)
-                    if cfg:
-                        salary_each = cfg.get(length, 0)
-                        if salary_each == 0:
-                            note = '⚠️ 未找到對應分鐘數的薪水設定（此妹妹）'
-                    else:
-                        note = '⚠️ 尚未為此妹妹設定薪水'
-
-                    total_salary += salary_each
-
-                    # 若含「儲值扣」字樣，加註提示方便人工檢查
-                    if '儲值扣' in raw_line:
-                        if note:
-                            note += '｜含儲值扣'
-                        else:
-                            note = '含儲值扣'
-
-                    entries.append({
-                        'raw': raw_line,
-                        'time': time_str,
-                        'name': name,
-                        'amount': amount,
-                        'length': length,
-                        'count': count,
-                        'revenue': revenue,
-                        'salary': salary_each,
-                        'note': note,
-                    })
-
-                net = total_revenue - (total_salary + meal_fee)
-                result = {
-                    'total_revenue': total_revenue,
-                    'total_salary': total_salary,
-                    'meal_fee': meal_fee,
-                    'net': net,
-                }
+    # 僅在按下「計算」時進行明細與結果計算
+    if request.method == 'POST' and action == 'calculate' and records_text:
+        if not selected_name:
+            errors.append("請先在左側選擇要計算的妹妹。")
         else:
-            # 未點擊計算時也需要 salary_list 給前端使用
-            pass
-    else:
-        salary_list = []
+            total_revenue = 0
+            total_salary = 0
+            meal_fee = 200 if include_meal else 0
+
+            pattern = _re.compile(r'(?P<time>\d{1,2}:\d{2})(?P<name>[^0-9\s/]+)?(?P<amount>\d+)\s*/\s*(?P<len>\d+)\s*/\s*(?P<count>\d+)')
+
+            for raw in records_text.splitlines():
+                raw_line = raw.rstrip('\n')
+                line = raw_line.strip()
+                if not line:
+                    continue
+                # 跳過只有日期的行，例如「12/13」
+                if _re.fullmatch(r'\d{1,2}/\d{1,2}', line):
+                    continue
+
+                m = pattern.search(line)
+                if not m:
+                    errors.append(f"無法識別的紀錄行：{raw_line}")
+                    continue
+
+                time_str = m.group('time')
+                name = (m.group('name') or '').strip()
+                try:
+                    amount = int(m.group('amount'))
+                    length = int(m.group('len'))
+                    count = int(m.group('count'))
+                except ValueError:
+                    errors.append(f"金額或分鐘數格式錯誤：{raw_line}")
+                    continue
+
+                revenue = amount
+                total_revenue += revenue
+
+                salary_each = 0
+                note = ''
+                # 依「選取的妹妹」之薪水表，對當日每一筆 40/60/90 分鐘紀錄都套用同一套標準，
+                # 不再依照行內顯示的姓名分配。
+                cfg_map = salary_map.get(selected_name)
+                if cfg_map:
+                    salary_each = cfg_map.get(length, 0)
+                    if salary_each == 0:
+                        note = '⚠️ 未找到對應分鐘數的薪水設定（此妹妹）'
+                else:
+                    note = '⚠️ 尚未為此妹妹設定薪水'
+
+                total_salary += salary_each
+
+                # 若含「儲值扣」字樣，加註提示方便人工檢查
+                if '儲值扣' in raw_line:
+                    if note:
+                        note += '｜含儲值扣'
+                    else:
+                        note = '含儲值扣'
+
+                entries.append({
+                    'raw': raw_line,
+                    'time': time_str,
+                    'name': name,
+                    'amount': amount,
+                    'length': length,
+                    'count': count,
+                    'revenue': revenue,
+                    'salary': salary_each,
+                    'note': note,
+                })
+
+            net = total_revenue - (total_salary + meal_fee)
+            result = {
+                'total_revenue': total_revenue,
+                'total_salary': total_salary,
+                'meal_fee': meal_fee,
+                'net': net,
+            }
 
     return render_template(
         'wage_reconcile.html',
