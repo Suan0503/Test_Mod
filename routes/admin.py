@@ -1468,17 +1468,17 @@ def wage_reconcile():
 
                     salary_each = 0
                     note = ''
-                    target = (name == selected_name)
+                    # 依「選取的妹妹」之薪水表，對當日每一筆 40/60/90 分鐘紀錄都套用同一套標準，
+                    # 不再依照行內顯示的姓名分配。
                     cfg = salary_map.get(selected_name)
-                    if target and cfg:
+                    if cfg:
                         salary_each = cfg.get(length, 0)
                         if salary_each == 0:
                             note = '⚠️ 未找到對應分鐘數的薪水設定（此妹妹）'
-                    elif target and not cfg:
+                    else:
                         note = '⚠️ 尚未為此妹妹設定薪水'
 
-                    if target:
-                        total_salary += salary_each
+                    total_salary += salary_each
 
                     # 若含「儲值扣」字樣，加註提示方便人工檢查
                     if '儲值扣' in raw_line:
@@ -1495,9 +1495,8 @@ def wage_reconcile():
                         'length': length,
                         'count': count,
                         'revenue': revenue,
-                        'salary': salary_each if target else 0,
+                        'salary': salary_each,
                         'note': note,
-                        'target': target,
                     })
 
                 net = total_revenue - (total_salary + meal_fee)
