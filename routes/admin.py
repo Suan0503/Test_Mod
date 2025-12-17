@@ -1515,17 +1515,23 @@ def wage_reconcile():
             if revenue_terms and total_revenue is not None:
                 summary_revenue_expr = "+".join(revenue_terms) + f"={total_revenue}"
 
-            # 2) 妹妹薪水：若所有有薪水的筆數單價一致，顯示「單價*筆數=總額」
+            # 2) 妹妹薪水：依不同單價分組，輸出多行公式
+            #    例如：1000*5=5000（60 分 5 筆）、1700（90 分 1 筆）
             salary_values = [e.get('salary') for e in entries if (e.get('salary') or 0) > 0]
             if salary_values and total_salary is not None:
-                unique_units = set(salary_values)
-                if len(unique_units) == 1:
-                    unit = unique_units.pop()
-                    count = len(salary_values)
-                    summary_salary_expr = f"{unit}*{count}={total_salary}"
-                else:
-                    # 若單價不一致，僅顯示總額
-                    summary_salary_expr = str(total_salary)
+                unit_counts = {}
+                for v in salary_values:
+                    unit_counts[v] = unit_counts.get(v, 0) + 1
+                lines = []
+                for unit in sorted(unit_counts.keys()):
+                    cnt = unit_counts[unit]
+                    sub_total = unit * cnt
+                    if cnt > 1:
+                        lines.append(f"{unit}*{cnt}={sub_total}")
+                    else:
+                        # 單一筆就直接顯示金額，例如「1700」
+                        lines.append(str(sub_total))
+                summary_salary_expr = "\n".join(lines)
 
             # 3) 飯錢與總收的公式
             summary_meal = meal_fee if meal_fee else None
