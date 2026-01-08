@@ -138,3 +138,41 @@ def ensure_external_user_defaults(user: ExternalUser):
     """Ensure expires_at default if missing."""
     if user and user.expires_at is None:
         user.expires_at = datetime.utcnow() + timedelta(days=30)
+
+
+# ===== 功能控制系統 =====
+class GroupFeatureSetting(db.Model):
+    """群組功能開關設定（販售版本控制）"""
+    __tablename__ = 'group_feature_setting'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    group_id = db.Column(db.String(100), unique=True, nullable=False, index=True)
+    token = db.Column(db.String(100), unique=True, nullable=False)  # 群組專屬 TOKEN
+    features = db.Column(db.Text, nullable=False)  # JSON 格式儲存功能列表
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=True)  # 授權到期日（可選）
+    is_active = db.Column(db.Boolean, default=True, nullable=False)  # 是否啟用
+
+
+class CommandConfig(db.Model):
+    """指令配置表（中文化指令管理）"""
+    __tablename__ = 'command_config'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    command_key = db.Column(db.String(50), unique=True, nullable=False)  # 功能鍵值
+    command_zh = db.Column(db.String(100), nullable=False)  # 中文指令
+    command_en = db.Column(db.String(100), nullable=True)  # 英文指令（備用）
+    feature_category = db.Column(db.String(50), nullable=False)  # 功能分類
+    description = db.Column(db.String(255))  # 說明
+    is_admin_only = db.Column(db.Boolean, default=False)  # 是否僅管理員可用
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
+class FeatureUsageLog(db.Model):
+    """功能使用記錄（用於統計與分析）"""
+    __tablename__ = 'feature_usage_log'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    group_id = db.Column(db.String(100), index=True, nullable=False)
+    user_id = db.Column(db.String(100), index=True, nullable=False)
+    feature_key = db.Column(db.String(50), nullable=False)  # 使用的功能
+    command_used = db.Column(db.String(100))  # 實際使用的指令
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)

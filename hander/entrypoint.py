@@ -3,10 +3,12 @@ from extensions import handler, line_bot_api, db
 from utils.menu_helpers import reply_with_menu, notify_admins, reply_with_ad_menu
 from hander.report import handle_report, handle_report_postback
 from hander.admin import handle_admin
+from hander.admin_feature import handle_admin_commands
 from hander.verify import handle_verify, maybe_push_coupon_expiry_notice
 from utils.temp_users import temp_users
 from models import Whitelist, Coupon
 from utils.draw_utils import draw_coupon, has_drawn_today, save_coupon_record, get_today_coupon_flex
+from utils.feature_control import check_feature_enabled, log_feature_usage
 import pytz
 from datetime import datetime
 
@@ -60,9 +62,27 @@ def entrypoint(event):
     user_text = _norm(event.message.text)
     user_id = event.source.user_id
     logging.info(f"[TextMessage] user_id={user_id} text={user_text}")
+    
+    # 取得群組 ID（若在群組中）
+    group_id = None
+    if hasattr(event.source, 'group_id'):
+        group_id = event.source.group_id
 
-    # ===== 新增：廣告專區入口 =====
+    # ===== 優先處理管理員功能控制指令 =====
+    if handle_admin_commands(event):
+        return
+
+    # ===== 廣告專區入口 =====
     if user_text == "廣告專區":
+        # 檢查功能是否啟用
+        if group_id and not check_feature_enabled(group_id, "ad_menu"):
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="⚠️ 此群組未開啟「廣告專區」功能")
+            )
+            return
+        
+        log_feature_usage(group_id or "private", user_id, "ad_menu", "廣告專區")
         reply_with_ad_menu(event.reply_token)
         return
 
@@ -71,21 +91,46 @@ def entrypoint(event):
         temp_users[user_id].get("report_pending") or
         temp_users[user_id].get("report_ng_pending")
     ):
+        # 檢查回報文功能
+        if group_id and not check_feature_enabled(group_id, "report"):
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="⚠️ 此群組未開啟「回報文」功能")
+            )
+            return
         handle_report(event)
         return
 
     # 回報文關鍵字
     if user_text in ["回報文", "Report", "report"]:
+        # 檢查回報文功能
+        if group_id and not check_feature_enabled(group_id, "report"):
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="⚠️ 此群組未開啟「回報文」功能")
+            )
+            return
+        
+        log_feature_usage(group_id or "private", user_id, "report", user_text)
         handle_report(event)
         return
 
-    # 管理員指令
+    # 管理員指令（原有的 /msg 功能）
     if user_text.startswith("/msg "):
         handle_admin(event)
         return
 
     # 驗證資訊
     if user_text in ["驗證資訊", "驗證 資訊", "驗證資訊 "]:
+        # 檢查驗證功能
+        if group_id and not check_feature_enabled(group_id, "verify"):
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="⚠️ 此群組未開啟「驗證」功能")
+            )
+            return
+        
+        log_feature_usage(group_id or "private", user_id, "verify", "驗證資訊")
         tz = pytz.timezone("Asia/Taipei")
         now = datetime.now(tz)
         today_str = now.strftime('%Y-%m-%d')
@@ -134,6 +179,15 @@ def entrypoint(event):
 
     # ======= 每日抽獎功能 =======
     if user_text in ["每日抽獎", "每日 抽獎", "每日抽獎 "]:
+        # 檢查抽獎功能
+        if group_id and not check_feature_enabled(group_id, "draw"):
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="⚠️ 此群組未開啟「每日抽獎」功能")
+            )
+            return
+        
+        log_feature_usage(group_id or "private", user_id, "draw", "每日抽獎")
         profile = None
         display_name = "用戶"
         try:
@@ -160,6 +214,15 @@ def entrypoint(event):
 
     # 折價券管理
     if user_text in ["折價券管理", "券紀錄", "我的券紀錄", "我的 券紀錄"]:
+        # 檢查抽獎券功能
+        if group_id and not check_feature_enabled(group_id, "coupon"):
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="⚠️ 此群組未開啟「抽獎券」功能")
+            )
+            return
+        
+        log_feature_usage(group_id or "private", user_id, "coupon", user_text)
         tz = pytz.timezone("Asia/Taipei")
         now = datetime.now(tz)
         today_str = now.strftime('%Y-%m-%d')
