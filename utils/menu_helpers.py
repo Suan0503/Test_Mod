@@ -4,25 +4,25 @@ from extensions import line_bot_api
 from storage import ADMIN_IDS  # 管理員清單
 from secrets import choice as secrets_choice
 
-# ================= 聖誕/冬季主題配色 =================
-XMAS_BG_1   = "#0B3D2E"  # 深綠
-XMAS_BG_2   = "#072A20"  # 更深綠
-XMAS_GOLD   = "#FFD700"  # 金色
-XMAS_SNOW   = "#F5F5F5"  # 雪白
-XMAS_RED    = "#C62828"  # 聖誕紅
-XMAS_GREEN  = "#2E7D32"  # 松樹綠
-XMAS_ACCENT = "#00897B"  # 冬日青綠
-XMAS_PURPLE = "#6A1B9A"  # 點綴紫
-XMAS_BORDER = "#1B5E20"  # 深綠分隔線
+# ================= 馬年主題配色 =================
+HORSE_BG_1   = "#8B4513"  # 棕褐色（馬鞍褐）
+HORSE_BG_2   = "#654321"  # 深褐色（深咖啡）
+HORSE_GOLD   = "#FFD700"  # 金色（金馬獎）
+HORSE_CREAM  = "#FFF8DC"  # 奶油色
+HORSE_RED    = "#DC143C"  # 中國紅（吉祥紅）
+HORSE_GREEN  = "#228B22"  # 草原綠
+HORSE_ACCENT = "#CD853F"  # 秋麥色
+HORSE_PURPLE = "#8B008B"  # 深紫（高貴紫）
+HORSE_BORDER = "#A0522D"  # 赭褐分隔線
 
-# 冬至主選單專用配色（不影響廣告泡泡）
-WINTER_BG_1   = "#001826"  # 深夜藍綠
-WINTER_BG_2   = "#021018"  # 更深夜空
-WINTER_GOLD   = "#F2C94C"  # 暖黃燈光
-WINTER_SNOW   = "#F9FAFB"  # 雪白
-WINTER_BLUE   = "#0F4C75"  # 冬季藍
-WINTER_ACCENT = "#56CCF2"  # 冰藍點綴
-WINTER_PURPLE = "#6A1B9A"  # 夜色紫
+# 馬年主選單專用配色
+HORSE_MENU_BG_1   = "#4A2C2A"  # 深栗色
+HORSE_MENU_BG_2   = "#3B1E1C"  # 更深栗
+HORSE_MENU_GOLD   = "#F4A460"  # 沙棕金
+HORSE_MENU_LIGHT  = "#F5DEB3"  # 小麥色
+HORSE_MENU_BLUE   = "#8B7355"  # 咖啡藍
+HORSE_MENU_ACCENT = "#D2691E"  # 巧克力色
+HORSE_MENU_PURPLE = "#8B4789"  # 蘭花紫
 
 # ====== 共用：隨機客服/預約群連結 ======
 def choose_link():
@@ -47,10 +47,10 @@ JKF_LINKS = [
     {"label": "本期空缺中",         "url": "https://www.jkforum.net/p/thread-15744749-1-1.html"},
 ]
 
-# ====== 廣告專區（聖誕主題）======
+# ====== 廣告專區（馬年主題）======
 def get_ad_menu():
-    btn_primary   = XMAS_RED
-    btn_secondary = XMAS_GREEN
+    btn_primary   = HORSE_RED
+    btn_secondary = HORSE_ACCENT
 
     buttons = []
     for i, link in enumerate(JKF_LINKS):
@@ -75,24 +75,24 @@ def get_ad_menu():
             "header": {
                 "type": "box",
                 "layout": "vertical",
-                "backgroundColor": XMAS_BG_2,
+                "backgroundColor": HORSE_BG_2,
                 "paddingAll": "16px",
                 "contents": [{
                     "type": "text",
-                    "text": "🎄 茗殿廣告資訊站",
+                    "text": "🐴 茗殿廣告資訊站",
                     "weight": "bold",
                     "size": "lg",
                     "align": "center",
-                    "color": XMAS_GOLD
+                    "color": HORSE_GOLD
                 }]
             },
             "body": {
                 "type": "box",
                 "layout": "vertical",
-                "backgroundColor": XMAS_BG_2,
+                "backgroundColor": HORSE_BG_2,
                 "spacing": "md",
                 "contents": [
-                    {"type": "separator", "color": XMAS_BORDER},
+                    {"type": "separator", "color": HORSE_BORDER},
                     {"type": "box", "layout": "vertical", "spacing": "sm", "margin": "lg", "contents": buttons}
                 ]
             },
@@ -100,14 +100,14 @@ def get_ad_menu():
         }
     )
 
-# ====== 聖誕主選單（兩頁 Carousel） ======
+# ====== 馬年主選單（兩頁 Carousel） ======
 def get_menu_carousel():
-    # 冬至主選單配色
-    COLOR_PRIMARY = WINTER_BLUE
-    COLOR_ACCENT = WINTER_ACCENT
-    COLOR_SECONDARY = WINTER_GOLD
-    COLOR_GRAY = WINTER_SNOW
-    COLOR_ALERT = WINTER_PURPLE
+    # 馬年主選單配色
+    COLOR_PRIMARY = HORSE_MENU_BLUE
+    COLOR_ACCENT = HORSE_MENU_ACCENT
+    COLOR_SECONDARY = HORSE_MENU_GOLD
+    COLOR_GRAY = HORSE_MENU_LIGHT
+    COLOR_ALERT = HORSE_MENU_PURPLE
 
     page1 = {
         "type": "bubble",
@@ -115,24 +115,24 @@ def get_menu_carousel():
         "header": {
             "type": "box",
             "layout": "vertical",
-            "backgroundColor": WINTER_BG_1,
+            "backgroundColor": HORSE_MENU_BG_1,
             "paddingAll": "16px",
             "contents": [{
                 "type": "text",
-                "text": "❄️ 冬至暖心選單 1/2",
+                "text": "🐴 馬年吉祥選單 1/2",
                 "weight": "bold",
                 "align": "center",
                 "size": "lg",
-                "color": WINTER_GOLD
+                "color": HORSE_MENU_GOLD
             }]
         },
         "body": {
             "type": "box",
             "layout": "vertical",
-            "backgroundColor": WINTER_BG_1,
+            "backgroundColor": HORSE_MENU_BG_1,
             "spacing": "md",
             "contents": [
-                {"type": "separator", "color": WINTER_BLUE},
+                {"type": "separator", "color": HORSE_MENU_BLUE},
                 {
                     "type": "box",
                     "layout": "vertical",
@@ -156,24 +156,24 @@ def get_menu_carousel():
         "header": {
             "type": "box",
             "layout": "vertical",
-            "backgroundColor": WINTER_BG_2,
+            "backgroundColor": HORSE_MENU_BG_2,
             "paddingAll": "16px",
             "contents": [{
                 "type": "text",
-                "text": "❄️ 冬至暖心選單 2/2",
+                "text": "🐴 馬年吉祥選單 2/2",
                 "weight": "bold",
                 "align": "center",
                 "size": "lg",
-                "color": WINTER_GOLD
+                "color": HORSE_MENU_GOLD
             }]
         },
         "body": {
             "type": "box",
             "layout": "vertical",
-            "backgroundColor": WINTER_BG_2,
+            "backgroundColor": HORSE_MENU_BG_2,
             "spacing": "md",
             "contents": [
-                {"type": "separator", "color": WINTER_BLUE},
+                {"type": "separator", "color": HORSE_MENU_BLUE},
                 {
                     "type": "box",
                     "layout": "vertical",
@@ -192,7 +192,7 @@ def get_menu_carousel():
     }
 
     return FlexSendMessage(
-        alt_text="冬至主選單",
+        alt_text="馬年吉祥選單",
         contents={"type": "carousel", "contents": [page1, page2]}
     )
 

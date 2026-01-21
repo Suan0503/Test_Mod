@@ -21,7 +21,6 @@ FEATURE_LIST = {
     "schedule": "預約系統",
     "wage": "薪資管理",
     "manual_verify": "手動驗證",
-    "richmenu": "圖文選單",
     "statistics": "統計功能",
     "ad_menu": "廣告專區"
 }
